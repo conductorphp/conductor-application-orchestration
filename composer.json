@@ -13,6 +13,12 @@
     "require": {
         "robofirm/devops-tool-core": "^0.1.0"
     },
+    "suggest": {
+        "robofirm/devops-tool-drupal-platform-support": "Adds support for the Drupal platform.",
+        "robofirm/devops-tool-magento-1-platform-support": "Adds support for the Magento 1 platform.",
+        "robofirm/devops-tool-magento-2-platform-support": "Adds support for the Magento 2 platform.",
+        "robofirm/devops-tool-wordpress-platform-support": "Adds support for the Wordpress platform."
+    },
     "autoload": {
         "psr-4": {
             "DevopsToolAppOrchestration\\": "src/"
