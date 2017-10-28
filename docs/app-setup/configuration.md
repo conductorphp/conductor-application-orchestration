@@ -81,4 +81,4 @@ config.yaml
  config.yaml
 ```
 
-For a complete example, see [App Setup Repository Example](../../../../../examples/app-setup-repo/README.md).
+For a complete example, see [App Setup Repository Example](../examples/app-setup-repo/README.md).
