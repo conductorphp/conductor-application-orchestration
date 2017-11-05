@@ -5,7 +5,11 @@
 
 namespace DevopsToolAppOrchestration\Command;
 
+use DevopsToolCore\MonologConsoleHandlerAwareTrait;
 use Exception;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
+use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -13,6 +17,29 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class AppConfigGetCommand extends AbstractCommand
 {
+    use MonologConsoleHandlerAwareTrait;
+    /**
+     * @var LoggerInterface
+     */
+    private $logger;
+
+    /**
+     * AppListCommand constructor.
+     *
+     * @param LoggerInterface $logger
+     * @param null            $name
+     */
+    public function __construct(
+        LoggerInterface $logger = null,
+        $name = null
+    ) {
+        if (is_null($logger)) {
+            $logger = new NullLogger();
+        }
+        $this->logger = $logger;
+        parent::__construct($name);
+    }
+
     protected function configure()
     {
         $this->setName('app:config:get')
@@ -30,34 +57,28 @@ class AppConfigGetCommand extends AbstractCommand
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        // outputs multiple lines to the console (adding "\n" at the end of each line)
-        $output->writeln(
-            [
-                'App Configuration: Get',
-                '============',
-                '',
-            ]
-        );
-
-        $this->parseConfigFile();
+        $this->injectOutputIntoLogger($output, $this->logger);
+        $applicationCode = $input->getOption('app');
+        $application = $this->config['applications'][$applicationCode];
 
         $key = $input->getArgument('key');
-        $appId = $this->getAppIds($input)[0];
-
-        $repo = $this->getRepo($appId);
-        $config = $this->getMergedAppConfig($repo, $appId);
-        $appName = $config->getAppName();
-        $value = $config->getArrayCopy();
+        $value = $application;
         $parts = explode('.', $key);
         foreach ($parts as $part) {
             if (!array_key_exists($part, $value)) {
-                throw new Exception("Key \"$key\" not found in application $appId ($appName) configuration.");
+                throw new Exception(
+                    "Key \"$key\" not found in application $applicationCode (${application['name']}) configuration."
+                );
             }
             $value = $value[$part];
         }
-        $output->writeln(
-            "Value for key \"$key\" in application $appId ($appName) configuration:\n" . print_r($value, true)
-        );
+
+        $outputTable = new Table($output);
+        $outputTable
+            ->setHeaders(['Key', 'Value'])
+            ->addRow([$key, $value])
+            ->render();
+
         return 0;
     }
 

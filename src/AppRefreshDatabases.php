@@ -5,7 +5,7 @@
 
 namespace DevopsToolAppOrchestration;
 
-use DevopsToolCore\Database\ImportExportAdapter\DatabaseImportExportAdapterInterface;
+use DevopsToolCore\Database\DatabaseImportAdapterInterface;
 use Exception;
 use Monolog\Handler\NullHandler;
 use Psr\Log\LoggerInterface;
@@ -39,7 +39,7 @@ class AppRefreshDatabases implements FileLayoutAwareInterface
      */
     private $databaseAdapter;
     /**
-     * @var DatabaseImportExportAdapterInterface
+     * @var DatabaseImportAdapterInterface
      */
     private $importDatabaseAdapter;
     /**
@@ -67,25 +67,25 @@ class AppRefreshDatabases implements FileLayoutAwareInterface
     /**
      * AppRefreshDatabase constructor.
      *
-     * @param FilesystemTransferInterface $filesystemTransfer ,
-     * @param string $workingDir                              ,
-     * @param AppSetupRepository $repo
-     * @param DatabaseAdapter $databaseAdapter
-     * @param DatabaseImportExportAdapterInterface $importDatabaseAdapter
-     * @param array $databases
-     * @param string $appRoot
-     * @param string $appName
-     * @param string $fileLayout
-     * @param string $branch
-     * @param FileLayoutHelper|null $fileLayoutHelper
-     * @param LoggerInterface|null $logger
+     * @param FilesystemTransferInterface    $filesystemTransfer ,
+     * @param string                         $workingDir                              ,
+     * @param AppSetupRepository             $repo
+     * @param DatabaseAdapter                $databaseAdapter
+     * @param DatabaseImportAdapterInterface $importDatabaseAdapter
+     * @param array                          $databases
+     * @param string                         $appRoot
+     * @param string                         $appName
+     * @param string                         $fileLayout
+     * @param string                         $branch
+     * @param FileLayoutHelper|null          $fileLayoutHelper
+     * @param LoggerInterface|null           $logger
      */
     public function __construct(
         FilesystemTransferInterface $filesystemTransfer,
         $workingDir,
         AppSetupRepository $repo,
         DatabaseAdapter $databaseAdapter,
-        DatabaseImportExportAdapterInterface $importDatabaseAdapter,
+        DatabaseImportAdapterInterface $importDatabaseAdapter,
         array $databases,
         $appRoot,
         $appName,

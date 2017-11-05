@@ -5,7 +5,7 @@
 
 namespace DevopsToolAppOrchestration;
 
-use DevopsToolCore\Database\ImportExportAdapter\DatabaseImportExportAdapterInterface;
+use DevopsToolCore\Database\DatabaseImportAdapterInterface;
 use DevopsToolCore\Filesystem\FilesystemTransferInterface;
 use DevopsToolCore\ShellCommandHelper;
 use Exception;
@@ -34,7 +34,7 @@ class AppSnapshot implements FileLayoutAwareInterface
      */
     private $workingDir;
     /**
-     * @var DatabaseImportExportAdapterInterface
+     * @var DatabaseImportAdapterInterface
      */
     protected $databaseAdapter;
     /**
@@ -77,7 +77,7 @@ class AppSnapshot implements FileLayoutAwareInterface
      * @param                                           $appRoot
      * @param                                           $fileLayout
      * @param                                           $branch
-     * @param DatabaseImportExportAdapterInterface|null $databaseAdapter
+     * @param DatabaseImportAdapterInterface|null       $databaseAdapter
      * @param FilesystemTransferInterface|null          $databaseFilesystemTransfer
      * @param array|null                                $databases
      * @param array|null                                $databaseTableGroups
@@ -94,7 +94,7 @@ class AppSnapshot implements FileLayoutAwareInterface
         $appRoot,
         $fileLayout,
         $branch,
-        DatabaseImportExportAdapterInterface $databaseAdapter = null,
+        DatabaseImportAdapterInterface $databaseAdapter = null,
         FilesystemTransferInterface $databaseFilesystemTransfer = null,
         array $databases = null,
         array $databaseTableGroups = null,

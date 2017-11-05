@@ -5,7 +5,7 @@ namespace DevopsToolAppOrchestration\Command;
 use Interop\Container\ContainerInterface;
 use Zend\ServiceManager\Initializer\InitializerInterface;
 
-class AppSetupConfigAwareInitializer implements InitializerInterface
+class ApplicationOrchestrationConfigAwareInitializer implements InitializerInterface
 {
     /**
      * Initialize the given instance
@@ -17,13 +17,13 @@ class AppSetupConfigAwareInitializer implements InitializerInterface
      */
     public function __invoke(ContainerInterface $container, $instance)
     {
-        if (!$instance instanceof AppSetupConfigAwareInterface) {
+        if (!$instance instanceof ApplicationOrchestrationConfigAwareInterface) {
             return;
         }
 
         $config = $container->get('config');
-        if (isset($config['app_setup'])) {
-            $instance->setAppSetupConfig($config['app_setup']);
+        if (isset($config['application_orchestration'])) {
+            $instance->setApplicationOrchestrationConfig($config['application_orchestration']);
         }
     }
 }

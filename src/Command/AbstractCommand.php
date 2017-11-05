@@ -11,7 +11,7 @@ use DevopsToolCore\Database\DatabaseAdapter;
 use DevopsToolAppOrchestration\Exception\DomainException;
 use DevopsToolCore\ShellCommandHelper;
 use DevopsToolCore\Database\DatabaseConfig;
-use DevopsToolCore\Database\ImportExportAdapter\DatabaseImportExportAdapterInterface;
+use DevopsToolCore\Database\DatabaseImportAdapterInterface;
 use DevopsToolCore\Database\ImportExportAdapter\MydumperDatabaseAdapter;
 use DevopsToolCore\Database\ImportExportAdapter\MysqldumpDatabaseAdapter;
 use DevopsToolCore\Database\ImportExportAdapter\MysqlTabDelimitedDatabaseAdapter;
@@ -24,17 +24,17 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Yaml\Yaml;
 
-abstract class AbstractCommand extends Command implements AppSetupConfigAwareInterface
+abstract class AbstractCommand extends Command implements ApplicationOrchestrationConfigAwareInterface
 {
     /**
      * @var array
      */
-    private $config;
+    protected $config;
 
-    /**
-     * @var string
-     */
-    private $appConfigFile;
+//    /**
+//     * @var string
+//     */
+//    private $appConfigFile;
 
     /**
      * @var string
@@ -51,48 +51,30 @@ abstract class AbstractCommand extends Command implements AppSetupConfigAwareInt
      */
     private $apps;
 
-    /**
-     * Constructor.
-     *
-     * @param string|null $name The name of the command; passing null means it must be set in configure()
-     * @param string|null $appConfigFile
-     *
-     * @throws LogicException When the command name is empty
-     */
-    public function __construct($name = null, $appConfigFile = null)
-    {
-        if (is_null($appConfigFile)) {
-            $appConfigFile = getenv("HOME") . '/.devops/app-setup.yaml';
-        }
-
-        $this->appConfigFile = $appConfigFile;
-        parent::__construct($name);
-    }
-
-    /**
-     * @throws Exception
-     */
-    protected function parseConfigFile()
-    {
-        if (!is_readable($this->appConfigFile)) {
-            throw new Exception("App configuration file \"$this->appConfigFile\" does not exist.");
-        }
-
-        $config = Yaml::parse(file_get_contents($this->appConfigFile), true);
-        if (!$config) {
-            throw new Exception("App configuration file \"{$this->appConfigFile}\" is empty.");
-        }
-
-        if (!(isset($config['environment']) && isset($config['role']) && isset($config['apps']))) {
-            throw new Exception(
-                "App configuration file \"{$this->appConfigFile}\" must define \"environment\", \"role\", and \"apps\"."
-            );
-        }
-
-        $this->environment = $config['environment'];
-        $this->role = $config['role'];
-        $this->apps = $config['apps'];
-    }
+//    /**
+//     * @throws Exception
+//     */
+//    protected function parseConfigFile()
+//    {
+//        if (!is_readable($this->appConfigFile)) {
+//            throw new Exception("App configuration file \"$this->appConfigFile\" does not exist.");
+//        }
+//
+//        $config = Yaml::parse(file_get_contents($this->appConfigFile), true);
+//        if (!$config) {
+//            throw new Exception("App configuration file \"{$this->appConfigFile}\" is empty.");
+//        }
+//
+//        if (!(isset($config['environment']) && isset($config['role']) && isset($config['apps']))) {
+//            throw new Exception(
+//                "App configuration file \"{$this->appConfigFile}\" must define \"environment\", \"role\", and \"apps\"."
+//            );
+//        }
+//
+//        $this->environment = $config['environment'];
+//        $this->role = $config['role'];
+//        $this->apps = $config['apps'];
+//    }
 
     /**
      * @param AppSetupRepository $repo
@@ -245,17 +227,17 @@ abstract class AbstractCommand extends Command implements AppSetupConfigAwareInt
             );
         }
         switch ($format) {
-            case DatabaseImportExportAdapterInterface::FORMAT_MYDUMPER:
+            case 'mydumper':
                 $databaseAdapter = new MydumperDatabaseAdapter($databaseConnectionConfig, $shellCommandHelper, $logger);
                 break;
 
-            case DatabaseImportExportAdapterInterface::FORMAT_SQL:
+            case 'sql':
                 $databaseAdapter = new MysqldumpDatabaseAdapter(
                     $databaseConnectionConfig, $shellCommandHelper, $logger
                 );
                 break;
 
-            case DatabaseImportExportAdapterInterface::FORMAT_TAB_DELIMITED:
+            case 'tab':
                 $databaseAdapter = new MysqlTabDelimitedDatabaseAdapter(
                     $databaseConnectionConfig,
                     $shellCommandHelper,
@@ -274,7 +256,7 @@ abstract class AbstractCommand extends Command implements AppSetupConfigAwareInt
         return $databaseAdapter;
     }
 
-    public function setAppSetupConfig(array $config)
+    public function setApplicationOrchestrationConfig(array $config)
     {
         $this->config = $config;
     }

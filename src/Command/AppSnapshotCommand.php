@@ -11,7 +11,7 @@ use DevopsToolAppOrchestration\FilesystemFactory;
 use DevopsToolCore\Filesystem\FilesystemTransferFactory;
 use DevopsToolCore\MonologConsoleHandler;
 use DevopsToolCore\ShellCommandHelper;
-use DevopsToolCore\Database\ImportExportAdapter\DatabaseImportExportAdapterInterface;
+use DevopsToolCore\Database\DatabaseImportAdapterInterface;
 use League\Flysystem\Adapter\Local;
 use Monolog\Logger;
 use Symfony\Component\Console\Input\InputArgument;
@@ -44,9 +44,9 @@ class AppSnapshotCommand extends AbstractCommand
                 InputOption::VALUE_OPTIONAL,
                 sprintf(
                     'Format to export database in. Must be "%s", "%s", or "%s".',
-                    DatabaseImportExportAdapterInterface::FORMAT_MYDUMPER,
-                    DatabaseImportExportAdapterInterface::FORMAT_TAB_DELIMITED,
-                    DatabaseImportExportAdapterInterface::FORMAT_SQL
+                    'mydumper',
+                    'tab',
+                    'sql'
                 )
             )
             ->addOption('no-databases', null, InputOption::VALUE_NONE, 'Do not include databases in snapshot.')

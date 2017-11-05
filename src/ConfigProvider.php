@@ -17,9 +17,9 @@ class ConfigProvider
     public function __invoke()
     {
         return [
-            'console'      => $this->getConsole(),
-            'dependencies' => $this->getDependencies(),
-            'app_setup'    => $this->getAppSetup(),
+            'console'      => $this->getConsoleConfig(),
+            'dependencies' => $this->getDependencyConfig(),
+            'application_orchestration' => $this->getApplicationOrchestrationConfig(),
         ];
     }
 
@@ -28,7 +28,7 @@ class ConfigProvider
      *
      * @return array
      */
-    private function getDependencies()
+    private function getDependencyConfig()
     {
         return require(__DIR__ . '/../config/dependencies.php');
     }
@@ -36,7 +36,7 @@ class ConfigProvider
     /**
      * @return array
      */
-    private function getConsole()
+    private function getConsoleConfig()
     {
         return require(__DIR__ . '/../config/console.php');
     }
@@ -44,9 +44,9 @@ class ConfigProvider
     /**
      * @return array
      */
-    private function getAppSetup()
+    private function getApplicationOrchestrationConfig()
     {
-        return Yaml::parse(file_get_contents(__DIR__ . '/../config/app-setup-defaults.yaml'));
+        return require(__DIR__ . '/../config/application-orchestration.php');
     }
 
 }

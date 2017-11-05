@@ -13,7 +13,7 @@ use DevopsToolAppOrchestration\FilesystemFactory;
 use DevopsToolCore\Filesystem\FilesystemTransferFactory;
 use DevopsToolCore\MonologConsoleHandler;
 use DevopsToolCore\ShellCommandHelper;
-use DevopsToolCore\Database\ImportExportAdapter\DatabaseImportExportAdapterInterface;
+use DevopsToolCore\Database\DatabaseImportAdapterInterface;
 use League\Flysystem\Adapter\Local;
 use Monolog\Logger;
 use Symfony\Component\Console\Input\InputInterface;
@@ -54,9 +54,9 @@ class AppInstallCommand extends AbstractCommand
                 InputOption::VALUE_OPTIONAL,
                 sprintf(
                     'Format database was exported in. Must be "%s", "%s", or "%s".',
-                    DatabaseImportExportAdapterInterface::FORMAT_MYDUMPER,
-                    DatabaseImportExportAdapterInterface::FORMAT_SQL,
-                    DatabaseImportExportAdapterInterface::FORMAT_TAB_DELIMITED
+                    'mydumper',
+                    'sql',
+                    'tab'
                 )
             );
     }

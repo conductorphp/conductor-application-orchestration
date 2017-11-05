@@ -2,6 +2,6 @@
 
 return [
     'initializers' => [
-        \DevopsToolAppOrchestration\Command\AppSetupConfigAwareInitializer::class,
+        \DevopsToolAppOrchestration\Command\ApplicationOrchestrationConfigAwareInitializer::class,
     ]
 ];
