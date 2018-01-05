@@ -17,7 +17,7 @@ devops app:snapshot
 ```
 
 The default settings will create a scrubbed snapshot named "$environment-scrubbed", where $environment is the 
-environment configured in ~/.devops/app-setup.yaml. The default behavior will also remove things like customer data, 
+environment configured in configuration. The default behavior will also remove things like customer data, 
 log data, etc. before pushing the snapshot to the external file system. To disable this, specify `--no-scrub`.
 
 The items that are scrubbed are determined by the `excludes` list for both assets and databases. This is specified in 

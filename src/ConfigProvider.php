@@ -2,7 +2,10 @@
 
 namespace DevopsToolAppOrchestration;
 
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
 use Symfony\Component\Yaml\Yaml;
+use Zend\ConfigAggregator\GlobTrait;
 
 class ConfigProvider
 {
@@ -17,8 +20,8 @@ class ConfigProvider
     public function __invoke()
     {
         return [
-            'console'      => $this->getConsoleConfig(),
-            'dependencies' => $this->getDependencyConfig(),
+            'console'                   => $this->getConsoleConfig(),
+            'dependencies'              => $this->getDependencyConfig(),
             'application_orchestration' => $this->getApplicationOrchestrationConfig(),
         ];
     }
@@ -46,7 +49,42 @@ class ConfigProvider
      */
     private function getApplicationOrchestrationConfig()
     {
-        return require(__DIR__ . '/../config/application-orchestration.php');
+        $config = require(__DIR__ . '/../config/application-orchestration.php');
+        $config['applications'] = $this->getApplicationConfig();
+        return $config;
+    }
+
+    /**
+     * @return array
+     */
+    private function getApplicationConfig()
+    {
+        $applicationConfig = [];
+        $iterator = new \DirectoryIterator('config/autoload/application-orchestration/applications');
+        foreach ($iterator as $applicationDir) {
+            if ($applicationDir->isDot()) {
+                continue;
+            }
+            $applicationCode = $applicationDir->getBasename();
+            $config = Yaml::parse(file_get_contents($applicationDir->getPathname() . '/config.yaml'));
+            $config['environments'] = [];
+
+            $environmentIterator = new \DirectoryIterator($applicationDir->getPathname() . '/environments');
+            foreach ($environmentIterator as $environmentDir) {
+                if ($environmentDir->isDot()) {
+                    continue;
+                }
+
+                $environmentCode = $environmentDir->getBasename();
+                $config['environments'][$environmentCode] = Yaml::parse(
+                    file_get_contents($environmentDir->getPathname() . '/config.yaml')
+                );
+            }
+
+            $applicationConfig[$applicationCode] = $config;
+        }
+
+        return $applicationConfig;
     }
 
 }

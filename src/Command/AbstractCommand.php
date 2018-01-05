@@ -5,259 +5,62 @@
 
 namespace DevopsToolAppOrchestration\Command;
 
-use DevopsToolAppOrchestration\AppConfig;
-use DevopsToolAppOrchestration\AppSetupRepository;
-use DevopsToolCore\Database\DatabaseAdapter;
-use DevopsToolAppOrchestration\Exception\DomainException;
-use DevopsToolCore\ShellCommandHelper;
-use DevopsToolCore\Database\DatabaseConfig;
-use DevopsToolCore\Database\DatabaseImportAdapterInterface;
-use DevopsToolCore\Database\ImportExportAdapter\MydumperDatabaseAdapter;
-use DevopsToolCore\Database\ImportExportAdapter\MysqldumpDatabaseAdapter;
-use DevopsToolCore\Database\ImportExportAdapter\MysqlTabDelimitedDatabaseAdapter;
-use Exception;
-use GitElephant\Repository;
-use LogicException;
-use PDO;
-use Psr\Log\LoggerInterface;
+use DevopsToolAppOrchestration\ApplicationConfig;
+use DevopsToolAppOrchestration\Exception;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Yaml\Yaml;
 
-abstract class AbstractCommand extends Command implements ApplicationOrchestrationConfigAwareInterface
+abstract class AbstractCommand extends Command implements ApplicationConfigAwareInterface
 {
     /**
-     * @var array
+     * @var ApplicationConfig[]
      */
-    protected $config;
-
-//    /**
-//     * @var string
-//     */
-//    private $appConfigFile;
-
-    /**
-     * @var string
-     */
-    private $environment;
-
-    /**
-     * @var string
-     */
-    private $role;
-
-    /**
-     * @var array
-     */
-    private $apps;
-
-//    /**
-//     * @throws Exception
-//     */
-//    protected function parseConfigFile()
-//    {
-//        if (!is_readable($this->appConfigFile)) {
-//            throw new Exception("App configuration file \"$this->appConfigFile\" does not exist.");
-//        }
-//
-//        $config = Yaml::parse(file_get_contents($this->appConfigFile), true);
-//        if (!$config) {
-//            throw new Exception("App configuration file \"{$this->appConfigFile}\" is empty.");
-//        }
-//
-//        if (!(isset($config['environment']) && isset($config['role']) && isset($config['apps']))) {
-//            throw new Exception(
-//                "App configuration file \"{$this->appConfigFile}\" must define \"environment\", \"role\", and \"apps\"."
-//            );
-//        }
-//
-//        $this->environment = $config['environment'];
-//        $this->role = $config['role'];
-//        $this->apps = $config['apps'];
-//    }
-
-    /**
-     * @param AppSetupRepository $repo
-     * @param string             $appId
-     *
-     * @return AppConfig
-     */
-    protected function getMergedAppConfig(AppSetupRepository $repo, $appId)
-    {
-        $app = $this->getApp($appId);
-
-        // Merge appConfig on top of repo config to allow for local overrides, but unset known 
-        // conflicting keys.
-        unset($app['repo_url']);
-        $config = array_merge($repo->getConfig(), $app);
-        return new AppConfig($config);
-    }
-
-    /**
-     * @param string $appId
-     *
-     * @return AppSetupRepository
-     * @throws Exception
-     */
-    protected function getRepo($appId)
-    {
-        $app = $this->getApp($appId);
-        if (empty($app['repo_url'])) {
-            throw new Exception("App \"$appId\" must define repo_url in ~/.devops/app-setup.yaml");
-        }
-
-        $repoUrl = $app['repo_url'];
-        $environment = $this->environment;
-        $role = $this->role;
-
-        $repo = Repository::createFromRemote($repoUrl);
-        return new AppSetupRepository($repo, $environment, $role, $this->config);
-    }
+    protected $applicationConfig;
 
     /**
      * @param InputInterface $input
      *
-     * @return array
-     * @throws Exception if --app or --all not given and there is more than one app specified in ~/.devops/app-setup.yaml
+     * @return ApplicationConfig[]
+     * @throws Exception\RuntimeException if --app not given and there is more than one app specified in configuration
      */
-    protected function getAppIds(InputInterface $input)
+    protected function getApplications(InputInterface $input)
     {
         if ($input->hasOption('all') && $input->getOption('all')) {
-            $appIds = array_keys($this->apps);
-        } else {
-            $appId = $this->getAppId($input);
-            $appIds = [$appId];
+            return $this->applicationConfig;
         }
-        return $appIds;
-    }
 
-    /**
-     * @param InputInterface $input
-     *
-     * @return string
-     * @throws Exception if --app not given and there is more than one app specified in ~/.devops/app-setup.yaml
-     */
-    protected function getAppId(InputInterface $input)
-    {
         if ($input->hasOption('app') && $input->getOption('app')) {
-            $appId = $this->getAppIds($input)[0];
-        } else {
-            if (count($this->apps) == 1) {
-                $keys = array_keys($this->apps);
-                $appId = reset($keys);
-            } else {
-                $message
-                    = "Must specify --app since there is more than one app specified in \"{$this->appConfigFile}\".\nConfigured applications:\n";
-                foreach ($this->apps as $appCode => $app) {
-                    $message .= "$appCode\n";
-                }
-                throw new Exception($message);
+            $invalidApplicationCodes = array_diff($input->getOption('app'), array_keys($this->applicationConfig));
+            if ($invalidApplicationCodes) {
+                throw new Exception\DomainException(
+                    'Invalid application code(s) passed: ' . implode(', ', $invalidApplicationCodes)
+                );
             }
+
+            return array_intersect_key($this->applicationConfig, array_flip($input->getOption('app')));
         }
-        return $appId;
+
+        // Special case if app not specified and only one app exists, return that app
+        if (count($this->applicationConfig) == 1) {
+            return $this->applicationConfig;
+        }
+
+        $message
+            = "Must specify --app since there is more than one app specified in configuration.\n\nConfigured applications:\n";
+        foreach ($this->applicationConfig as $appCode => $app) {
+            $message .= "$appCode\n";
+        }
+        throw new Exception\RuntimeException($message);
     }
 
     /**
-     * @param string $appId
-     *
-     * @return array
-     * @throws Exception
+     * @param array $applicationConfig
      */
-    protected function getApp($appId)
+    public function setApplicationConfig(array $applicationConfig)
     {
-        if (!isset($this->apps[$appId])) {
-            throw new Exception("App config not found for app \"$appId\" in \"{$this->appConfigFile}\".");
+        $this->applicationConfig = [];
+        foreach ($applicationConfig as $code => $application) {
+            $this->applicationConfig[$code] = new ApplicationConfig($application);
         }
-
-        $app = $this->apps[$appId];
-        if (empty($app['repo_url'])) {
-            throw new Exception(
-                "App config at \"{$this->appConfigFile}\" for app \"$appId\" must have \"repo_url\" defined."
-            );
-        }
-        return $app;
-    }
-
-    /**
-     * @param AppConfig $config
-     *
-     * @return DatabaseAdapter
-     */
-    protected function getDatabaseAdapter(AppConfig $config)
-    {
-        $host = $config->getMySqlHost();
-        $port = $config->getMySqlPort();
-        $user = $config->getMySqlUser();
-        $password = $config->getMySqlPassword();
-        $options = [];
-
-        if ($config->getMySqlSslCa()) {
-            $options[PDO::MYSQL_ATTR_SSL_CA] = $config->getMySqlSslCa();
-        }
-
-        if (!is_null($config->getMySqlSslVerifyPeer())) {
-            $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = $config->getMySqlSslVerifyPeer();
-        }
-
-        $pdo = new PDO("mysql:host=$host;port=$port;charset=UTF8;", $user, $password, $options);
-        return new DatabaseAdapter($pdo);
-    }
-
-    /**
-     * @param string             $format
-     * @param AppConfig          $config
-     * @param ShellCommandHelper $shellCommandHelper
-     * @param LoggerInterface    $logger
-     *
-     * @return MydumperDatabaseAdapter|MysqldumpDatabaseAdapter|MysqlTabDelimitedDatabaseAdapter
-     */
-    protected function getImportExportDatabaseAdapter(
-        $format,
-        AppConfig $config,
-        ShellCommandHelper $shellCommandHelper,
-        LoggerInterface $logger
-    ) {
-        $databaseConnectionConfig = null;
-        if ($config->getMySqlUser() && $config->getMySqlPassword()) {
-            $databaseConnectionConfig = new DatabaseConfig(
-                $config->getMySqlUser(),
-                $config->getMySqlPassword(),
-                $config->getMySqlHost(),
-                $config->getMySqlPort()
-            );
-        }
-        switch ($format) {
-            case 'mydumper':
-                $databaseAdapter = new MydumperDatabaseAdapter($databaseConnectionConfig, $shellCommandHelper, $logger);
-                break;
-
-            case 'sql':
-                $databaseAdapter = new MysqldumpDatabaseAdapter(
-                    $databaseConnectionConfig, $shellCommandHelper, $logger
-                );
-                break;
-
-            case 'tab':
-                $databaseAdapter = new MysqlTabDelimitedDatabaseAdapter(
-                    $databaseConnectionConfig,
-                    $shellCommandHelper,
-                    $logger
-                );
-                break;
-
-            default:
-                throw new DomainException(
-                    sprintf(
-                        'Invalid format "%s" specified.',
-                        $format
-                    )
-                );
-        }
-        return $databaseAdapter;
-    }
-
-    public function setApplicationOrchestrationConfig(array $config)
-    {
-        $this->config = $config;
     }
 }

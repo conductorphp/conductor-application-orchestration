@@ -20,7 +20,7 @@ The deploy command is not yet built, but will likely have this signature:
 app:deploy [options] [--] <build-id> [<tag>]
 ```
 
-If you have multiple apps specified in ~/.devops/app-setup.yaml, you will also need to specify which 
+If you have multiple apps specified in configuration, you will also need to specify which 
 application to build/deploy with the `--app` argument.
 
 To run a build in your current working directory, do not specify a build-id or working-directory. You must

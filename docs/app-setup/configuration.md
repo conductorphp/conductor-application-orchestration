@@ -2,7 +2,7 @@ App Setup Configuration
 =======================
 
 In order to use the app setup commands, you must first create a file named 
-`~/.devops/app-setup.yaml` with the following format:
+`configuration` with the following format:
 
 ```yaml
 

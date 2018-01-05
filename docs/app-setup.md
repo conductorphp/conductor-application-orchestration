@@ -6,7 +6,7 @@ and others.
 
 Initial setup
 -------------
-In order to use these commands, you must first create a file named ~/.devops/app-setup.yaml
+In order to use these commands, you must first create a file named configuration
 in the following format:
 
 ```yaml
@@ -63,7 +63,7 @@ devops app:install
 
 If you have multiple applications on one server, you will be prompted to specify which app or choose to run this for all
 applications. You can do so with the `--app myap` flag or the `--all` flag. The app name here is the same app name used
-in `~/.devops/app-setup.yaml`.
+in `configuration`.
 
 ```bash
 # Install the "myapp" app

@@ -1,7 +1,9 @@
 <?php
 
+namespace DevopsToolAppOrchestration;
+
 return [
     'initializers' => [
-        \DevopsToolAppOrchestration\Command\ApplicationOrchestrationConfigAwareInitializer::class,
-    ]
+        Command\ApplicationConfigAwareInitializer::class,
+    ],
 ];

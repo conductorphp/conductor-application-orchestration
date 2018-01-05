@@ -5,7 +5,7 @@ return [
 //        \DevopsToolAppOrchestration\Command\AppBuildCommand::class,
         \DevopsToolAppOrchestration\Command\AppConfigGetCommand::class,
         \DevopsToolAppOrchestration\Command\AppConfigListCommand::class,
-//        \DevopsToolAppOrchestration\Command\AppDestroyCommand::class,
+        \DevopsToolAppOrchestration\Command\AppDestroyCommand::class,
 //        \DevopsToolAppOrchestration\Command\AppInstallCommand::class,
         \DevopsToolAppOrchestration\Command\AppListCommand::class,
 //        \DevopsToolAppOrchestration\Command\AppMaintenanceCommand::class,
