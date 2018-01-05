@@ -5,9 +5,10 @@
 
 namespace DevopsToolAppOrchestration\Command;
 
-use DevopsToolAppOrchestration\AppDestroy;
-use DevopsToolCore\MonologConsoleHandler;
-use Monolog\Logger;
+use DevopsToolAppOrchestration\ApplicationDestroyer;
+use DevopsToolCore\MonologConsoleHandlerAwareTrait;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Symfony\Component\Console\Helper\QuestionHelper;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -17,6 +18,31 @@ use Symfony\Component\Console\Question\ConfirmationQuestion;
 
 class AppDestroyCommand extends AbstractCommand
 {
+    use MonologConsoleHandlerAwareTrait;
+
+    /**
+     * @var ApplicationDestroyer
+     */
+    private $applicationDestroyer;
+    /**
+     * @var LoggerInterface
+     */
+    private $logger;
+
+
+    public function __construct(
+        ApplicationDestroyer $applicationDestroyer,
+        LoggerInterface $logger = null,
+        $name = null
+    ) {
+        $this->applicationDestroyer = $applicationDestroyer;
+        if (is_null($logger)) {
+            $logger = new NullLogger();
+        }
+        $this->logger = $logger;
+        parent::__construct($name);
+    }
+
     protected function configure()
     {
         $this->setName('app:destroy')
@@ -25,10 +51,10 @@ class AppDestroyCommand extends AbstractCommand
             ->addOption(
                 'app',
                 null,
-                InputOption::VALUE_OPTIONAL,
-                'App id if you want to pull repo_url and environment from ~/.devops/app-setup.yaml'
+                InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY,
+                'Application code if you want to pull repo_url and environment from configuration'
             )
-            ->addOption('all', null, InputOption::VALUE_NONE, 'Refresh assets for all apps in ~/.devops/app-setup.yaml')
+            ->addOption('all', null, InputOption::VALUE_NONE, 'Destroy all apps in configuration')
             ->addOption(
                 'branch',
                 null,
@@ -40,61 +66,33 @@ class AppDestroyCommand extends AbstractCommand
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        // outputs multiple lines to the console (adding "\n" at the end of each line)
-        $output->writeln(
-            [
-                'App: Destroy',
-                '============',
-                '',
-            ]
-        );
+        $this->injectOutputIntoLogger($output, $this->logger);
+        $this->applicationDestroyer->setLogger($this->logger);
+        $applications = $this->getApplications($input);
 
-        $logger = new Logger('app:destroy');
-        $logger->pushHandler(new MonologConsoleHandler($output));
-        $this->parseConfigFile();
-
-        $appIds = $this->getAppIds($input);
-
-        foreach ($appIds as $appId) {
-            $repo = $this->getRepo($appId);
-            $config = $this->getMergedAppConfig($repo, $appId);
-            $branch = $input->getOption('branch') ? $input->getOption('branch') : $config->getDefaultBranch();
-            $appName = $config->getAppName();
-
-            $destroyBranchOnly = !empty($branch);
-            $destroyDescription = ($destroyBranchOnly ? "branch \"$branch\" of " : '') . "application \"$appName\"";
-            if (!$input->getOption('force')) {
-                /** @var QuestionHelper $helper */
-                $helper = $this->getHelper('question');
-                $question = new ConfirmationQuestion(
-                    "Are you sure you want to destroy $destroyDescription? [y/N] ",
-                    false
-                );
-
-                if (!$helper->ask($input, $output, $question)) {
-                    return 0;
-                }
-            }
-
-            $databaseAdapter = null;
-            $databases = array_keys($config->getDatabases());
-            if ($databases) {
-                $databaseAdapter = $this->getDatabaseAdapter($config);
-            }
-            $appDestroy = new AppDestroy(
-                $repo,
-                $config->getAppRoot(),
-                $config->getFileLayout(),
-                $branch,
-                $databases,
-                $databaseAdapter,
-                null,
-                $logger
+        $branch = $input->getOption('branch');
+        if (!$input->getOption('force')) {
+            /** @var QuestionHelper $helper */
+            $helper = $this->getHelper('question');
+            $question = new ConfirmationQuestion(
+                sprintf(
+                    '<question>Are you sure you want to destroy application instances %s%s? [y/N]</question>',
+                    '"' . implode('", "', array_keys($applications)) . '"',
+                    ($branch ? " ($branch branch only)" : '')
+                ),
+                false
             );
 
-            $output->writeln("Destroying $destroyDescription ...");
-            $appDestroy->destroy($destroyBranchOnly);
-            $output->writeln('<info>' . ucfirst($destroyDescription) . ' destroyed!</info>');
+            if (!$helper->ask($input, $output, $question)) {
+                return 0;
+            }
+        }
+
+        foreach ($applications as $code => $application) {
+            $branchDescription = ($branch ? " ($branch branch only)" : '');
+            $this->logger->info("Destroying application instance $code$branchDescription...");
+            $this->applicationDestroyer->destroy($application, $branch);
+            $this->logger->info("Application instance $code$branchDescription destroyed.");
         }
         return 0;
     }
