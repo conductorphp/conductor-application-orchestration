@@ -23,7 +23,7 @@ abstract class AbstractCommand extends Command implements ApplicationConfigAware
      * @return ApplicationConfig[]
      * @throws Exception\RuntimeException if --app not given and there is more than one app specified in configuration
      */
-    protected function getApplications(InputInterface $input)
+    protected function getApplications(InputInterface $input): array
     {
         if ($input->hasOption('all') && $input->getOption('all')) {
             return $this->applicationConfig;
@@ -56,7 +56,7 @@ abstract class AbstractCommand extends Command implements ApplicationConfigAware
     /**
      * @param array $applicationConfig
      */
-    public function setApplicationConfig(array $applicationConfig)
+    public function setApplicationConfig(array $applicationConfig): void
     {
         $this->applicationConfig = [];
         foreach ($applicationConfig as $code => $application) {

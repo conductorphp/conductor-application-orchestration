@@ -6,7 +6,7 @@ class FileLayout implements FileLayoutAwareInterface
 {
     use FileLayoutAwareTrait;
 
-    public function __construct($appRoot, $fileLayout, $relativeDocumentRoot, $branch)
+    public function __construct(string $appRoot, string $fileLayout, string $relativeDocumentRoot, ?string $branch)
     {
         $this->appRoot = $appRoot;
         $this->fileLayout = $fileLayout;

@@ -32,8 +32,8 @@ class AppDestroyCommand extends AbstractCommand
 
     public function __construct(
         ApplicationDestroyer $applicationDestroyer,
-        LoggerInterface $logger = null,
-        $name = null
+        ?LoggerInterface $logger,
+        ?string $name
     ) {
         $this->applicationDestroyer = $applicationDestroyer;
         if (is_null($logger)) {

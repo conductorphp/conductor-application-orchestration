@@ -38,7 +38,12 @@ class ApplicationConfig
         $this->config = $config;
     }
 
-    public function getCodePath($branch = null)
+    /**
+     * @param string|null $branch
+     *
+     * @return string
+     */
+    public function getCodePath(?string $branch): string
     {
         if ($branch) {
             $branch = $this->sanitizeBranchForFilepath($branch);
@@ -57,9 +62,16 @@ class ApplicationConfig
         }
     }
 
-    public function getLocalPath($branch = null)
+    /**
+     * @param string|null $branch
+     *
+     * @return string
+     */
+    public function getLocalPath(?string $branch): string
     {
-        $branch = $this->sanitizeBranchForFilepath($branch);
+        if ($branch) {
+            $branch = $this->sanitizeBranchForFilepath($branch);
+        }
         $appRoot = $this->getAppRoot();
         switch ($this->getFileLayout()) {
             case FileLayoutAwareInterface::FILE_LAYOUT_BLUE_GREEN:
@@ -74,7 +86,10 @@ class ApplicationConfig
         }
     }
 
-    public function getSharedPath()
+    /**
+     * @return string
+     */
+    public function getSharedPath(): string
     {
         $appRoot = $this->getAppRoot();
         switch ($this->getFileLayout()) {
@@ -93,7 +108,7 @@ class ApplicationConfig
     /**
      * @return array
      */
-    public function getArrayCopy()
+    public function getArrayCopy(): array
     {
         return $this->config;
     }
@@ -101,7 +116,7 @@ class ApplicationConfig
     /**
      * @return string
      */
-    public function getAppRoot()
+    public function getAppRoot(): string
     {
         return $this->config['app_root'];
     }
@@ -109,7 +124,7 @@ class ApplicationConfig
     /**
      * @return string
      */
-    public function getAppName()
+    public function getAppName(): string
     {
         return $this->config['app_name'];
     }
@@ -117,7 +132,7 @@ class ApplicationConfig
     /**
      * @return string|null
      */
-    public function getRelativeDocumentRoot()
+    public function getRelativeDocumentRoot(): ?string
     {
         return isset($this->config['relative_document_root']) ? $this->config['relative_document_root'] : null;
     }
@@ -125,7 +140,7 @@ class ApplicationConfig
     /**
      * @return string
      */
-    public function getPlatform()
+    public function getPlatform(): string
     {
         return $this->config['platform'];
     }
@@ -133,7 +148,7 @@ class ApplicationConfig
     /**
      * @return string
      */
-    public function getDefaultDatabaseAdapter()
+    public function getDefaultDatabaseAdapter(): string
     {
         return isset($this->config['default_database_adapter']) ? $this->config['default_database_adapter'] : 'default';
     }
@@ -141,7 +156,7 @@ class ApplicationConfig
     /**
      * @return string
      */
-    public function getDatabaseSnapshotFormat()
+    public function getDatabaseSnapshotFormat(): string
     {
         return $this->config['database_snapshot_format'];
     }
@@ -149,7 +164,7 @@ class ApplicationConfig
     /**
      * @return string
      */
-    public function getMaintenanceStrategy()
+    public function getMaintenanceStrategy(): string
     {
         return $this->config['maintenance_strategy'];
     }
@@ -157,7 +172,7 @@ class ApplicationConfig
     /**
      * @return string
      */
-    public function getDefaultFileMode()
+    public function getDefaultFileMode(): string
     {
         return $this->config['default_file_mode'];
     }
@@ -165,7 +180,7 @@ class ApplicationConfig
     /**
      * @return string
      */
-    public function getDefaultDirMode()
+    public function getDefaultDirMode(): string
     {
         return $this->config['default_dir_mode'];
     }
@@ -173,7 +188,7 @@ class ApplicationConfig
     /**
      * @return string
      */
-    public function getFileLayout()
+    public function getFileLayout(): string
     {
         return $this->config['file_layout'];
     }
@@ -181,7 +196,7 @@ class ApplicationConfig
     /**
      * @return string
      */
-    public function getRepoUrl()
+    public function getRepoUrl(): string
     {
         return $this->config['repo_url'];
     }
@@ -189,7 +204,7 @@ class ApplicationConfig
     /**
      * @return string
      */
-    public function getDefaultBranch()
+    public function getDefaultBranch(): string
     {
         return $this->config['default_branch'];
     }
@@ -197,7 +212,7 @@ class ApplicationConfig
     /**
      * @return string
      */
-    public function getDefaultSnapshotName()
+    public function getDefaultSnapshotName(): string
     {
         return $this->config['default_snapshot_name'];
     }
@@ -205,7 +220,7 @@ class ApplicationConfig
     /**
      * @return string
      */
-    public function getDefaultFilesystem()
+    public function getDefaultFilesystem(): string
     {
         return $this->config['default_filesystem'];
     }
@@ -213,7 +228,7 @@ class ApplicationConfig
     /**
      * @return string
      */
-    public function getRepoRevisionType()
+    public function getRepoRevisionType(): string
     {
         return $this->config['repo_revision_type'];
     }
@@ -224,7 +239,7 @@ class ApplicationConfig
      * @return FilesystemConfig
      * @throws Exception\DomainException if filesystem doesn't exist in application configuration
      */
-    public function getFilesystemConfig($filesystemName)
+    public function getFilesystemConfig($filesystemName): FilesystemConfig
     {
         if (empty($this->config['file_systems'][$filesystemName])) {
             throw new Exception\DomainException(
@@ -238,7 +253,7 @@ class ApplicationConfig
     /**
      * @return string|null
      */
-    public function getWorkingDir()
+    public function getWorkingDir(): ?string
     {
         return !empty($this->config['working_dir']) ? $this->config['working_dir'] : null;
     }
@@ -246,7 +261,7 @@ class ApplicationConfig
     /**
      * @return array
      */
-    public function getTemplateVars()
+    public function getTemplateVars(): array
     {
         return !empty($this->config['template_vars']) ? $this->config['template_vars'] : [];
     }
@@ -254,7 +269,7 @@ class ApplicationConfig
     /**
      * @return array
      */
-    public function getFiles()
+    public function getFiles(): array
     {
         return !empty($this->config['files']) ? $this->config['files'] : [];
     }
@@ -262,7 +277,7 @@ class ApplicationConfig
     /**
      * @return array
      */
-    public function getAssets()
+    public function getAssets(): array
     {
         return !empty($this->config['assets']) ? $this->config['assets'] : [];
     }
@@ -270,7 +285,7 @@ class ApplicationConfig
     /**
      * @return array
      */
-    public function getAssetGroups()
+    public function getAssetGroups(): array
     {
         return !empty($this->config['asset_groups']) ? $this->config['asset_groups'] : [];
     }
@@ -278,7 +293,7 @@ class ApplicationConfig
     /**
      * @return string|null
      */
-    public function getMySqlHost()
+    public function getMySqlHost(): ?string
     {
         return !empty($this->config['mysql_host']) ? $this->config['mysql_host'] : null;
     }
@@ -286,7 +301,7 @@ class ApplicationConfig
     /**
      * @return int|null
      */
-    public function getMySqlPort()
+    public function getMySqlPort(): ?int
     {
         return !empty($this->config['mysql_port']) ? (int)$this->config['mysql_port'] : null;
     }
@@ -294,7 +309,7 @@ class ApplicationConfig
     /**
      * @return string|null
      */
-    public function getMySqlUser()
+    public function getMySqlUser(): ?string
     {
         return !empty($this->config['mysql_user']) ? $this->config['mysql_user'] : null;
     }
@@ -302,7 +317,7 @@ class ApplicationConfig
     /**
      * @return string|null
      */
-    public function getMySqlPassword()
+    public function getMySqlPassword(): ?string
     {
         return !empty($this->config['mysql_password']) ? $this->config['mysql_password'] : null;
     }
@@ -310,7 +325,7 @@ class ApplicationConfig
     /**
      * @return string|null
      */
-    public function getMySqlSslCa()
+    public function getMySqlSslCa(): ?string
     {
         return !empty($this->config['mysql_ssl_ca']) ? $this->config['mysql_ssl_ca'] : null;
     }
@@ -318,7 +333,7 @@ class ApplicationConfig
     /**
      * @return bool|null
      */
-    public function getMySqlSslVerifyPeer()
+    public function getMySqlSslVerifyPeer(): ?string
     {
         return isset($this->config['mysql_ssl_verify_peer']) ? $this->config['mysql_ssl_verify_peer'] : null;
     }
@@ -326,7 +341,7 @@ class ApplicationConfig
     /**
      * @return array
      */
-    public function getDatabases()
+    public function getDatabases(): array
     {
         return !empty($this->config['databases']) ? $this->config['databases'] : [];
     }
@@ -334,7 +349,7 @@ class ApplicationConfig
     /**
      * @return array
      */
-    public function getDatabaseTableGroups()
+    public function getDatabaseTableGroups(): array
     {
         return !empty($this->config['database_table_groups']) ? $this->config['database_table_groups'] : [];
     }
@@ -342,7 +357,7 @@ class ApplicationConfig
     /**
      * @return array
      */
-    public function getPostInstallScripts()
+    public function getPostInstallScripts(): array
     {
         return !empty($this->config['post_install_scripts']) ? $this->config['post_install_scripts'] : [];
     }
@@ -350,7 +365,7 @@ class ApplicationConfig
     /**
      * @return array
      */
-    public function getServers()
+    public function getServers(): array
     {
         return !empty($this->config['servers']) ? $this->config['servers'] : [];
     }
@@ -358,7 +373,7 @@ class ApplicationConfig
     /**
      * @return array
      */
-    public function getSshDefaults()
+    public function getSshDefaults(): array
     {
         return !empty($this->config['ssh_defaults']) ? $this->config['ssh_defaults'] : [];
     }
@@ -366,7 +381,7 @@ class ApplicationConfig
     /**
      * @return array|mixed
      */
-    public function getBuildPlans()
+    public function getBuildPlans(): array
     {
         return !empty($this->config['build_plans']) ? $this->config['build_plans'] : [];
     }
@@ -376,7 +391,7 @@ class ApplicationConfig
      *
      * @return string
      */
-    private function sanitizeBranchForFilepath($branch)
+    private function sanitizeBranchForFilepath(string $branch): string
     {
         return strtolower(preg_replace('/[^a-z0-9\.-]/i', '-', $branch));
     }
@@ -387,7 +402,7 @@ class ApplicationConfig
      *
      * @return array
      */
-    private function filter(array $config)
+    private function filter(array $config): array
     {
         $filteredConfig = $config;
         if (!empty($config['app_root'])) {
@@ -422,7 +437,7 @@ class ApplicationConfig
      * @throws Exception\RuntimeException
      * @throws Exception\DomainException
      */
-    private function validate(array $config)
+    private function validate(array $config): void
     {
         $required = [
             'app_root',

@@ -26,59 +26,56 @@ interface FileLayoutAwareInterface
     /**
      * @return string
      */
-    public function getAppRoot();
+    public function getAppRoot(): string;
 
     /**
      * @param boolean $userCurrentRelease
      *
      * @return string
      */
-    public function getDocumentRoot($useCurrentRelease = false);
+    public function getDocumentRoot(bool $useCurrentRelease = false): string;
 
     /**
      * @return string
      */
-    public function getFileLayout();
+    public function getFileLayout(): string;
 
     /**
      * @return string
      */
-    public function getBranch();
+    public function getBranch(): string;
 
     /**
      * @param string $path
      *
-     * @return $this
      */
-    public function setCodePath($path);
+    public function setCodePath(string $path): void;
 
     /**
      * @return string
      */
-    public function getCodePath();
+    public function getCodePath(): string;
 
     /**
      * @param string $path
      *
-     * @return $this
      */
-    public function setLocalPath($path);
+    public function setLocalPath(string $path): void;
 
     /**
      * @return string
      */
-    public function getLocalPath();
+    public function getLocalPath(): string;
 
     /**
      * @param string $path
      *
-     * @return $this
      */
-    public function setSharedPath($path);
+    public function setSharedPath(string $path): void;
 
     /**
      * @return string
      */
-    public function getSharedPath();
+    public function getSharedPath(): string;
 
 }

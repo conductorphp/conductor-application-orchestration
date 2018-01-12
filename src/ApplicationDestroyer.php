@@ -29,7 +29,7 @@ class ApplicationDestroyer
 
     public function __construct(
         DatabaseAdapterManager $databaseAdapterManager,
-        LoggerInterface $logger = null
+        ?LoggerInterface $logger
     ) {
         $this->databaseAdapterManager = $databaseAdapterManager;
         if (is_null($logger)) {
@@ -43,7 +43,7 @@ class ApplicationDestroyer
      *
      * @return void
      */
-    public function setLogger(LoggerInterface $logger)
+    public function setLogger(LoggerInterface $logger): void
     {
         $this->logger = $logger;
     }
@@ -51,7 +51,7 @@ class ApplicationDestroyer
     /**
      * @throws Exception
      */
-    public function destroy(ApplicationConfig $application, $branch = null)
+    public function destroy(ApplicationConfig $application, ?string $branch): void
     {
         $codePath = $application->getCodePath($branch);
         $localPath = $application->getLocalPath($branch);
@@ -118,7 +118,7 @@ class ApplicationDestroyer
      *
      * @return string
      */
-    private function sanitizeDatabaseName($name)
+    private function sanitizeDatabaseName(string $name): string
     {
         return strtolower(preg_replace('/[^a-z0-9]/i', '_', $name));
     }
@@ -129,7 +129,7 @@ class ApplicationDestroyer
      * @param string $path
      * @return void
      */
-    private function removePath($path)
+    private function removePath(string $path): void
     {
         if (false !== strpos($path, '*')) {
             $paths = glob($path);

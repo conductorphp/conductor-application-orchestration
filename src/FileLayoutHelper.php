@@ -18,7 +18,7 @@ class FileLayoutHelper
      * @todo Make this more complete
      * @return bool
      */
-    public function isFileLayoutInstalled(FileLayoutAwareInterface $fileLayoutAware)
+    public function isFileLayoutInstalled(FileLayoutAwareInterface $fileLayoutAware): bool
     {
         $appRoot = $fileLayoutAware->getAppRoot();
         if (is_dir($appRoot)) {
@@ -33,9 +33,10 @@ class FileLayoutHelper
     }
 
     /**
+     * @todo Deprecate this method
      * @param FileLayoutAwareInterface $fileLayoutAware
      */
-    public function loadFileLayoutPaths(FileLayoutAwareInterface $fileLayoutAware)
+    public function loadFileLayoutPaths(FileLayoutAwareInterface $fileLayoutAware): void
     {
         $appRoot = $fileLayoutAware->getAppRoot();
         $fileLayout = $fileLayoutAware->getFileLayout();
@@ -75,7 +76,7 @@ class FileLayoutHelper
      *
      * @return string
      */
-    private function sanitizeBranchForFilepath($branch)
+    private function sanitizeBranchForFilepath(string $branch): string
     {
         return strtolower(preg_replace('/[^a-z0-9\.-]/i', '-', $branch));
     }
@@ -86,7 +87,7 @@ class FileLayoutHelper
      *
      * @return string
      */
-    public function resolvePathPrefix(FileLayoutAwareInterface $fileLayoutAware, $location)
+    public function resolvePathPrefix(FileLayoutAwareInterface $fileLayoutAware, string $location): string
     {
         $appRootLength = strlen($fileLayoutAware->getAppRoot());
         $pathPrefix = null;

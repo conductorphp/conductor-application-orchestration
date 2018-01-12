@@ -50,7 +50,7 @@ trait FileLayoutAwareTrait
     /**
      * @return string
      */
-    public function getAppRoot()
+    public function getAppRoot(): string
     {
         return $this->appRoot;
     }
@@ -58,7 +58,7 @@ trait FileLayoutAwareTrait
     /**
      * @return string
      */
-    public function getRelativeDocumentRoot()
+    public function getRelativeDocumentRoot(): string
     {
         return $this->relativeDocumentRoot;
     }
@@ -68,7 +68,7 @@ trait FileLayoutAwareTrait
      *
      * @return string
      */
-    public function getDocumentRoot($useCurrentRelease = false)
+    public function getDocumentRoot(bool $useCurrentRelease = false): string
     {
         if (FileLayoutAwareInterface::FILE_LAYOUT_BLUE_GREEN == $this->fileLayout && $useCurrentRelease) {
             $documentRoot = $this->appRoot . '/' . FileLayoutAwareInterface::PATH_CURRENT_RELEASE;
@@ -84,7 +84,7 @@ trait FileLayoutAwareTrait
     /**
      * @return string
      */
-    public function getFileLayout()
+    public function getFileLayout(): string
     {
         return $this->fileLayout;
     }
@@ -92,7 +92,7 @@ trait FileLayoutAwareTrait
     /**
      * @return string
      */
-    public function getBranch()
+    public function getBranch(): string
     {
         return $this->branch;
     }
@@ -100,18 +100,16 @@ trait FileLayoutAwareTrait
     /**
      * @param string $path
      *
-     * @return $this
      */
-    public function setCodePath($path)
+    public function setCodePath(string $path): void
     {
         $this->codePath = $path;
-        return $this;
     }
 
     /**
      * @return string
      */
-    public function getCodePath()
+    public function getCodePath(): string
     {
         return $this->codePath;
     }
@@ -119,18 +117,16 @@ trait FileLayoutAwareTrait
     /**
      * @param string $path
      *
-     * @return $this
      */
-    public function setLocalPath($path)
+    public function setLocalPath(string $path): void
     {
         $this->localPath = $path;
-        return $this;
     }
 
     /**
      * @return string
      */
-    public function getLocalPath()
+    public function getLocalPath(): string
     {
         return $this->localPath;
     }
@@ -138,18 +134,16 @@ trait FileLayoutAwareTrait
     /**
      * @param string $path
      *
-     * @return $this
      */
-    public function setSharedPath($path)
+    public function setSharedPath(string $path): void
     {
         $this->sharedPath = $path;
-        return $this;
     }
 
     /**
      * @return string
      */
-    public function getSharedPath()
+    public function getSharedPath(): string
     {
         return $this->sharedPath;
     }
