@@ -5,15 +5,10 @@
 
 namespace DevopsToolAppOrchestration\Command;
 
-use DevopsToolAppOrchestration\AppInstall;
-use DevopsToolAppOrchestration\AppRefreshAssets;
-use DevopsToolCore\Filesystem\Filesystem;
-use DevopsToolAppOrchestration\FilesystemFactory;
-use DevopsToolCore\Filesystem\FilesystemTransferFactory;
-use DevopsToolCore\MonologConsoleHandler;
-use DevopsToolCore\ShellCommandHelper;
-use League\Flysystem\Adapter\Local;
-use Monolog\Logger;
+use DevopsToolAppOrchestration\ApplicationAssetRefresher;
+use DevopsToolCore\MonologConsoleHandlerAwareTrait;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -21,6 +16,31 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class AppRefreshAssetsCommand extends AbstractCommand
 {
+    use MonologConsoleHandlerAwareTrait;
+
+    /**
+     * @var ApplicationAssetRefresher
+     */
+    private $applicationAssetRefresher;
+    /**
+     * @var LoggerInterface
+     */
+    private $logger;
+
+
+    public function __construct(
+        ApplicationAssetRefresher $applicationAssetRefresher,
+        ?LoggerInterface $logger,
+        ?string $name
+    ) {
+        $this->applicationAssetRefresher = $applicationAssetRefresher;
+        if (is_null($logger)) {
+            $logger = new NullLogger();
+        }
+        $this->logger = $logger;
+        parent::__construct($name);
+    }
+
     protected function configure()
     {
         $this->setName('app:refresh-assets')
@@ -32,95 +52,52 @@ class AppRefreshAssetsCommand extends AbstractCommand
                 'app',
                 null,
                 InputOption::VALUE_OPTIONAL,
-                'App id if you want to pull repo_url and environment from ~/.devops/app-setup.yaml'
+                'Application code if you want to pull repo_url and environment from configuration'
             )
-            ->addOption('all', null, InputOption::VALUE_NONE, 'Refresh assets for all apps in ~/.devops/app-setup.yaml')
-            ->addOption('branch', null, InputArgument::OPTIONAL, 'The branch to install assets into.')
-            ->addOption('filesystem', null, InputOption::VALUE_OPTIONAL, 'The filesystem to pull snapshot from.')
-            ->addOption('snapshot', null, InputArgument::OPTIONAL, 'The snapshot to pull assets from.')
+            ->addOption('all', null, InputOption::VALUE_NONE, 'Refresh assets for all apps in configuration')
+            ->addOption(
+                'filesystem',
+                null,
+                InputOption::VALUE_OPTIONAL,
+                'The filesystem to pull snapshot from. [Defaults to application default filesystem]'
+            )
+            ->addOption(
+                'snapshot',
+                null,
+                InputArgument::OPTIONAL,
+                'The snapshot to pull assets from.',
+                'production-scrubbed'
+            )
             ->addOption(
                 'delete',
                 null,
                 InputOption::VALUE_NONE,
                 'Delete local assets which are not present in snapshot.'
+            )
+            ->addOption(
+                'batch-size',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Batch size for asset sync.'
             );
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        // outputs multiple lines to the console (adding "\n" at the end of each line)
-        $output->writeln(
-            [
-                'App: Refresh Assets',
-                '============',
-                '',
-            ]
-        );
+        $this->injectOutputIntoLogger($output, $this->logger);
+        $this->applicationAssetRefresher->setLogger($this->logger);
+        $applications = $this->getApplications($input);
+        $syncConfig = [
+            'delete' => $input->getOption('delete'),
+            'batch_size' => $input->getOption('batch-size'),
+        ];
 
-        $logger = new Logger('app:refresh-assets');
-        $logger->pushHandler(new MonologConsoleHandler($output));
-        $shellCommandHelper = new ShellCommandHelper($logger);
-        $this->parseConfigFile();
-
-        $appIds = $this->getAppIds($input);
-
-        foreach ($appIds as $appId) {
-            $repo = $this->getRepo($appId);
-            $config = $this->getMergedAppConfig($repo, $appId);
-            $branch = $input->getOption('branch') ? $input->getOption('branch') : $config->getDefaultBranch();
-            $filesystem = $input->getOption('filesystem') ? $input->getOption('filesystem')
-                : $config->getDefaultFileSystem();
-            $snapshotName = $input->getOption('snapshot') ? $input->getOption('snapshot')
-                : $config->getDefaultSnapshotName();
-
-            $filesystemConfig = $config->getFilesystemConfig($filesystem);
-            $sourceFilesystem = FilesystemFactory::create(
-                $filesystemConfig->getType(),
-                $filesystemConfig->getTypeSpecificConfig(),
-                $filesystemConfig->getSnapshotRoot() . "/$snapshotName/assets"
-            );
-
-            $destinationFilesystem = new Filesystem(new Local($config->getAppRoot()));
-            $filesystemTransfer = FilesystemTransferFactory::create(
-                $sourceFilesystem,
-                $destinationFilesystem,
-                $shellCommandHelper,
-                $logger
-            );
-
-            $appRefreshAssets = new AppRefreshAssets(
-                $filesystemTransfer,
-                $config->getAppRoot(),
-                $config->getFileLayout(),
-                $branch,
-                $config->getAssets(),
-                $config->getDefaultDirMode(),
-                $input->getOption('delete'),
-                $logger
-            );
-
-            $appInstall = new AppInstall(
-                $repo,
-                $config->getAppRoot(),
-                $config->getFileLayout(),
-                $branch,
-                $config->getRepoUrl(),
-                $config->getDefaultDirMode(),
-                $config->getDefaultFileMode(),
-                $appRefreshAssets,
-                null,
-                null,
-                $config->getPostInstallScripts(),
-                null,
-                null,
-                $logger,
-                $shellCommandHelper
-            );
-
-            $appName = $config->getAppName();
-            $output->writeln("Refreshing application \"$appName\" assets...");
-            $appInstall->install(false, true, false, true, true);
-            $output->writeln("<info>Application \"$appName\" assets refreshed!</info>");
+        foreach ($applications as $code => $application) {
+            $this->logger->info("Refreshing application \"$code\" assets...");
+            $filesystem = $input->getOption('filesystem') ?? $application->getDefaultFilesystem();
+            $snapshot = $input->getOption('snapshot');
+            $this->applicationAssetRefresher->refreshAssets($application, $filesystem, $snapshot, $syncConfig);
+            $this->logger->info("<info>Application \"$code\" assets refreshed!</info>");
         }
         return 0;
     }
