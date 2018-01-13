@@ -12,7 +12,7 @@ return [
         AppListCommand::class,
 //        AppMaintenanceCommand::class,
         AppRefreshAssetsCommand::class,
-//        AppRefreshDatabasesCommand::class,
+        AppRefreshDatabasesCommand::class,
 //        AppSnapshotCommand::class,
     ],
 ];
