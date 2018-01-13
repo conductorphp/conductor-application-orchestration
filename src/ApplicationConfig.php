@@ -43,7 +43,7 @@ class ApplicationConfig
      *
      * @return string
      */
-    public function getCodePath(?string $branch): string
+    public function getCodePath(string $branch = null): string
     {
         if ($branch) {
             $branch = $this->sanitizeBranchForFilepath($branch);
@@ -67,7 +67,7 @@ class ApplicationConfig
      *
      * @return string
      */
-    public function getLocalPath(?string $branch): string
+    public function getLocalPath(string $branch = null): string
     {
         if ($branch) {
             $branch = $this->sanitizeBranchForFilepath($branch);
@@ -134,7 +134,7 @@ class ApplicationConfig
      */
     public function getRelativeDocumentRoot(): ?string
     {
-        return isset($this->config['relative_document_root']) ? $this->config['relative_document_root'] : null;
+        return $this->config['relative_document_root'] ?? '.';
     }
 
     /**
@@ -150,7 +150,15 @@ class ApplicationConfig
      */
     public function getDefaultDatabaseAdapter(): string
     {
-        return isset($this->config['default_database_adapter']) ? $this->config['default_database_adapter'] : 'default';
+        return $this->config['default_database_adapter'] ?? 'default';
+    }
+
+    /**
+     * @return string
+     */
+    public function getDefaultDatabaseImportExportAdapter(): string
+    {
+        return $this->config['default_database_importexport_adapter'] ?? null;
     }
 
     /**
@@ -432,6 +440,8 @@ class ApplicationConfig
     }
 
     /**
+     * @todo Validate by schema instead
+     *
      * @param array $config
      *
      * @throws Exception\RuntimeException
@@ -478,4 +488,6 @@ class ApplicationConfig
             throw new Exception\DomainException("Invalid file layout \"{$config['file_layout']}\".");
         }
     }
+
+
 }

@@ -30,8 +30,8 @@ class AppRefreshAssetsCommand extends AbstractCommand
 
     public function __construct(
         ApplicationAssetRefresher $applicationAssetRefresher,
-        ?LoggerInterface $logger,
-        ?string $name
+        LoggerInterface $logger = null,
+        string $name = null
     ) {
         $this->applicationAssetRefresher = $applicationAssetRefresher;
         if (is_null($logger)) {
@@ -46,7 +46,7 @@ class AppRefreshAssetsCommand extends AbstractCommand
         $this->setName('app:refresh-assets')
             ->setDescription('Refresh application assets.')
             ->setHelp(
-                "This command refreshes application assets based on configuration in a given application setup repo."
+                "This command refreshes application assets based on configuration."
             )
             ->addOption(
                 'app',

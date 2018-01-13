@@ -29,7 +29,7 @@ class ApplicationDestroyer
 
     public function __construct(
         DatabaseAdapterManager $databaseAdapterManager,
-        ?LoggerInterface $logger
+        LoggerInterface $logger = null
     ) {
         $this->databaseAdapterManager = $databaseAdapterManager;
         if (is_null($logger)) {
@@ -51,7 +51,7 @@ class ApplicationDestroyer
     /**
      * @throws Exception
      */
-    public function destroy(ApplicationConfig $application, ?string $branch): void
+    public function destroy(ApplicationConfig $application, string $branch = null): void
     {
         $codePath = $application->getCodePath($branch);
         $localPath = $application->getLocalPath($branch);
