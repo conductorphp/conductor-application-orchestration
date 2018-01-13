@@ -43,7 +43,7 @@ interface FileLayoutAwareInterface
     /**
      * @return string
      */
-    public function getBranch(): string;
+    public function getBranch(): ?string;
 
     /**
      * @param string $path

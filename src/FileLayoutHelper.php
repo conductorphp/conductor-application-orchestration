@@ -41,8 +41,8 @@ class FileLayoutHelper
         $appRoot = $fileLayoutAware->getAppRoot();
         $fileLayout = $fileLayoutAware->getFileLayout();
         $branch = $fileLayoutAware->getBranch();
-        if (!$appRoot || !$fileLayout || !$branch) {
-            throw new Exception('appRoot, fileLayout, and branch must be set in $fileLayoutAware.');
+        if (!$appRoot || !$fileLayout) {
+            throw new Exception('appRoot and fileLayout must be set in $fileLayoutAware.');
         }
 
         if ($branch) {

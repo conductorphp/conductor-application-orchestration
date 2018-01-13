@@ -33,7 +33,7 @@ class ApplicationAssetRefresher
     public function __construct(
         FileLayoutHelper $fileLayoutHelper,
         MountManager $mountManager,
-        ?LoggerInterface $logger
+        LoggerInterface $logger = null
     ) {
         $this->mountManager = $mountManager;
         if (is_null($logger)) {
@@ -73,6 +73,7 @@ class ApplicationAssetRefresher
             $application->getFileLayout(),
             $application->getRelativeDocumentRoot()
         );
+        $this->fileLayoutHelper->loadFileLayoutPaths($fileLayout);
         if (!$this->fileLayoutHelper->isFileLayoutInstalled($fileLayout)) {
             throw new Exception("App is not yet installed. Install first before refreshing assets.");
         }

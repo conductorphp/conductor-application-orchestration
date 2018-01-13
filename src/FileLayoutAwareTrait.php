@@ -90,9 +90,9 @@ trait FileLayoutAwareTrait
     }
 
     /**
-     * @return string
+     * @return string|null
      */
-    public function getBranch(): string
+    public function getBranch(): ?string
     {
         return $this->branch;
     }
