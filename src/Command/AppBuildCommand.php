@@ -37,7 +37,7 @@ class AppBuildCommand extends AbstractCommand
                 'app',
                 null,
                 InputOption::VALUE_REQUIRED,
-                'App id from ~/.devops/app-setup.yaml. Required if there is more than one app.'
+                'Application code from configuration. Required if there is more than one app.'
             )
             ->addOption(
                 'filesystem',
@@ -75,7 +75,7 @@ class AppBuildCommand extends AbstractCommand
         $shellCommandHelper = new ShellCommandHelper($logger);
         $this->parseConfigFile();
 
-        $appId = $this->getAppId($input);
+        $appId = $this->getAppCode($input);
         $repo = $this->getRepo($appId);
         $config = $this->getMergedAppConfig($repo, $appId);
         $plan = $input->getArgument('plan');

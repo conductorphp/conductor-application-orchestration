@@ -34,7 +34,7 @@ class AppMaintenanceCommand extends AbstractCommand
                 'app',
                 null,
                 InputOption::VALUE_OPTIONAL,
-                'App id if you want to pull repo_url and environment from ~/.devops/app-setup.yaml'
+                'Application code if you want to pull repo_url and environment from configuration'
             )
             ->addOption('repo', null, InputOption::VALUE_OPTIONAL, 'The url of the setup repo.')
             ->addOption('environment', null, InputOption::VALUE_OPTIONAL, 'The environment in which this server lives.')
@@ -60,7 +60,7 @@ class AppMaintenanceCommand extends AbstractCommand
 
         $this->parseConfigFile();
 
-        $appIds = $this->getAppIds($input);
+        $appIds = $this->getAppCodes($input);
         $action = $input->getArgument('action');
 
         foreach ($appIds as $appId) {

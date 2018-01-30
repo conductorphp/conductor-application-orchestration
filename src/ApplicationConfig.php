@@ -116,6 +116,22 @@ class ApplicationConfig
     /**
      * @return string
      */
+    public function getConfigRoot(): string
+    {
+        return $this->config['config_root'];
+    }
+
+    /**
+     * @return string
+     */
+    public function getCurrentEnvironment(): string
+    {
+        return $this->config['current_environment'];
+    }
+
+    /**
+     * @return string
+     */
     public function getAppRoot(): string
     {
         return $this->config['app_root'];

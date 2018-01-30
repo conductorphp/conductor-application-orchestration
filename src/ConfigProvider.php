@@ -67,6 +67,7 @@ class ConfigProvider
             }
             $applicationCode = $applicationDir->getBasename();
             $config = Yaml::parse(file_get_contents($applicationDir->getPathname() . '/config.yaml'));
+            $config['config_root'] = realpath($applicationDir->getPathname());
             $config['environments'] = [];
 
             $environmentIterator = new \DirectoryIterator($applicationDir->getPathname() . '/environments');

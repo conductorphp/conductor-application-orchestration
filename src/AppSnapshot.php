@@ -5,12 +5,12 @@
 
 namespace DevopsToolAppOrchestration;
 
-use DevopsToolCore\Database\DatabaseImportAdapterInterface;
+use DevopsToolCore\Database\DatabaseImportExportAdapterInterface;
 use DevopsToolCore\Filesystem\FilesystemTransferInterface;
 use DevopsToolCore\ShellCommandHelper;
 use Exception;
-use Monolog\Handler\NullHandler;
 use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 /**
  * Class App
@@ -34,7 +34,7 @@ class AppSnapshot implements FileLayoutAwareInterface
      */
     private $workingDir;
     /**
-     * @var DatabaseImportAdapterInterface
+     * @var DatabaseImportExportAdapterInterface
      */
     protected $databaseAdapter;
     /**
@@ -77,7 +77,7 @@ class AppSnapshot implements FileLayoutAwareInterface
      * @param                                           $appRoot
      * @param                                           $fileLayout
      * @param                                           $branch
-     * @param DatabaseImportAdapterInterface|null       $databaseAdapter
+     * @param DatabaseImportExportAdapterInterface|null $databaseAdapter
      * @param FilesystemTransferInterface|null          $databaseFilesystemTransfer
      * @param array|null                                $databases
      * @param array|null                                $databaseTableGroups
@@ -94,7 +94,7 @@ class AppSnapshot implements FileLayoutAwareInterface
         $appRoot,
         $fileLayout,
         $branch,
-        DatabaseImportAdapterInterface $databaseAdapter = null,
+        DatabaseImportExportAdapterInterface $databaseAdapter = null,
         FilesystemTransferInterface $databaseFilesystemTransfer = null,
         array $databases = null,
         array $databaseTableGroups = null,
@@ -119,7 +119,7 @@ class AppSnapshot implements FileLayoutAwareInterface
         $this->assetGroups = $assetGroups;
         $this->delete = $delete;
         if (is_null($logger)) {
-            $logger = new NullHandler();
+            $logger = new NullLogger();
         }
         $this->logger = $logger;
         if (is_null($fileLayoutHelper)) {

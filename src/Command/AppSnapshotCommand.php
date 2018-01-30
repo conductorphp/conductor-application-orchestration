@@ -11,7 +11,7 @@ use DevopsToolAppOrchestration\FilesystemFactory;
 use DevopsToolCore\Filesystem\FilesystemTransferFactory;
 use DevopsToolCore\MonologConsoleHandler;
 use DevopsToolCore\ShellCommandHelper;
-use DevopsToolCore\Database\DatabaseImportAdapterInterface;
+use DevopsToolCore\Database\DatabaseImportExportAdapterInterface;
 use League\Flysystem\Adapter\Local;
 use Monolog\Logger;
 use Symfony\Component\Console\Input\InputArgument;
@@ -33,9 +33,9 @@ class AppSnapshotCommand extends AbstractCommand
                 'app',
                 null,
                 InputOption::VALUE_OPTIONAL,
-                'App id if you want to pull repo_url and environment from ~/.devops/app-setup.yaml'
+                'Application code if you want to pull repo_url and environment from configuration'
             )
-            ->addOption('all', null, InputOption::VALUE_NONE, 'Refresh assets for all apps in ~/.devops/app-setup.yaml')
+            ->addOption('all', null, InputOption::VALUE_NONE, 'Refresh assets for all apps in configuration')
             ->addOption('branch', null, InputArgument::OPTIONAL, 'The branch to install database into.')
             ->addOption('filesystem', null, InputOption::VALUE_OPTIONAL, 'The filesystem to pull snapshot from.')
             ->addOption(
@@ -82,7 +82,7 @@ class AppSnapshotCommand extends AbstractCommand
 
         $this->parseConfigFile();
 
-        $appIds = $this->getAppIds($input);
+        $appIds = $this->getAppCodes($input);
         $includeDatabases = !$input->getOption('no-databases');
         $includeAssets = !$input->getOption('no-assets');
         $scrub = !$input->getOption('no-scrub');

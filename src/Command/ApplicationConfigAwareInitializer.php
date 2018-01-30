@@ -35,6 +35,7 @@ class ApplicationConfigAwareInitializer implements InitializerInterface
                     $application = array_replace_recursive($application, $environmentConfig);
                 }
                 unset($application['environments']);
+                $application['current_environment'] = $environment;
                 $applicationConfig[$applicationCode] = array_replace_recursive($config['application_orchestration']['defaults'], $application);
             }
 

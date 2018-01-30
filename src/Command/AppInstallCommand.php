@@ -13,7 +13,7 @@ use DevopsToolAppOrchestration\FilesystemFactory;
 use DevopsToolCore\Filesystem\FilesystemTransferFactory;
 use DevopsToolCore\MonologConsoleHandler;
 use DevopsToolCore\ShellCommandHelper;
-use DevopsToolCore\Database\DatabaseImportAdapterInterface;
+use DevopsToolCore\Database\DatabaseImportExportAdapterInterface;
 use League\Flysystem\Adapter\Local;
 use Monolog\Logger;
 use Symfony\Component\Console\Input\InputInterface;
@@ -31,9 +31,9 @@ class AppInstallCommand extends AbstractCommand
                 'app',
                 null,
                 InputOption::VALUE_OPTIONAL,
-                'App id if you want to pull repo_url and environment from ~/.devops/app-setup.yaml'
+                'Application code if you want to pull repo_url and environment from configuration'
             )
-            ->addOption('all', null, InputOption::VALUE_NONE, 'Refresh assets for all apps in ~/.devops/app-setup.yaml')
+            ->addOption('all', null, InputOption::VALUE_NONE, 'Refresh assets for all apps in configuration')
             ->addOption('branch', null, InputOption::VALUE_OPTIONAL, 'The code branch to install.')
             ->addOption('filesystem', null, InputOption::VALUE_OPTIONAL, 'The filesystem to pull snapshot from.')
             ->addOption('snapshot', null, InputOption::VALUE_OPTIONAL, 'The snapshot to install from.')
@@ -77,7 +77,7 @@ class AppInstallCommand extends AbstractCommand
         $shellCommandHelper = new ShellCommandHelper($logger);
         $this->parseConfigFile();
 
-        $appIds = $this->getAppIds($input);
+        $appIds = $this->getAppCodes($input);
         $installCode = !$input->getOption('skeleton') && !$input->getOption('no-code');
         $installAssets = !$input->getOption('skeleton') && !$input->getOption('no-assets');
         $installDatabases = !$input->getOption('skeleton') && !$input->getOption('no-databases');
