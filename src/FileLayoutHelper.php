@@ -15,25 +15,39 @@ use Exception;
 class FileLayoutHelper
 {
     /**
-     * @todo Make this more complete
      * @return bool
      */
     public function isFileLayoutInstalled(FileLayoutAwareInterface $fileLayoutAware): bool
     {
         $appRoot = $fileLayoutAware->getAppRoot();
-        if (is_dir($appRoot)) {
-            $files = scandir($appRoot);
-            $ignoredFiles = ['.', '..', 'shared', 'projectsync'];
-            if (array_diff($files, $ignoredFiles)) {
-                return true;
-            }
+        if (!is_dir($appRoot)) {
+            return false;
         }
 
-        return false;
+        if (FileLayoutAwareInterface::FILE_LAYOUT_DEFAULT == $fileLayoutAware->getFileLayout()) {
+            return true;
+        }
+
+        $files = scandir($appRoot);
+        if (FileLayoutAwareInterface::FILE_LAYOUT_BRANCH == $fileLayoutAware->getFileLayout()) {
+            $expectedPaths = [
+                FileLayoutAwareInterface::PATH_BRANCHES,
+                FileLayoutAwareInterface::PATH_SHARED,
+            ];
+        } else { // FileLayoutAwareInterface::FILE_LAYOUT_BLUE_GREEN
+            $expectedPaths = [
+                FileLayoutAwareInterface::PATH_CURRENT_RELEASE,
+                FileLayoutAwareInterface::PATH_LOCAL,
+                FileLayoutAwareInterface::PATH_RELEASES,
+                FileLayoutAwareInterface::PATH_SHARED,
+            ];
+        }
+
+        return count(array_intersect($expectedPaths, $files)) == count($expectedPaths);
     }
 
     /**
-     * @todo Deprecate this method
+     * @todo Deprecate this method?
      * @param FileLayoutAwareInterface $fileLayoutAware
      */
     public function loadFileLayoutPaths(FileLayoutAwareInterface $fileLayoutAware): void
@@ -82,28 +96,28 @@ class FileLayoutHelper
     }
 
     /**
-     * @param FileLayoutAwareInterface $fileLayoutAware
+     * @param ApplicationConfig $application
      * @param string                   $location
      *
      * @return string
      */
-    public function resolvePathPrefix(FileLayoutAwareInterface $fileLayoutAware, string $location): string
+    public function resolvePathPrefix(ApplicationConfig $application, string $location): string
     {
-        $appRootLength = strlen($fileLayoutAware->getAppRoot());
+        $appRootLength = strlen($application->getAppRoot());
         $pathPrefix = null;
         switch ($location) {
             case FileLayoutAwareInterface::PATH_CODE:
-                if (FileLayoutAwareInterface::FILE_LAYOUT_BLUE_GREEN == $fileLayoutAware->getFileLayout()) {
+                if (FileLayoutAwareInterface::FILE_LAYOUT_BLUE_GREEN == $application->getFileLayout()) {
                     $pathPrefix = FileLayoutAwareInterface::PATH_CURRENT_RELEASE;
                 } else {
-                    $pathPrefix = ltrim(substr($fileLayoutAware->getCodePath(), $appRootLength + 1));
+                    $pathPrefix = ltrim(substr($application->getCodePath(), $appRootLength + 1));
                 }
                 break;
             case FileLayoutAwareInterface::PATH_LOCAL:
-                $pathPrefix = ltrim(substr($fileLayoutAware->getLocalPath(), $appRootLength + 1));
+                $pathPrefix = ltrim(substr($application->getLocalPath(), $appRootLength + 1));
                 break;
             case FileLayoutAwareInterface::PATH_SHARED:
-                $pathPrefix = ltrim(substr($fileLayoutAware->getSharedPath(), $appRootLength + 1));
+                $pathPrefix = ltrim(substr($application->getSharedPath(), $appRootLength + 1));
                 break;
             default:
                 throw new Exception(

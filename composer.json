@@ -12,7 +12,9 @@
     ],
     "require": {
         "php": "^7.1",
-        "robofirm/devops-tool-core": "^0.1.0"
+        "robofirm/devops-tool-core": "^0.1.0",
+        "cypresslab/gitelephant": "^1.1",
+        "twig/twig": "^2.0"
     },
     "suggest": {
         "robofirm/devops-tool-drupal-platform-support": "Adds support for the Drupal platform.",

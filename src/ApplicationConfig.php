@@ -122,6 +122,41 @@ class ApplicationConfig
     }
 
     /**
+     * @return array
+     */
+    public function getSourceFilePaths(): array
+    {
+        return $this->config['source_file_paths'] ?? [];
+    }
+
+    /**
+     * @param string $relativeFilename
+     *
+     * @return string
+     */
+    public function getSourceFile(string $relativeFilename): string
+    {
+        $filename = '';
+        if (!empty($this->config['source_file_paths']) && is_array($this->config['source_file_paths'])) {
+            foreach ($this->config['source_file_paths'] as $path) {
+                $filename = "$path/$relativeFilename";
+                if (file_exists("$path/$relativeFilename")) {
+                    $filename = "$path/$relativeFilename";
+                    break;
+                }
+            }
+        }
+
+        if (!$filename) {
+            throw new Exception\RuntimeException(
+                "Source file \"$relativeFilename\" not found in configuration."
+            );
+        }
+
+        return $filename;
+    }
+
+    /**
      * @return string
      */
     public function getCurrentEnvironment(): string
@@ -174,15 +209,7 @@ class ApplicationConfig
      */
     public function getDefaultDatabaseImportExportAdapter(): string
     {
-        return $this->config['default_database_importexport_adapter'] ?? null;
-    }
-
-    /**
-     * @return string
-     */
-    public function getDatabaseSnapshotFormat(): string
-    {
-        return $this->config['database_snapshot_format'];
+        return $this->config['default_database_importexport_adapter'] ?? 'default';
     }
 
     /**
@@ -250,14 +277,6 @@ class ApplicationConfig
     }
 
     /**
-     * @return string
-     */
-    public function getRepoRevisionType(): string
-    {
-        return $this->config['repo_revision_type'];
-    }
-
-    /**
      * @param string
      *
      * @return FilesystemConfig
@@ -272,14 +291,6 @@ class ApplicationConfig
         }
 
         return new FilesystemConfig($this->config['file_systems'][$filesystemName]);
-    }
-
-    /**
-     * @return string|null
-     */
-    public function getWorkingDir(): ?string
-    {
-        return !empty($this->config['working_dir']) ? $this->config['working_dir'] : null;
     }
 
     /**
@@ -315,75 +326,11 @@ class ApplicationConfig
     }
 
     /**
-     * @return string|null
-     */
-    public function getMySqlHost(): ?string
-    {
-        return !empty($this->config['mysql_host']) ? $this->config['mysql_host'] : null;
-    }
-
-    /**
-     * @return int|null
-     */
-    public function getMySqlPort(): ?int
-    {
-        return !empty($this->config['mysql_port']) ? (int)$this->config['mysql_port'] : null;
-    }
-
-    /**
-     * @return string|null
-     */
-    public function getMySqlUser(): ?string
-    {
-        return !empty($this->config['mysql_user']) ? $this->config['mysql_user'] : null;
-    }
-
-    /**
-     * @return string|null
-     */
-    public function getMySqlPassword(): ?string
-    {
-        return !empty($this->config['mysql_password']) ? $this->config['mysql_password'] : null;
-    }
-
-    /**
-     * @return string|null
-     */
-    public function getMySqlSslCa(): ?string
-    {
-        return !empty($this->config['mysql_ssl_ca']) ? $this->config['mysql_ssl_ca'] : null;
-    }
-
-    /**
-     * @return bool|null
-     */
-    public function getMySqlSslVerifyPeer(): ?string
-    {
-        return isset($this->config['mysql_ssl_verify_peer']) ? $this->config['mysql_ssl_verify_peer'] : null;
-    }
-
-    /**
      * @return array
      */
     public function getDatabases(): array
     {
         return !empty($this->config['databases']) ? $this->config['databases'] : [];
-    }
-
-    /**
-     * @return array
-     */
-    public function getDatabaseTableGroups(): array
-    {
-        return !empty($this->config['database_table_groups']) ? $this->config['database_table_groups'] : [];
-    }
-
-    /**
-     * @return array
-     */
-    public function getPostInstallScripts(): array
-    {
-        return !empty($this->config['post_install_scripts']) ? $this->config['post_install_scripts'] : [];
     }
 
     /**
@@ -470,7 +417,6 @@ class ApplicationConfig
             'app_name',
             'environment',
             'platform',
-            'database_snapshot_format',
             'maintenance_strategy',
             'default_file_mode',
             'default_dir_mode',
@@ -478,7 +424,6 @@ class ApplicationConfig
             'default_snapshot_name',
             'file_layout',
             'repo_url',
-            'repo_revision_type'
         ];
         $missingRequired = [];
         foreach ($required as $name) {
@@ -504,6 +449,4 @@ class ApplicationConfig
             throw new Exception\DomainException("Invalid file layout \"{$config['file_layout']}\".");
         }
     }
-
-
 }

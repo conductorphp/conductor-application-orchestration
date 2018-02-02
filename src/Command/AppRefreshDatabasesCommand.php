@@ -7,6 +7,7 @@ namespace DevopsToolAppOrchestration\Command;
 
 use DevopsToolAppOrchestration\ApplicationDatabaseRefresher;
 use DevopsToolCore\Database\DatabaseImportExportAdapterManager;
+use DevopsToolCore\Filesystem\MountManager\MountManager;
 use DevopsToolCore\MonologConsoleHandlerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -24,6 +25,10 @@ class AppRefreshDatabasesCommand extends AbstractCommand
      */
     private $applicationDatabaseRefresher;
     /**
+     * @var MountManager
+     */
+    private $mountManager;
+    /**
      * @var LoggerInterface
      */
     private $logger;
@@ -31,10 +36,12 @@ class AppRefreshDatabasesCommand extends AbstractCommand
 
     public function __construct(
         ApplicationDatabaseRefresher $applicationDatabaseImportRefresher,
+        MountManager $mountManager,
         LoggerInterface $logger = null,
         string $name = null
     ) {
         $this->applicationDatabaseRefresher = $applicationDatabaseImportRefresher;
+        $this->mountManager = $mountManager;
         if (is_null($logger)) {
             $logger = new NullLogger();
         }
@@ -44,6 +51,7 @@ class AppRefreshDatabasesCommand extends AbstractCommand
 
     protected function configure()
     {
+        $filesystemPrefixes = $this->mountManager->getFilesystemPrefixes();
         $this->setName('app:refresh-databases')
             ->setDescription('Refresh application databases.')
             ->setHelp(
@@ -61,12 +69,14 @@ class AppRefreshDatabasesCommand extends AbstractCommand
                 'filesystem',
                 null,
                 InputOption::VALUE_OPTIONAL,
-                'The filesystem to pull snapshot from. [Defaults to application default filesystem]'
+                sprintf('The filesystem to pull snapshot from. <comment>Configured filesystems: %s. [default: application default filesystem]</comment>.',
+                    implode(', ', $filesystemPrefixes)
+                )
             )
             ->addOption(
                 'snapshot',
                 null,
-                InputArgument::OPTIONAL,
+                InputOption::VALUE_REQUIRED,
                 'The snapshot to pull assets from.',
                 'production-scrubbed'
             )

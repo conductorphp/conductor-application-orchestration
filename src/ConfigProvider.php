@@ -31,7 +31,7 @@ class ConfigProvider
      *
      * @return array
      */
-    private function getDependencyConfig()
+    private function getDependencyConfig(): array
     {
         return require(__DIR__ . '/../config/dependencies.php');
     }
@@ -39,7 +39,7 @@ class ConfigProvider
     /**
      * @return array
      */
-    private function getConsoleConfig()
+    private function getConsoleConfig(): array
     {
         return require(__DIR__ . '/../config/console.php');
     }
@@ -47,7 +47,7 @@ class ConfigProvider
     /**
      * @return array
      */
-    private function getApplicationOrchestrationConfig()
+    private function getApplicationOrchestrationConfig(): array
     {
         $config = require(__DIR__ . '/../config/application-orchestration.php');
         $config['applications'] = $this->getApplicationConfig();
@@ -57,7 +57,7 @@ class ConfigProvider
     /**
      * @return array
      */
-    private function getApplicationConfig()
+    private function getApplicationConfig(): array
     {
         $applicationConfig = [];
         $iterator = new \DirectoryIterator('config/autoload/application-orchestration/applications');

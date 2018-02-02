@@ -2,13 +2,14 @@
 
 namespace DevopsToolAppOrchestration\BuildCommand;
 
+use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use SplFileInfo;
 
-class MinifyJsCommand implements BuildCommandInterface
+class MinifyJsCommand implements BuildCommandInterface, LoggerAwareInterface
 {
     /**
      * @var LoggerInterface
@@ -31,22 +32,17 @@ class MinifyJsCommand implements BuildCommandInterface
         $this->logger = new NullLogger();
     }
 
-    public function setOptions(array $options)
-    {
-        $this->paths = !empty($options['paths']) ? $options['paths'] : ['./'];
-        $this->excludes = !empty($options['excludes']) ? $options['excludes'] : [];
-        return $this;
-    }
-
-    public function setLogger(LoggerInterface $logger)
+    public function setLogger(LoggerInterface $logger): void
     {
         $this->logger = $logger;
-        return $this;
     }
 
-    public function run()
+    public function run(array $options = null): void
     {
         $this->logger->error(__METHOD__ . ' not yet implemented. Skipping...');
+        $this->paths = $options['paths'] ?? ['./'];
+        $this->excludes = $options['excludes'] ?? [];
+
         return;
         foreach ($this->paths as $path) {
             $dirIterator = new RecursiveDirectoryIterator($path);

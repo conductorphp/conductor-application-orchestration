@@ -9,7 +9,6 @@ use DevopsToolCore\Database\DatabaseAdapterManager;
 use DevopsToolCore\Database\DatabaseImportExportAdapterInterface;
 use DevopsToolCore\Database\DatabaseImportExportAdapterManager;
 use DevopsToolCore\Filesystem\MountManager\MountManager;
-use DevopsToolAppOrchestration\Exception;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -20,10 +19,6 @@ use Psr\Log\NullLogger;
  */
 class ApplicationDatabaseRefresher
 {
-    /**
-     * @var LoggerInterface
-     */
-    protected $logger;
     /**
      * @var MountManager
      */
@@ -36,20 +31,30 @@ class ApplicationDatabaseRefresher
      * @var DatabaseAdapterManager
      */
     private $databaseAdapterManager;
+    /**
+     * @var FileLayoutHelper
+     */
+    private $fileLayoutHelper;
+    /**
+     * @var LoggerInterface
+     */
+    protected $logger;
 
     public function __construct(
         MountManager $mountManager,
         DatabaseAdapterManager $databaseAdapterManager,
         DatabaseImportExportAdapterManager $databaseImportAdapterManager,
+        FileLayoutHelper $fileLayoutHelper,
         LoggerInterface $logger = null
     ) {
         $this->mountManager = $mountManager;
+        $this->databaseImportAdapterManager = $databaseImportAdapterManager;
+        $this->databaseAdapterManager = $databaseAdapterManager;
         if (is_null($logger)) {
             $logger = new NullLogger();
         }
+        $this->fileLayoutHelper = $fileLayoutHelper;
         $this->logger = $logger;
-        $this->databaseImportAdapterManager = $databaseImportAdapterManager;
-        $this->databaseAdapterManager = $databaseAdapterManager;
     }
 
     /**
@@ -69,16 +74,24 @@ class ApplicationDatabaseRefresher
      * @param string            $sourceFilesystemPrefix
      * @param string            $snapshotName
      *
+     * @throws Exception\RuntimeException if app skeleton has not yet been installed
      */
     public function refreshDatabases(
         ApplicationConfig $application,
         string $sourceFilesystemPrefix,
         string $snapshotName,
-        string $branch = null
+        string $branch = null,
+        bool $replaceIfExists = false
     ): void {
-
-        // @todo Add flag for whether to replace or not? Or should it just always warn and then we have a force flag to skip the warning?
-        $replace = false;
+        $fileLayout = new FileLayout(
+            $application->getAppRoot(),
+            $application->getFileLayout(),
+            $application->getRelativeDocumentRoot()
+        );
+        $this->fileLayoutHelper->loadFileLayoutPaths($fileLayout);
+        if (!$this->fileLayoutHelper->isFileLayoutInstalled($fileLayout)) {
+            throw new Exception\RuntimeException("App is not yet installed. Install app skeleton before refreshing databases.");
+        }
 
         if ($application->getDatabases()) {
             $this->logger->info('Refreshing databases');
@@ -96,7 +109,7 @@ class ApplicationDatabaseRefresher
 
                 if ($databaseAdapter->databaseExists($databaseName)) {
                     if (!$databaseAdapter->databaseIsEmpty($databaseName)) {
-                        if (!$replace) {
+                        if (!$replaceIfExists) {
                             $this->logger->debug("Database \"$databaseName\" exists and is not empty. Skipping.");
                             continue;
                         }
@@ -134,18 +147,9 @@ class ApplicationDatabaseRefresher
                         $branchDatabase = $this->sanitizeBranchForDatabase($branch);
                     }
 
-                    $environment = $application->getCurrentEnvironment();
-                    $configRoot = $application->getConfigRoot();
                     foreach ($database['post_import_scripts'] as $scriptFilename) {
 
-                        $filename = "$configRoot/environments/$environment/files/$scriptFilename";
-                        if (!file_exists($filename)) {
-                            $filename = "$configRoot/files/$scriptFilename";
-                            if (!file_exists($filename)) {
-                                throw new Exception\RuntimeException("Database $databaseName post_import_scripts \"$scriptFilename\" not found in config");
-                            }
-                        };
-
+                        $filename = $application->getSourceFile($scriptFilename);
                         $filename = $this->applyStringReplacements(
                             $application,
                             $branchUrl,
@@ -153,10 +157,9 @@ class ApplicationDatabaseRefresher
                             $filename
                         );
 
-                        $databaseImportExportAdapter->importFromFile(
-                            $filename,
-                            $databaseName,
-                            [] // This command does not yet support any options
+                        $databaseAdapter->run(
+                            file_get_contents($filename),
+                            $databaseName
                         );
                     }
                 }

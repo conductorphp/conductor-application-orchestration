@@ -6,7 +6,6 @@
 namespace DevopsToolAppOrchestration;
 
 use DevopsToolCore\Filesystem\MountManager\MountManager;
-use Exception;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -60,7 +59,8 @@ class ApplicationAssetRefresher
      * @param string            $snapshotName
      * @param array             $syncOptions
      *
-     * @throws Exception
+     * @throws Exception\RuntimeException if app skeleton has not yet been installed
+     * @throws Exception\RuntimeException if there is an asset configuration error
      */
     public function refreshAssets(
         ApplicationConfig $application,
@@ -75,14 +75,14 @@ class ApplicationAssetRefresher
         );
         $this->fileLayoutHelper->loadFileLayoutPaths($fileLayout);
         if (!$this->fileLayoutHelper->isFileLayoutInstalled($fileLayout)) {
-            throw new Exception("App is not yet installed. Install first before refreshing assets.");
+            throw new Exception\RuntimeException("App is not yet installed. Install app skeleton before refreshing assets.");
         }
 
         if ($application->getAssets()) {
             $this->logger->info('Refreshing assets');
             foreach ($application->getAssets() as $sourcePath => $asset) {
                 if (empty($asset['ensure']) || empty($asset['location'])) {
-                    throw new Exception("Asset \"$sourcePath\" must have \"ensure\" and \"location\" properties set.");
+                    throw new Exception\RuntimeException("Asset \"$sourcePath\" must have \"ensure\" and \"location\" properties set.");
                 }
 
                 if (!empty($asset['local_path'])) {
@@ -91,7 +91,7 @@ class ApplicationAssetRefresher
                     $destinationPath = $sourcePath;
                 }
 
-                $pathPrefix = $this->fileLayoutHelper->resolvePathPrefix($fileLayout, $asset['location']);
+                $pathPrefix = $this->fileLayoutHelper->resolvePathPrefix($application, $asset['location']);
                 $sourcePath = "snapshots/$snapshotName/assets/{$asset['location']}/$sourcePath";
                 if ($pathPrefix) {
                     $destinationPath = "$pathPrefix/$destinationPath";

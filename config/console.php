@@ -8,7 +8,7 @@ return [
         AppConfigGetCommand::class,
         AppConfigListCommand::class,
         AppDestroyCommand::class,
-//        AppInstallCommand::class,
+        AppInstallCommand::class,
         AppListCommand::class,
 //        AppMaintenanceCommand::class,
         AppRefreshAssetsCommand::class,
