@@ -2,25 +2,22 @@
 
 namespace DevopsToolAppOrchestration\MaintenanceStrategy;
 
+use DevopsToolAppOrchestration\ApplicationConfig;
+
 interface MaintenanceStrategyInterface
 {
-    const PLATFORM_MAGENTO1 = 'magento1';
-    const PLATFORM_MAGENTO2 = 'magento2';
-
-    const STRATEGY_FILE = 'file';
+    /**
+     * @return void
+     */
+    public function enable(ApplicationConfig $application, string $branch = null): void;
 
     /**
      * @return void
      */
-    public function enable();
-
-    /**
-     * @return void
-     */
-    public function disable();
+    public function disable(ApplicationConfig $application, string $branch = null): void;
 
     /**
      * @return bool
      */
-    public function isEnabled();
+    public function isEnabled(ApplicationConfig $application, string $branch = null): bool;
 }

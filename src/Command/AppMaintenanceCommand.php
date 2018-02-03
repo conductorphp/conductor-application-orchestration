@@ -5,16 +5,11 @@
 
 namespace DevopsToolAppOrchestration\Command;
 
-use DevopsToolAppOrchestration\AppConfig;
-use DevopsToolAppOrchestration\AppMaintenance;
-use DevopsToolAppOrchestration\FileLayout;
-use DevopsToolAppOrchestration\FileLayoutHelper;
-use DevopsToolAppOrchestration\MaintenanceStrategy\Magento1FileMaintenanceStrategy;
 use DevopsToolAppOrchestration\MaintenanceStrategy\MaintenanceStrategyInterface;
-use Exception;
-use League\Flysystem\Adapter\Local as LocalFileAdapter;
-use League\Flysystem\Filesystem;
-use League\Flysystem\Sftp\SftpAdapter;
+use DevopsToolCore\MonologConsoleHandlerAwareTrait;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -22,6 +17,31 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class AppMaintenanceCommand extends AbstractCommand
 {
+    use MonologConsoleHandlerAwareTrait;
+
+    /**
+     * @var MaintenanceStrategyInterface
+     */
+    private $maintenanceStrategy;
+    /**
+     * @var LoggerInterface
+     */
+    private $logger;
+
+
+    public function __construct(
+        MaintenanceStrategyInterface $maintenanceStrategy,
+        LoggerInterface $logger = null,
+        string $name = null
+    ) {
+        $this->maintenanceStrategy = $maintenanceStrategy;
+        if (is_null($logger)) {
+            $logger = new NullLogger();
+        }
+        $this->logger = $logger;
+        parent::__construct($name);
+    }
+
     protected function configure()
     {
         $this->setName('app:maintenance')
@@ -36,135 +56,43 @@ class AppMaintenanceCommand extends AbstractCommand
                 InputOption::VALUE_OPTIONAL,
                 'Application code if you want to pull repo_url and environment from configuration'
             )
-            ->addOption('repo', null, InputOption::VALUE_OPTIONAL, 'The url of the setup repo.')
-            ->addOption('environment', null, InputOption::VALUE_OPTIONAL, 'The environment in which this server lives.')
-            ->addOption('role', null, InputOption::VALUE_OPTIONAL, 'This server\'s role.')
             ->addOption(
                 'branch',
                 null,
                 InputArgument::OPTIONAL,
-                'The branch instance to destroy. Only relevant when using the \"branch\" file layout.'
+                'The branch instance to manage maintenance state for. Only relevant when using the \"branch\" file layout.'
             );
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        // outputs multiple lines to the console (adding "\n" at the end of each line)
-        $output->writeln(
-            [
-                'App Maintenance:',
-                '============',
-                '',
-            ]
-        );
+        $this->injectOutputIntoLogger($output, $this->logger);
+        if ($this->maintenanceStrategy instanceof LoggerAwareInterface) {
+            $this->maintenanceStrategy->setLogger($this->logger);
+        }
+        $applications = $this->getApplications($input);
 
-        $this->parseConfigFile();
-
-        $appIds = $this->getAppCodes($input);
         $action = $input->getArgument('action');
+        $branch = $input->getOption('branch');
 
-        foreach ($appIds as $appId) {
-            $repo = $this->getRepo($appId);
-            $config = $this->getMergedAppConfig($repo, $appId);
-            $branch = $input->getOption('branch') ? $input->getOption('branch') : $config->getDefaultBranch();
-            $appName = $config->getAppName();
-
-            $maintenanceStrategy = $this->getMaintenanceStrategy($config, $branch, $output);
-            $appMaintenance = new AppMaintenance(
-                $maintenanceStrategy
-            );
-
+        foreach ($applications as $code => $application) {
+            $appName = $application->getAppName();
             if ('enable' == $action) {
                 $output->writeln("Enabling maintenance mode for app \"$appName\".");
-                $appMaintenance->enable();
+                $this->maintenanceStrategy->enable($application, $branch);
                 $output->writeln("Maintenance mode <info>enabled</info> for app \"$appName\".");
             } elseif ('disable' == $action) {
                 $output->writeln("Disabling maintenance mode for app \"$appName\".");
-                $appMaintenance->disable();
+                $this->maintenanceStrategy->disable($application, $branch);
                 $output->writeln("Maintenance mode <error>disabled</error> for app \"$appName\".");
             } else {
                 $output->writeln("Checking if maintenance mode is enabled for app \"$appName\".");
-                $status = $appMaintenance->isEnabled() ? '<info>enabled</info>' : '<error>disabled</error>';
-                $output->writeln("Maintenance mode is $status for app \"$appName\".");
+                $status = $this->maintenanceStrategy->isEnabled($application, $branch);
+                $statusText = $status ? 'enabled' : 'disabled';
+                $output->writeln("Maintenance mode is $statusText for app \"$appName\".");
             }
         }
         return 0;
-    }
-
-    /**
-     * @param AppConfig $config
-     * @param string $branch
-     * @param OutputInterface $output
-     *
-     * @return Magento1FileMaintenanceStrategy
-     * @throws Exception
-     */
-    protected function getMaintenanceStrategy(AppConfig $config, $branch, OutputInterface $output)
-    {
-        $platform = $config->getPlatform();
-        $maintenanceStrategy = $config->getMaintenanceStrategy();
-        $servers = $config->getServers();
-        switch ($maintenanceStrategy) {
-            case MaintenanceStrategyInterface::STRATEGY_FILE:
-
-                $fileLayout = new FileLayout(
-                    $config->getAppRoot(),
-                    $config->getFileLayout(),
-                    $config->getRelativeDocumentRoot(),
-                    $branch
-                );
-
-                $fileLayoutHelper = new FileLayoutHelper();
-                $fileLayoutHelper->loadFileLayoutPaths($fileLayout);
-                $documentRoot = $fileLayout->getDocumentRoot(true);
-
-                $filesystems = [];
-                if (empty($servers)) {
-                    $filesystems[] = new Filesystem(new LocalFileAdapter($documentRoot));
-                    $output->writeln(
-                        '<comment>No "servers" node set in config. Assuming this is a single server setup.</comment>'
-                    );
-                } else {
-                    foreach ($servers as $server) {
-                        if (in_array($server['host'], ['127.0.0.1', 'localhost'])) {
-                            $filesystems[] = new Filesystem(new LocalFileAdapter($documentRoot));
-                        } else {
-                            $filesystems[] = new Filesystem(
-                                new SftpAdapter(
-                                    array_merge(
-                                        $config->getSshDefaults(),
-                                        $server,
-                                        ['root' => $documentRoot]
-                                    )
-                                )
-                            );
-                        }
-                    }
-                }
-
-                switch ($platform) {
-                    case MaintenanceStrategyInterface::PLATFORM_MAGENTO1:
-                        $maintenanceStrategy = new Magento1FileMaintenanceStrategy(
-                            $filesystems
-                        );
-                        break;
-
-                    default:
-                        throw new \Exception("Platform \"$platform\" does not have a supported maintenance strategy.");
-                        break;
-                }
-                break;
-
-            default:
-                break;
-        }
-
-        if (!isset($maintenanceStrategy)) {
-            throw new Exception(
-                "Unaccounted for app type \"$platform\" with maintenance strategy \"$maintenanceStrategy\"."
-            );
-        }
-        return $maintenanceStrategy;
     }
 
 }
