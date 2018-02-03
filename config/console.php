@@ -4,7 +4,7 @@ namespace DevopsToolAppOrchestration\Command;
 
 return [
     'commands' => [
-//        AppBuildCommand::class,
+        AppBuildCommand::class,
         AppConfigGetCommand::class,
         AppConfigListCommand::class,
         AppDestroyCommand::class,

@@ -82,7 +82,7 @@ class ApplicationDestroyer
         }
 
         if ($application->getDatabases()) {
-            $this->logger->debug("Destroying databases...");
+            $this->logger->debug("Destroying databases.");
             $databasesToDestroy = [];
             foreach ($application->getDatabases() as $database => $databaseInfo) {
                 if ('branch' == $application->getFileLayout()) {
@@ -105,7 +105,7 @@ class ApplicationDestroyer
             $databaseAdapter = $this->databaseAdapterManager->getAdapter($databaseAdapterName);
 
             foreach ($databasesToDestroy as $database) {
-                $this->logger->debug("Dropping database \"$database\"...");
+                $this->logger->debug("Dropping database \"$database\".");
                 $databaseAdapter->dropDatabaseIfExists($database);
             }
         } else {

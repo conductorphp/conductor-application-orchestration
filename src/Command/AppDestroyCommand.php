@@ -90,7 +90,7 @@ class AppDestroyCommand extends AbstractCommand
 
         foreach ($applications as $code => $application) {
             $branchDescription = ($branch ? " ($branch branch only)" : '');
-            $this->logger->info("Destroying application instance $code$branchDescription...");
+            $this->logger->info("Destroying application instance $code$branchDescription.");
             $this->applicationDestroyer->destroy($application, $branch);
             $this->logger->info("Application instance $code$branchDescription destroyed.");
         }

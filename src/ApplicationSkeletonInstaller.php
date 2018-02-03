@@ -70,7 +70,7 @@ class ApplicationSkeletonInstaller
      */
     public function prepareFileLayout(ApplicationConfig $application): void
     {
-        $this->logger->info('Preparing file layout...');
+        $this->logger->info('Preparing file layout.');
         $this->prepareAppRootPath($application);
         $this->prepareCodePath($application);
         $this->prepareLocalPath($application);

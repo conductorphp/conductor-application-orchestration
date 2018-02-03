@@ -103,7 +103,7 @@ class AppRefreshAssetsCommand extends AbstractCommand
         ];
 
         foreach ($applications as $code => $application) {
-            $this->logger->info("Refreshing application \"$code\" assets...");
+            $this->logger->info("Refreshing application \"$code\" assets.");
             $filesystem = $input->getOption('filesystem') ?? $application->getDefaultFilesystem();
             $snapshot = $input->getOption('snapshot');
             $this->applicationAssetRefresher->refreshAssets($application, $filesystem, $snapshot, $syncConfig);

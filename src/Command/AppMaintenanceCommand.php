@@ -75,15 +75,15 @@ class AppMaintenanceCommand extends AbstractCommand
             );
 
             if ('enable' == $action) {
-                $output->writeln("Enabling maintenance mode for app \"$appName\"...");
+                $output->writeln("Enabling maintenance mode for app \"$appName\".");
                 $appMaintenance->enable();
                 $output->writeln("Maintenance mode <info>enabled</info> for app \"$appName\".");
             } elseif ('disable' == $action) {
-                $output->writeln("Disabling maintenance mode for app \"$appName\"...");
+                $output->writeln("Disabling maintenance mode for app \"$appName\".");
                 $appMaintenance->disable();
                 $output->writeln("Maintenance mode <error>disabled</error> for app \"$appName\".");
             } else {
-                $output->writeln("Checking if maintenance mode is enabled for app \"$appName\"...");
+                $output->writeln("Checking if maintenance mode is enabled for app \"$appName\".");
                 $status = $appMaintenance->isEnabled() ? '<info>enabled</info>' : '<error>disabled</error>';
                 $output->writeln("Maintenance mode is $status for app \"$appName\".");
             }

@@ -90,7 +90,7 @@ class AppRefreshDatabasesCommand extends AbstractCommand
         $applications = $this->getApplications($input);
 
         foreach ($applications as $code => $application) {
-            $this->logger->info("Refreshing application \"$code\" databases...");
+            $this->logger->info("Refreshing application \"$code\" databases.");
             $filesystem = $input->getOption('filesystem') ?? $application->getDefaultFilesystem();
             $snapshot = $input->getOption('snapshot');
             $branch = $input->getOption('branch');

@@ -192,7 +192,7 @@ class AppSnapshot implements FileLayoutAwareInterface
                     $ignoreTables = $this->expandDatabaseTableGroups($databaseInfo['excludes']);
                 }
 
-                $this->logger->debug("Dumping database \"$localDatabaseName\" to file...");
+                $this->logger->debug("Dumping database \"$localDatabaseName\" to file.");
                 $filename = $this->databaseAdapter->exportToFile(
                     $localDatabaseName,
                     "{$this->workingDir}/$database",

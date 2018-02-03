@@ -358,6 +358,14 @@ class ApplicationConfig
     }
 
     /**
+     * @return array
+     */
+    public function getBuildExcludePaths(): array
+    {
+        return $this->config['build_exclude_paths'] ?? [];
+    }
+
+    /**
      * @param string $branch
      *
      * @return string

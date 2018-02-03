@@ -39,7 +39,7 @@ class MinifyJsCommand implements BuildCommandInterface, LoggerAwareInterface
 
     public function run(array $options = null): void
     {
-        $this->logger->error(__METHOD__ . ' not yet implemented. Skipping...');
+        $this->logger->error(__METHOD__ . ' not yet implemented. Skipping.');
         $this->paths = $options['paths'] ?? ['./'];
         $this->excludes = $options['excludes'] ?? [];
 

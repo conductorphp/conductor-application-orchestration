@@ -128,8 +128,11 @@ class AppInstallCommand extends AbstractCommand
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $this->injectOutputIntoLogger($output, $this->logger);
+        $this->applicationSkeletonInstaller->setLogger($this->logger);
+        $this->applicationCodeInstaller->setLogger($this->logger);
         $this->applicationAssetRefresher->setLogger($this->logger);
         $this->applicationDatabaseRefresher->setLogger($this->logger);
+        $this->applicationBuilder->setLogger($this->logger);
         $applications = $this->getApplications($input);
         $syncConfig = [
             'batch_size' => $input->getOption('asset-batch-size'),
@@ -153,7 +156,7 @@ class AppInstallCommand extends AbstractCommand
         }
 
         foreach ($applications as $code => $application) {
-            $this->logger->info("Refreshing application \"$code\" assets...");
+            $this->logger->info("Refreshing application \"$code\" assets.");
             $branch = $input->getOption('branch') ?? $application->getDefaultBranch();
             $filesystem = $input->getOption('filesystem') ?? $application->getDefaultFilesystem();
             $snapshot = $input->getOption('snapshot');
@@ -181,7 +184,7 @@ class AppInstallCommand extends AbstractCommand
             }
 
             if ($runBuild) {
-                $this->applicationBuilder->buildInPlace($application, $buildPlan, $branch, $buildTriggers, $reinstall);
+                $this->applicationBuilder->buildInPlace($application, $branch, $buildPlan, $buildTriggers, $reinstall);
             }
 
             $this->logger->info("<info>Application \"$code\" installation complete!</info>");

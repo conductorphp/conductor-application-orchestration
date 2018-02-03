@@ -171,7 +171,7 @@ class AppSnapshotCommand extends AbstractCommand
                 $shellCommandHelper
             );
 
-            $output->writeln("Creating an application snapshot for application \"$appName\"...");
+            $output->writeln("Creating an application snapshot for application \"$appName\".");
             $appSnapshot->createSnapshot($includeDatabases, $includeAssets, $scrub);
             $output->writeln("<info>Application snapshot created for app \"$appName\".</info>");
         }

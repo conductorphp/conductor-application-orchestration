@@ -6,6 +6,7 @@
 namespace DevopsToolAppOrchestration;
 
 use DevopsToolAppOrchestration\BuildCommand\BuildCommandInterface;
+use DevopsToolCore\Filesystem\MountManager\MountManager;
 use DevopsToolCore\ShellCommandHelper;
 use FilesystemIterator;
 use Psr\Log\LoggerAwareInterface;
@@ -32,6 +33,10 @@ class ApplicationBuilder
      */
     private $fileLayoutHelper;
     /**
+     * @var MountManager
+     */
+    private $mountManager;
+    /**
      * @var int
      */
     private $diskSpaceErrorThreshold;
@@ -44,6 +49,10 @@ class ApplicationBuilder
      */
     private $logger;
     /**
+     * @var string
+     */
+    private $buildPath = '/tmp/.conductor-application-builder';
+    /**
      * @var bool
      */
     private $canCallBuild;
@@ -51,12 +60,14 @@ class ApplicationBuilder
     public function __construct(
         ShellCommandHelper $shellCommandHelper,
         FileLayoutHelper $fileLayoutHelper,
+        MountManager $mountManager,
         int $diskSpaceErrorThreshold = 52428800,
         int $diskSpaceWarningThreshold = 104857600,
         LoggerInterface $logger = null
     ) {
         $this->shellCommandHelper = $shellCommandHelper;
         $this->fileLayoutHelper = $fileLayoutHelper;
+        $this->mountManager = $mountManager;
         if (is_null($logger)) {
             $logger = new NullLogger();
         }
@@ -66,45 +77,35 @@ class ApplicationBuilder
     }
 
     /**
-     * @param LoggerInterface $logger
-     *
-     * @return void
-     */
-    public function setLogger(LoggerInterface $logger): void
-    {
-        $this->logger = $logger;
-    }
-
-    /**
      * @param ApplicationConfig $application
+     * @param string            $gitReference
      * @param string            $buildPlan
-     * @param string            $branch
      * @param array|null        $triggers
      * @param bool              $forceCleanBuild
      */
     public function buildInPlace(
         ApplicationConfig $application,
+        string $gitReference,
         string $buildPlan,
-        string $branch,
         array $triggers = null,
         bool $forceCleanBuild = false
     ): void {
         $this->validateCanCallBuild();
         $this->validateAppIsInstalled($application);
 
-        $buildPath = $application->getCodePath($branch);
+        $buildPath = $application->getCodePath($gitReference);
         $this->prepareBuildPath($buildPath, true, $application);
         chdir($buildPath);
 
         $buildPlanName = $buildPlan;
         $buildPlan = $this->getBuildPlan($application, $buildPlan, $forceCleanBuild);
 
-        if ($forceCleanBuild) {
-            $this->cleanBuild($buildPlan);
+        if ($gitReference) {
+            $this->checkoutReference($gitReference);
         }
 
-        if ($branch) {
-            $this->checkoutBranch($branch);
+        if ($forceCleanBuild) {
+            $this->cleanBuild($buildPlan);
         }
 
         $this->runBuildPlan($buildPlanName, $buildPlan, $triggers);
@@ -112,32 +113,36 @@ class ApplicationBuilder
 
     /**
      * @param ApplicationConfig $application
+     * @param string            $gitReference
      * @param string            $buildPlan
-     * @param string            $branch
-     * @param int               $buildId
-     * @param string            $buildPath
+     * @param string            $buildId
+     * @param string            $savePath
      *
      * @throws \Exception
      */
     public function build(
         ApplicationConfig $application,
+        string $gitReference,
         string $buildPlan,
-        string $branch,
-        int $buildId,
-        string $buildPath = '/tmp/.conductor-application-builder'
+        string $buildId,
+        string $savePath
     ): void {
         $this->validateCanCallBuild();
         $buildPlanName = $buildPlan;
         $buildPlan = $this->getBuildPlan($application, $buildPlan);
 
-        $this->prepareBuildPath($buildPath, false, $application);
-        chdir($buildPath);
+        $this->prepareBuildPath($this->buildPath, false, $application);
+        chdir($this->buildPath);
 
-        $this->cloneRepoToBuildPath($application, $branch);
+        $this->cloneRepoToBuildPath($application, $gitReference);
 
         try {
+            // @todo How do we deal with the use case where a file that is part of the skeleton is needed to perform the
+            //       build. For example, a config.rb file that is specific to Production. Should this also install the
+            //       skeleton before running the build? We would have to be able to set environment also for the skeleton
+            //       build. Is this really a valid use case anyways?
             $this->runBuildPlan($buildPlanName, $buildPlan);
-            $this->packageAndUploadBuild($buildId);
+            $this->packageAndSaveBuild($application, $buildId, $savePath);
             $this->clearBuildPath();
         } catch (\Exception $e) {
             $this->clearBuildPath();
@@ -176,17 +181,17 @@ class ApplicationBuilder
         }
 
         // @todo Set up references for other commands or other build plans?
-//        foreach ($buildPlan['steps'] as $index => $command) {
-//            if (0 === strpos($command, '@')) {
-//                $name = substr($command, 1);
+//        foreach ($buildPlan['steps'] as $index => $step) {
+//            if (0 === strpos($step, '@')) {
+//                $name = substr($step, 1);
 //                $buildPlan['steps'][$index] = implode(' && ', $this->getBuildPlan($name)['steps']);
 //            }
 //        }
 //
 //        if ($forceCleanBuild && !empty($buildPlan['clean_steps'])) {
-//            foreach ($buildPlan['clean_steps'] as $index => $command) {
-//                if (0 === strpos($command, '@')) {
-//                    $name = substr($command, 1);
+//            foreach ($buildPlan['clean_steps'] as $index => $step) {
+//                if (0 === strpos($step, '@')) {
+//                    $name = substr($step, 1);
 //                    $buildPlan['clean_steps'][$index] = implode(' && ', $this->getBuildPlan($name)['steps']);
 //                }
 //            }
@@ -290,35 +295,31 @@ class ApplicationBuilder
     }
 
     /**
-     * @param string $branch
+     * @param string $gitReference
      */
-    private function checkoutBranch(string $branch): void
+    private function checkoutReference(string $gitReference): void
     {
-        $this->logger->info(sprintf('Checking out branch "%s".', $branch));
-        $currentBranch = trim($this->shellCommandHelper->runShellCommand('git branch | grep \'^*\' | cut -c 3-'));
-        if ($branch != $currentBranch) {
-            $this->logger->info(sprintf('Checking out branch "%s".', $branch));
-            $this->shellCommandHelper->runShellCommand(
-                'git fetch --all && git checkout ' .
-                escapeshellarg($branch)
-            );
-        }
+        $this->logger->info(sprintf('Checking out git reference "%s".', $gitReference));
+        $this->shellCommandHelper->runShellCommand(
+            'git fetch --all && git -c advice.detachedHead=false checkout ' .
+            escapeshellarg($gitReference)
+        );
     }
 
     /**
      * @param ApplicationConfig $application
-     * @param string            $branch
+     * @param string            $gitReference
      */
-    private function cloneRepoToBuildPath(ApplicationConfig $application, string $branch): void
+    private function cloneRepoToBuildPath(ApplicationConfig $application, string $gitReference): void
     {
         $this->logger->info(
             sprintf(
                 'Cloning "%s:%s".',
                 $application->getRepoUrl(),
-                $branch
+                $gitReference
             )
         );
-        $command = 'git clone ' . escapeshellarg($application->getRepoUrl()) . ' ./ --branch ' . escapeshellarg($branch)
+        $command = 'git clone ' . escapeshellarg($application->getRepoUrl()) . ' ./ --branch ' . escapeshellarg($gitReference)
             . ' --depth 1 --single-branch -v';
         $this->shellCommandHelper->runShellCommand($command);
     }
@@ -331,31 +332,31 @@ class ApplicationBuilder
     private function runBuildPlan(string $name, array $buildPlan, array $triggers = null): void
     {
         $this->logger->info(sprintf('Running build plan "%s".', $name));
-        $this->runSteps($buildPlan['steps'], $triggers);
+        $this->runSteps($buildPlan['steps'] ?? [], $triggers);
     }
 
     /**
      * @param string $buildId
+     * @param string $savePath
      *
      * @return void
      */
-    private function packageAndUploadBuild(string $buildId): void
+    private function packageAndSaveBuild(ApplicationConfig $application, string $buildId, string $savePath): void
     {
         $this->logger->info('Packaging build.');
         $tarFilename = "$buildId.tgz";
 
         $command = 'tar -pcaf ' . escapeshellarg($tarFilename) . ' ./* --exclude-vcs ';
 
-        if ($this->excludes) {
-            foreach ($this->excludes as $exclude) {
-                $command .= '--exclude ' . escapeshellarg($exclude) . ' ';
-            }
+        foreach ($application->getBuildExcludePaths() as $excludePath) {
+            $command .= '--exclude ' . escapeshellarg($excludePath) . ' ';
         }
 
         $this->shellCommandHelper->runShellCommand($command);
 
-        $this->logger->info('Uploading build.');
-        $this->filesystemTransfer->copy($tarFilename, $tarFilename);
+        $filename = realpath($tarFilename);
+        $this->logger->info("Saving build to \"$savePath/$tarFilename\".");
+        $this->mountManager->putFile("local://$filename", "$savePath/$tarFilename");
     }
 
     private function clearBuildPath(): void
@@ -371,12 +372,7 @@ class ApplicationBuilder
     private function cleanBuild(array $buildPlan): void
     {
         $this->logger->info("Cleaning build");
-
-        if (empty($buildPlan['clean_steps'])) {
-            return;
-        }
-
-        $this->runSteps($buildPlan['clean_steps']);
+        $this->runSteps($buildPlan['clean_steps'] ?? []);
         $this->shellCommandHelper->runShellCommand('git clean -df');
     }
 
@@ -482,6 +478,21 @@ class ApplicationBuilder
                 "App is not yet installed. Install app skeleton before running a build."
             );
         }
+    }
+
+    /**
+     * @param LoggerInterface $logger
+     *
+     * @return void
+     */
+    public function setLogger(LoggerInterface $logger): void
+    {
+        $this->logger = $logger;
+    }
+
+    public function setBuildPath(string $buildPath)
+    {
+        $this->buildPath = $buildPath;
     }
 
 }
