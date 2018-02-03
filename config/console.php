@@ -13,6 +13,6 @@ return [
 //        AppMaintenanceCommand::class,
         AppRefreshAssetsCommand::class,
         AppRefreshDatabasesCommand::class,
-//        AppSnapshotCommand::class,
+        AppSnapshotCommand::class,
     ],
 ];

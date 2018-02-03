@@ -298,7 +298,7 @@ class ApplicationConfig
      */
     public function getTemplateVars(): array
     {
-        return !empty($this->config['template_vars']) ? $this->config['template_vars'] : [];
+        return $this->config['template_vars'] ?? [];
     }
 
     /**
@@ -306,7 +306,7 @@ class ApplicationConfig
      */
     public function getFiles(): array
     {
-        return !empty($this->config['files']) ? $this->config['files'] : [];
+        return $this->config['files'] ?? [];
     }
 
     /**
@@ -314,7 +314,7 @@ class ApplicationConfig
      */
     public function getAssets(): array
     {
-        return !empty($this->config['assets']) ? $this->config['assets'] : [];
+        return $this->config['assets'] ?? [];
     }
 
     /**
@@ -322,7 +322,7 @@ class ApplicationConfig
      */
     public function getAssetGroups(): array
     {
-        return !empty($this->config['asset_groups']) ? $this->config['asset_groups'] : [];
+        return $this->config['asset_groups'] ?? [];
     }
 
     /**
@@ -330,7 +330,15 @@ class ApplicationConfig
      */
     public function getDatabases(): array
     {
-        return !empty($this->config['databases']) ? $this->config['databases'] : [];
+        return $this->config['databases'] ?? [];
+    }
+
+    /**
+     * @return array
+     */
+    public function getDatabaseTableGroups(): array
+    {
+        return $this->config['database_table_groups'] ?? [];
     }
 
     /**
@@ -338,7 +346,7 @@ class ApplicationConfig
      */
     public function getServers(): array
     {
-        return !empty($this->config['servers']) ? $this->config['servers'] : [];
+        return $this->config['servers'] ?? [];
     }
 
     /**
@@ -346,7 +354,7 @@ class ApplicationConfig
      */
     public function getSshDefaults(): array
     {
-        return !empty($this->config['ssh_defaults']) ? $this->config['ssh_defaults'] : [];
+        return $this->config['ssh_defaults'] ?? [];
     }
 
     /**
@@ -354,7 +362,7 @@ class ApplicationConfig
      */
     public function getBuildPlans(): array
     {
-        return !empty($this->config['build_plans']) ? $this->config['build_plans'] : [];
+        return $this->config['build_plans'] ?? [];
     }
 
     /**

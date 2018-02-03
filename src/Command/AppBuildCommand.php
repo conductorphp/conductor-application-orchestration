@@ -5,10 +5,7 @@
 
 namespace DevopsToolAppOrchestration\Command;
 
-use DevopsToolAppOrchestration\AppBuild;
 use DevopsToolAppOrchestration\ApplicationBuilder;
-use DevopsToolAppOrchestration\FilesystemFactory;
-use DevopsToolCore\Filesystem\FilesystemTransferFactory;
 use DevopsToolCore\MonologConsoleHandlerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -21,7 +18,6 @@ class AppBuildCommand extends AbstractCommand
 {
     use MonologConsoleHandlerAwareTrait;
 
-    private $applicationAssetRefresher;
     /**
      * @var ApplicationBuilder
      */

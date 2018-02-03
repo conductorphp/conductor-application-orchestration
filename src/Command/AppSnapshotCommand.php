@@ -5,15 +5,12 @@
 
 namespace DevopsToolAppOrchestration\Command;
 
-use DevopsToolAppOrchestration\AppSnapshot;
-use DevopsToolCore\Filesystem\Filesystem;
-use DevopsToolAppOrchestration\FilesystemFactory;
-use DevopsToolCore\Filesystem\FilesystemTransferFactory;
-use DevopsToolCore\MonologConsoleHandler;
-use DevopsToolCore\ShellCommandHelper;
-use DevopsToolCore\Database\DatabaseImportExportAdapterInterface;
-use League\Flysystem\Adapter\Local;
-use Monolog\Logger;
+use DevopsToolAppOrchestration\ApplicationSnapshotTaker;
+use DevopsToolAppOrchestration\Exception;
+use DevopsToolCore\Filesystem\MountManager\MountManager;
+use DevopsToolCore\MonologConsoleHandlerAwareTrait;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -21,8 +18,40 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class AppSnapshotCommand extends AbstractCommand
 {
+    use MonologConsoleHandlerAwareTrait;
+
+    /**
+     * @var ApplicationSnapshotTaker
+     */
+    private $applicationSnapshotTaker;
+    /**
+     * @var MountManager
+     */
+    private $mountManager;
+    /**
+     * @var LoggerInterface
+     */
+    private $logger;
+
+
+    public function __construct(
+        ApplicationSnapshotTaker $applicationSnapshotTaker,
+        MountManager $mountManager,
+        LoggerInterface $logger = null,
+        string $name = null
+    ) {
+        $this->applicationSnapshotTaker = $applicationSnapshotTaker;
+        $this->mountManager = $mountManager;
+        if (is_null($logger)) {
+            $logger = new NullLogger();
+        }
+        $this->logger = $logger;
+        parent::__construct($name);
+    }
+
     protected function configure()
     {
+        $filesystemPrefixes = $this->mountManager->getFilesystemPrefixes();
         $this->setName('app:snapshot')
             ->setDescription('Creates application snapshot.')
             ->setHelp(
@@ -35,18 +64,20 @@ class AppSnapshotCommand extends AbstractCommand
                 InputOption::VALUE_OPTIONAL,
                 'Application code if you want to pull repo_url and environment from configuration'
             )
-            ->addOption('all', null, InputOption::VALUE_NONE, 'Refresh assets for all apps in configuration')
-            ->addOption('branch', null, InputArgument::OPTIONAL, 'The branch to install database into.')
-            ->addOption('filesystem', null, InputOption::VALUE_OPTIONAL, 'The filesystem to pull snapshot from.')
+            ->addOption('all', null, InputOption::VALUE_NONE, 'Create a snapshot for all apps in configuration.')
             ->addOption(
-                'database-snapshot-format',
+                'branch',
+                null,
+                InputArgument::OPTIONAL,
+                'The branch to take snapshot from. Only relevant when using branch file layout.'
+            )
+            ->addOption(
+                'filesystem',
                 null,
                 InputOption::VALUE_OPTIONAL,
                 sprintf(
-                    'Format to export database in. Must be "%s", "%s", or "%s".',
-                    'mydumper',
-                    'tab',
-                    'sql'
+                    'The filesystem to push snapshot to. <comment>Configured filesystems: %s. [default: application default filesystem]</comment>.',
+                    implode(', ', $filesystemPrefixes)
                 )
             )
             ->addOption('no-databases', null, InputOption::VALUE_NONE, 'Do not include databases in snapshot.')
@@ -62,118 +93,47 @@ class AppSnapshotCommand extends AbstractCommand
                 null,
                 InputOption::VALUE_NONE,
                 'Delete any existing snapshot by this name first before pushing.'
+            )
+            ->addOption(
+                'asset-batch-size',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Batch size for asset sync.'
             );
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        // outputs multiple lines to the console (adding "\n" at the end of each line)
-        $output->writeln(
-            [
-                'App Snapshot',
-                '============',
-                '',
-            ]
-        );
+        $this->injectOutputIntoLogger($output, $this->logger);
+        $this->applicationSnapshotTaker->setLogger($this->logger);
+        $applications = $this->getApplications($input);
 
-        $logger = new Logger('app:snapshot');
-        $logger->pushHandler(new MonologConsoleHandler($output));
-        $shellCommandHelper = new ShellCommandHelper($logger);
-
-        $this->parseConfigFile();
-
-        $appIds = $this->getAppCodes($input);
-        $includeDatabases = !$input->getOption('no-databases');
-        $includeAssets = !$input->getOption('no-assets');
-        $scrub = !$input->getOption('no-scrub');
+        $branch = $input->getOption('branch');
+        $noAssets = $input->getOption('no-assets');
+        $noDatabases = $input->getOption('no-databases');
+        $noScrub = $input->getOption('no-scrub');
         $delete = $input->getOption('delete');
+        $assetSyncConfig = [
+            'batch_size' => $input->getOption('asset-batch-size'),
+        ];
 
-        foreach ($appIds as $appId) {
-            $repo = $this->getRepo($appId);
-            $config = $this->getMergedAppConfig($repo, $appId);
-
-            if ($includeDatabases) {
-                $databaseSnapshotFormat = $input->getOption('database-snapshot-format');
-                if (!$databaseSnapshotFormat) {
-                    $databaseSnapshotFormat = $config->getDatabaseSnapshotFormat();
-                }
-                $databaseAdapter = $this->getImportExportDatabaseAdapter(
-                    $databaseSnapshotFormat,
-                    $config,
-                    $shellCommandHelper,
-                    $logger
-                );
-            } else {
-                $databaseAdapter = null;
-            }
-
-            $appName = $config->getAppName();
-            $filesystem = $input->getOption('filesystem') ? $input->getOption('filesystem')
-                : $config->getDefaultFileSystem();
-            if ($input->getArgument('name')) {
-                $snapshotName = $input->getArgument('name');
-            } else {
-                $snapshotName = $config->getEnvironment();
-                if ($scrub) {
-                    $snapshotName .= '-scrubbed';
-                }
-            }
-            $branch = $input->getOption('branch') ? $input->getOption('branch') : $config->getDefaultBranch();
-            $workingDir = ($config->getWorkingDir() ? $config->getWorkingDir() : getenv('HOME'));
-            $databaseFilesystemTransfer = $assetFilesystemTransfer = null;
-            if ($includeAssets) {
-                $filesystemConfig = $config->getFilesystemConfig($filesystem);
-                $sourceFilesystem = new Filesystem(new Local($config->getAppRoot()));
-                $destinationFilesystem = FilesystemFactory::create(
-                    $filesystemConfig->getType(),
-                    $filesystemConfig->getTypeSpecificConfig(),
-                    $filesystemConfig->getSnapshotRoot() . "/$snapshotName/assets"
-                );
-                $assetFilesystemTransfer = FilesystemTransferFactory::create(
-                    $sourceFilesystem,
-                    $destinationFilesystem,
-                    $shellCommandHelper,
-                    $logger
-                );
-            }
-
-            if ($includeDatabases) {
-                $filesystemConfig = $config->getFilesystemConfig($filesystem);
-                $sourceFilesystem = new Filesystem(new Local("$workingDir/.devops/app-snapshot"));
-                $destinationFilesystem = FilesystemFactory::create(
-                    $filesystemConfig->getType(),
-                    $filesystemConfig->getTypeSpecificConfig(),
-                    $filesystemConfig->getSnapshotRoot() . "/$snapshotName/databases"
-                );
-                $databaseFilesystemTransfer = FilesystemTransferFactory::create(
-                    $sourceFilesystem,
-                    $destinationFilesystem,
-                    $shellCommandHelper,
-                    $logger
-                );
-            }
-
-            $appSnapshot = new AppSnapshot(
-                $workingDir,
-                $config->getAppRoot(),
-                $config->getFileLayout(),
+        foreach ($applications as $code => $application) {
+            $snapshotName = $input->getArgument('name') ??
+            $application->getCurrentEnvironment() . (!$noScrub ? '-scrubbed' : '');
+            $filesystem = $input->getOption('filesystem') ?? $application->getDefaultFilesystem();
+            $this->logger->info("Creating snapshot \"$snapshotName\" from application \"$code\" and pushing to filesystem \"$filesystem\".");
+            $this->applicationSnapshotTaker->takeSnapshot(
+                $application,
+                $filesystem,
+                $snapshotName,
                 $branch,
-                $databaseAdapter,
-                $databaseFilesystemTransfer,
-                $config->getDatabases(),
-                $config->getDatabaseTableGroups(),
-                $assetFilesystemTransfer,
-                $config->getAssets(),
-                $config->getAssetGroups(),
+                !$noDatabases,
+                !$noAssets,
+                !$noScrub,
                 $delete,
-                $logger,
-                null,
-                $shellCommandHelper
+                $assetSyncConfig
             );
-
-            $output->writeln("Creating an application snapshot for application \"$appName\".");
-            $appSnapshot->createSnapshot($includeDatabases, $includeAssets, $scrub);
-            $output->writeln("<info>Application snapshot created for app \"$appName\".</info>");
+            $this->logger->info("<info>Application \"$code\" snapshot completed!</info>");
         }
         return 0;
     }
