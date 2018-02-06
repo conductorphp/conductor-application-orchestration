@@ -20,6 +20,10 @@ use Psr\Log\NullLogger;
 class ApplicationDatabaseRefresher
 {
     /**
+     * @var ApplicationConfig
+     */
+    private $applicationConfig;
+    /**
      * @var MountManager
      */
     protected $mountManager;
@@ -41,12 +45,14 @@ class ApplicationDatabaseRefresher
     protected $logger;
 
     public function __construct(
+        ApplicationConfig $applicationConfig,
         MountManager $mountManager,
         DatabaseAdapterManager $databaseAdapterManager,
         DatabaseImportExportAdapterManager $databaseImportAdapterManager,
         FileLayoutHelper $fileLayoutHelper,
         LoggerInterface $logger = null
     ) {
+        $this->applicationConfig = $applicationConfig;
         $this->mountManager = $mountManager;
         $this->databaseImportAdapterManager = $databaseImportAdapterManager;
         $this->databaseAdapterManager = $databaseAdapterManager;
@@ -70,19 +76,18 @@ class ApplicationDatabaseRefresher
     }
 
     /**
-     * @param ApplicationConfig $application
-     * @param string            $sourceFilesystemPrefix
-     * @param string            $snapshotName
+     * @param string $sourceFilesystemPrefix
+     * @param string $snapshotName
      *
      * @throws Exception\RuntimeException if app skeleton has not yet been installed
      */
     public function refreshDatabases(
-        ApplicationConfig $application,
         string $sourceFilesystemPrefix,
         string $snapshotName,
         string $branch = null,
         bool $replaceIfExists = false
     ): void {
+        $application = $this->applicationConfig;
         $fileLayout = new FileLayout(
             $application->getAppRoot(),
             $application->getFileLayout(),
@@ -90,7 +95,9 @@ class ApplicationDatabaseRefresher
         );
         $this->fileLayoutHelper->loadFileLayoutPaths($fileLayout);
         if (!$this->fileLayoutHelper->isFileLayoutInstalled($fileLayout)) {
-            throw new Exception\RuntimeException("App is not yet installed. Install app skeleton before refreshing databases.");
+            throw new Exception\RuntimeException(
+                "App is not yet installed. Install app skeleton before refreshing databases."
+            );
         }
 
         if ($application->getDatabases()) {
@@ -99,7 +106,8 @@ class ApplicationDatabaseRefresher
 
                 $adapterName = $database['adapter'] ?? $application->getDefaultDatabaseAdapter();
                 $databaseAdapter = $this->databaseAdapterManager->getAdapter($adapterName);
-                $adapterName = $database['importexport_adapter'] ?? $application->getDefaultDatabaseImportExportAdapter();
+                $adapterName = $database['importexport_adapter'] ??
+                    $application->getDefaultDatabaseImportExportAdapter();
                 $databaseImportExportAdapter = $this->databaseImportAdapterManager->getAdapter($adapterName);
 
                 $filename = "$databaseName." . $databaseImportExportAdapter::getFileExtension();
@@ -151,7 +159,6 @@ class ApplicationDatabaseRefresher
 
                         $filename = $application->getSourceFile($scriptFilename);
                         $filename = $this->applyStringReplacements(
-                            $application,
                             $branchUrl,
                             $branchDatabase,
                             $filename
@@ -202,7 +209,6 @@ class ApplicationDatabaseRefresher
     }
 
     /**
-     * @param ApplicationConfig $application
      * @param                   $branchUrl
      * @param                   $branchDatabase
      * @param                   $filename
@@ -210,13 +216,12 @@ class ApplicationDatabaseRefresher
      * @return string Filename
      */
     private function applyStringReplacements(
-        ApplicationConfig $application,
         $branchUrl,
         $branchDatabase,
         $filename
     ): string {
         $stringReplacements = [];
-        if (FileLayout::FILE_LAYOUT_BRANCH == $application->getFileLayout()) {
+        if (FileLayout::FILE_LAYOUT_BRANCH == $this->applicationConfig->getFileLayout()) {
             $stringReplacements['{{branch}}'] = $branchUrl;
             $stringReplacements['{{branch_database}}'] = $branchDatabase;
         }

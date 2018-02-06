@@ -2,10 +2,7 @@
 
 namespace DevopsToolAppOrchestration;
 
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
 use Symfony\Component\Yaml\Yaml;
-use Zend\ConfigAggregator\GlobTrait;
 
 class ConfigProvider
 {
@@ -50,7 +47,7 @@ class ConfigProvider
     private function getApplicationOrchestrationConfig(): array
     {
         $config = require(__DIR__ . '/../config/application-orchestration.php');
-        $config['applications'] = $this->getApplicationConfig();
+        $config['application'] = $this->getApplicationConfig();
         return $config;
     }
 
@@ -59,33 +56,25 @@ class ConfigProvider
      */
     private function getApplicationConfig(): array
     {
-        $applicationConfig = [];
-        $iterator = new \DirectoryIterator('config/autoload/application-orchestration/applications');
-        foreach ($iterator as $applicationDir) {
-            if ($applicationDir->isDot()) {
+        // @todo We should just use php files probably instead. Or make expressive generally ready yaml files. This module
+        //       shouldn't reacy out into config/autoload
+        $config = Yaml::parse(file_get_contents('config/autoload/application-orchestration/config.yaml'));
+        $config['config_root'] = realpath('config/autoload/application-orchestration');
+        $config['environments'] = [];
+
+        $environmentIterator = new \DirectoryIterator('config/autoload/application-orchestration/environments');
+        foreach ($environmentIterator as $environmentDir) {
+            if ($environmentDir->isDot()) {
                 continue;
             }
-            $applicationCode = $applicationDir->getBasename();
-            $config = Yaml::parse(file_get_contents($applicationDir->getPathname() . '/config.yaml'));
-            $config['config_root'] = realpath($applicationDir->getPathname());
-            $config['environments'] = [];
 
-            $environmentIterator = new \DirectoryIterator($applicationDir->getPathname() . '/environments');
-            foreach ($environmentIterator as $environmentDir) {
-                if ($environmentDir->isDot()) {
-                    continue;
-                }
-
-                $environmentCode = $environmentDir->getBasename();
-                $config['environments'][$environmentCode] = Yaml::parse(
-                    file_get_contents($environmentDir->getPathname() . '/config.yaml')
-                );
-            }
-
-            $applicationConfig[$applicationCode] = $config;
+            $environmentCode = $environmentDir->getBasename();
+            $config['environments'][$environmentCode] = Yaml::parse(
+                file_get_contents($environmentDir->getPathname() . '/config.yaml')
+            );
         }
 
-        return $applicationConfig;
+        return $config;
     }
 
 }

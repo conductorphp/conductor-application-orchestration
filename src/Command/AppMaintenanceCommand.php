@@ -5,20 +5,25 @@
 
 namespace DevopsToolAppOrchestration\Command;
 
+use DevopsToolAppOrchestration\ApplicationConfig;
 use DevopsToolAppOrchestration\MaintenanceStrategy\MaintenanceStrategyInterface;
 use DevopsToolCore\MonologConsoleHandlerAwareTrait;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class AppMaintenanceCommand extends AbstractCommand
+class AppMaintenanceCommand extends Command
 {
     use MonologConsoleHandlerAwareTrait;
 
+    /**
+     * @var ApplicationConfig
+     */
+    private $applicationConfig;
     /**
      * @var MaintenanceStrategyInterface
      */
@@ -30,10 +35,12 @@ class AppMaintenanceCommand extends AbstractCommand
 
 
     public function __construct(
+        ApplicationConfig $applicationConfig,
         MaintenanceStrategyInterface $maintenanceStrategy,
         LoggerInterface $logger = null,
         string $name = null
     ) {
+        $this->applicationConfig = $applicationConfig;
         $this->maintenanceStrategy = $maintenanceStrategy;
         if (is_null($logger)) {
             $logger = new NullLogger();
@@ -51,12 +58,6 @@ class AppMaintenanceCommand extends AbstractCommand
             )
             ->addArgument('action', InputArgument::REQUIRED, 'Action to take. May use: status, enable, or disable')
             ->addOption(
-                'app',
-                null,
-                InputOption::VALUE_OPTIONAL,
-                'Application code if you want to pull repo_url and environment from configuration'
-            )
-            ->addOption(
                 'branch',
                 null,
                 InputArgument::OPTIONAL,
@@ -70,27 +71,24 @@ class AppMaintenanceCommand extends AbstractCommand
         if ($this->maintenanceStrategy instanceof LoggerAwareInterface) {
             $this->maintenanceStrategy->setLogger($this->logger);
         }
-        $applications = $this->getApplications($input);
 
         $action = $input->getArgument('action');
         $branch = $input->getOption('branch');
 
-        foreach ($applications as $code => $application) {
-            $appName = $application->getAppName();
-            if ('enable' == $action) {
-                $output->writeln("Enabling maintenance mode for app \"$appName\".");
-                $this->maintenanceStrategy->enable($application, $branch);
-                $output->writeln("Maintenance mode <info>enabled</info> for app \"$appName\".");
-            } elseif ('disable' == $action) {
-                $output->writeln("Disabling maintenance mode for app \"$appName\".");
-                $this->maintenanceStrategy->disable($application, $branch);
-                $output->writeln("Maintenance mode <error>disabled</error> for app \"$appName\".");
-            } else {
-                $output->writeln("Checking if maintenance mode is enabled for app \"$appName\".");
-                $status = $this->maintenanceStrategy->isEnabled($application, $branch);
-                $statusText = $status ? 'enabled' : 'disabled';
-                $output->writeln("Maintenance mode is $statusText for app \"$appName\".");
-            }
+        $appName = $this->applicationConfig->getAppName();
+        if ('enable' == $action) {
+            $output->writeln("Enabling maintenance mode for app \"$appName\".");
+            $this->maintenanceStrategy->enable($branch);
+            $output->writeln("Maintenance mode <info>enabled</info> for app \"$appName\".");
+        } elseif ('disable' == $action) {
+            $output->writeln("Disabling maintenance mode for app \"$appName\".");
+            $this->maintenanceStrategy->disable($branch);
+            $output->writeln("Maintenance mode <error>disabled</error> for app \"$appName\".");
+        } else {
+            $output->writeln("Checking if maintenance mode is enabled for app \"$appName\".");
+            $status = $this->maintenanceStrategy->isEnabled($branch);
+            $statusText = $status ? 'enabled' : 'disabled';
+            $output->writeln("Maintenance mode is $statusText for app \"$appName\".");
         }
         return 0;
     }

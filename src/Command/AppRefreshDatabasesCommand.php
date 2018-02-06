@@ -5,21 +5,25 @@
 
 namespace DevopsToolAppOrchestration\Command;
 
+use DevopsToolAppOrchestration\ApplicationConfig;
 use DevopsToolAppOrchestration\ApplicationDatabaseRefresher;
-use DevopsToolCore\Database\DatabaseImportExportAdapterManager;
 use DevopsToolCore\Filesystem\MountManager\MountManager;
 use DevopsToolCore\MonologConsoleHandlerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class AppRefreshDatabasesCommand extends AbstractCommand
+class AppRefreshDatabasesCommand extends Command
 {
     use MonologConsoleHandlerAwareTrait;
 
+    /**
+     * @var ApplicationConfig
+     */
+    private $applicationConfig;
     /**
      * @var ApplicationDatabaseRefresher
      */
@@ -35,11 +39,13 @@ class AppRefreshDatabasesCommand extends AbstractCommand
 
 
     public function __construct(
+        ApplicationConfig $applicationConfig,
         ApplicationDatabaseRefresher $applicationDatabaseImportRefresher,
         MountManager $mountManager,
         LoggerInterface $logger = null,
         string $name = null
     ) {
+        $this->applicationConfig = $applicationConfig;
         $this->applicationDatabaseRefresher = $applicationDatabaseImportRefresher;
         $this->mountManager = $mountManager;
         if (is_null($logger)) {
@@ -57,21 +63,21 @@ class AppRefreshDatabasesCommand extends AbstractCommand
             ->setHelp(
                 "This command refreshes application databases based on configuration."
             )
-            ->addOption(
-                'app',
-                null,
-                InputOption::VALUE_OPTIONAL,
-                'Application code.May be left empty if only one app exists in configuration or specifying --all.'
-            )
-            ->addOption('all', null, InputOption::VALUE_NONE, 'Refresh assets for all apps in configuration')
             ->addOption('branch', null, InputOption::VALUE_REQUIRED, 'The branch to install database into.')
             ->addOption(
                 'filesystem',
                 null,
                 InputOption::VALUE_OPTIONAL,
-                sprintf('The filesystem to pull snapshot from. <comment>Configured filesystems: %s. [default: application default filesystem]</comment>.',
+                sprintf(
+                    'The filesystem to pull snapshot from. <comment>Configured filesystems: %s. [default: application default filesystem]</comment>.',
                     implode(', ', $filesystemPrefixes)
                 )
+            )
+            ->addOption(
+                'reinstall',
+                null,
+                InputOption::VALUE_NONE,
+                'Reinstall if already installed. This will reinstall files, database, and assets.'
             )
             ->addOption(
                 'snapshot',
@@ -79,24 +85,22 @@ class AppRefreshDatabasesCommand extends AbstractCommand
                 InputOption::VALUE_REQUIRED,
                 'The snapshot to pull assets from.',
                 'production-scrubbed'
-            )
-        ;
+            );
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $this->injectOutputIntoLogger($output, $this->logger);
         $this->applicationDatabaseRefresher->setLogger($this->logger);
-        $applications = $this->getApplications($input);
 
-        foreach ($applications as $code => $application) {
-            $this->logger->info("Refreshing application \"$code\" databases.");
-            $filesystem = $input->getOption('filesystem') ?? $application->getDefaultFilesystem();
-            $snapshot = $input->getOption('snapshot');
-            $branch = $input->getOption('branch');
-            $this->applicationDatabaseRefresher->refreshDatabases($application, $filesystem, $snapshot, $branch);
-            $this->logger->info("<info>Application \"$code\" databases refreshed!</info>");
-        }
+        $appName = $this->applicationConfig->getAppName();
+        $this->logger->info("Refreshing application \"$appName\" databases.");
+        $filesystem = $input->getOption('filesystem') ?? $this->applicationConfig->getDefaultFilesystem();
+        $snapshot = $input->getOption('snapshot');
+        $branch = $input->getOption('branch');
+        $replaceIfExists = $input->getOption('reinstall');
+        $this->applicationDatabaseRefresher->refreshDatabases($filesystem, $snapshot, $branch, $replaceIfExists);
+        $this->logger->info("<info>Application \"$appName\" databases refreshed!</info>");
         return 0;
     }
 

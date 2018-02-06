@@ -47,7 +47,6 @@ class FileLayoutHelper
     }
 
     /**
-     * @todo Deprecate this method?
      * @param FileLayoutAwareInterface $fileLayoutAware
      */
     public function loadFileLayoutPaths(FileLayoutAwareInterface $fileLayoutAware): void
@@ -97,7 +96,7 @@ class FileLayoutHelper
 
     /**
      * @param ApplicationConfig $application
-     * @param string                   $location
+     * @param string            $location
      *
      * @return string
      */

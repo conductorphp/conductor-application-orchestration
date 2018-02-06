@@ -19,6 +19,10 @@ use Psr\Log\NullLogger;
 class ApplicationDestroyer
 {
     /**
+     * @var ApplicationConfig
+     */
+    private $applicationConfig;
+    /**
      * @var LoggerInterface
      */
     protected $logger;
@@ -28,9 +32,11 @@ class ApplicationDestroyer
     protected $databaseAdapterManager;
 
     public function __construct(
+        ApplicationConfig $applicationConfig,
         DatabaseAdapterManager $databaseAdapterManager,
         LoggerInterface $logger = null
     ) {
+        $this->applicationConfig = $applicationConfig;
         $this->databaseAdapterManager = $databaseAdapterManager;
         if (is_null($logger)) {
             $logger = new NullLogger();
@@ -51,8 +57,9 @@ class ApplicationDestroyer
     /**
      * @throws Exception
      */
-    public function destroy(ApplicationConfig $application, string $branch = null): void
+    public function destroy(string $branch = null): void
     {
+        $application = $this->applicationConfig;
         $codePath = $application->getCodePath($branch);
         $localPath = $application->getLocalPath($branch);
         $sharedPath = $application->getSharedPath();
@@ -76,7 +83,10 @@ class ApplicationDestroyer
 
         $fileLayout = $application->getFileLayout();
         $appRoot = $application->getAppRoot();
-        if (ApplicationConfig::FILE_LAYOUT_BLUE_GREEN == $fileLayout && file_exists("$appRoot/" . ApplicationConfig::PATH_CURRENT_RELEASE)) {
+        if (ApplicationConfig::FILE_LAYOUT_BLUE_GREEN == $fileLayout
+            && file_exists(
+                "$appRoot/" . ApplicationConfig::PATH_CURRENT_RELEASE
+            )) {
             unlink("$appRoot/" . ApplicationConfig::PATH_CURRENT_RELEASE);
             $this->logger->debug("Removed symlink \"$appRoot/" . ApplicationConfig::PATH_CURRENT_RELEASE . "\".");
         }
@@ -91,7 +101,7 @@ class ApplicationDestroyer
                         $databasesToDestroy[] = $database;
                     } else {
                         $allDatabases = $this->databaseAdapterManager->getDatabases();
-                        $appDatabases  = preg_grep('%^' . $database . '_%', $allDatabases);
+                        $appDatabases = preg_grep('%^' . $database . '_%', $allDatabases);
                         $databasesToDestroy += $appDatabases;
                     }
                 } else {
@@ -127,6 +137,7 @@ class ApplicationDestroyer
      * rmdir() will not remove the dir if it is not empty
      *
      * @param string $path
+     *
      * @return void
      */
     private function removePath(string $path): void

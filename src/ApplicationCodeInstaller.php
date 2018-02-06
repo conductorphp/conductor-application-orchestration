@@ -17,6 +17,10 @@ use Psr\Log\NullLogger;
 class ApplicationCodeInstaller
 {
     /**
+     * @var ApplicationConfig
+     */
+    private $applicationConfig;
+    /**
      * @var FileLayoutHelper
      */
     private $fileLayoutHelper;
@@ -26,9 +30,11 @@ class ApplicationCodeInstaller
     protected $logger;
 
     public function __construct(
+        ApplicationConfig $applicationConfig,
         FileLayoutHelper $fileLayoutHelper,
         LoggerInterface $logger = null
     ) {
+        $this->applicationConfig = $applicationConfig;
         $this->fileLayoutHelper = $fileLayoutHelper;
         if (is_null($logger)) {
             $logger = new NullLogger();
@@ -47,17 +53,16 @@ class ApplicationCodeInstaller
     }
 
     /**
-     * @param ApplicationConfig $application
-     * @param string            $branch
-     * @param bool              $update
+     * @param string $branch
+     * @param bool   $update
      *
      * @throws Exception\RuntimeException if app skeleton has not yet been installed
      */
     public function installCode(
-        ApplicationConfig $application,
         string $branch,
         $update = false
     ): void {
+        $application = $this->applicationConfig;
         $fileLayout = new FileLayout(
             $application->getAppRoot(),
             $application->getFileLayout(),
@@ -65,7 +70,9 @@ class ApplicationCodeInstaller
         );
         $this->fileLayoutHelper->loadFileLayoutPaths($fileLayout);
         if (!$this->fileLayoutHelper->isFileLayoutInstalled($fileLayout)) {
-            throw new Exception\RuntimeException("App is not yet installed. Install app skeleton before refreshing code.");
+            throw new Exception\RuntimeException(
+                "App is not yet installed. Install app skeleton before refreshing code."
+            );
         }
 
         $codePath = $application->getCodePath();

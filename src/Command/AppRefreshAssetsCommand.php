@@ -6,19 +6,24 @@
 namespace DevopsToolAppOrchestration\Command;
 
 use DevopsToolAppOrchestration\ApplicationAssetRefresher;
+use DevopsToolAppOrchestration\ApplicationConfig;
 use DevopsToolCore\Filesystem\MountManager\MountManager;
 use DevopsToolCore\MonologConsoleHandlerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class AppRefreshAssetsCommand extends AbstractCommand
+class AppRefreshAssetsCommand extends Command
 {
     use MonologConsoleHandlerAwareTrait;
 
+    /**
+     * @var ApplicationConfig
+     */
+    private $applicationConfig;
     /**
      * @var ApplicationAssetRefresher
      */
@@ -34,11 +39,13 @@ class AppRefreshAssetsCommand extends AbstractCommand
 
 
     public function __construct(
+        ApplicationConfig $applicationConfig,
         ApplicationAssetRefresher $applicationAssetRefresher,
         MountManager $mountManager,
         LoggerInterface $logger = null,
         string $name = null
     ) {
+        $this->applicationConfig = $applicationConfig;
         $this->applicationAssetRefresher = $applicationAssetRefresher;
         $this->mountManager = $mountManager;
         if (is_null($logger)) {
@@ -57,17 +64,11 @@ class AppRefreshAssetsCommand extends AbstractCommand
                 "This command refreshes application assets based on configuration."
             )
             ->addOption(
-                'app',
-                null,
-                InputOption::VALUE_OPTIONAL,
-                'Application code if you want to pull repo_url and environment from configuration'
-            )
-            ->addOption('all', null, InputOption::VALUE_NONE, 'Refresh assets for all apps in configuration')
-            ->addOption(
                 'filesystem',
                 null,
                 InputOption::VALUE_OPTIONAL,
-                sprintf('The filesystem to pull snapshot from. <comment>Configured filesystems: %s. [default: application default filesystem]</comment>.',
+                sprintf(
+                    'The filesystem to pull snapshot from. <comment>Configured filesystems: %s. [default: application default filesystem]</comment>.',
                     implode(', ', $filesystemPrefixes)
                 )
             )
@@ -96,19 +97,17 @@ class AppRefreshAssetsCommand extends AbstractCommand
     {
         $this->injectOutputIntoLogger($output, $this->logger);
         $this->applicationAssetRefresher->setLogger($this->logger);
-        $applications = $this->getApplications($input);
         $syncConfig = [
-            'delete' => $input->getOption('delete'),
+            'delete'     => $input->getOption('delete'),
             'batch_size' => $input->getOption('batch-size'),
         ];
 
-        foreach ($applications as $code => $application) {
-            $this->logger->info("Refreshing application \"$code\" assets.");
-            $filesystem = $input->getOption('filesystem') ?? $application->getDefaultFilesystem();
-            $snapshot = $input->getOption('snapshot');
-            $this->applicationAssetRefresher->refreshAssets($application, $filesystem, $snapshot, $syncConfig);
-            $this->logger->info("<info>Application \"$code\" assets refreshed!</info>");
-        }
+        $appName = $this->applicationConfig->getAppName();
+        $this->logger->info("Refreshing application \"$appName\" assets.");
+        $filesystem = $input->getOption('filesystem') ?? $this->applicationConfig->getDefaultFilesystem();
+        $snapshot = $input->getOption('snapshot');
+        $this->applicationAssetRefresher->refreshAssets($filesystem, $snapshot, $syncConfig);
+        $this->logger->info("<info>Application \"$appName\" assets refreshed!</info>");
         return 0;
     }
 

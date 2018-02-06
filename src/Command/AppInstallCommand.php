@@ -8,20 +8,26 @@ namespace DevopsToolAppOrchestration\Command;
 use DevopsToolAppOrchestration\ApplicationAssetRefresher;
 use DevopsToolAppOrchestration\ApplicationBuilder;
 use DevopsToolAppOrchestration\ApplicationCodeInstaller;
+use DevopsToolAppOrchestration\ApplicationConfig;
 use DevopsToolAppOrchestration\ApplicationDatabaseRefresher;
 use DevopsToolAppOrchestration\ApplicationSkeletonInstaller;
 use DevopsToolCore\Filesystem\MountManager\MountManager;
 use DevopsToolCore\MonologConsoleHandlerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class AppInstallCommand extends AbstractCommand
+class AppInstallCommand extends Command
 {
     use MonologConsoleHandlerAwareTrait;
 
+    /**
+     * @var ApplicationConfig
+     */
+    private $applicationConfig;
     /**
      * @var ApplicationSkeletonInstaller
      */
@@ -53,6 +59,7 @@ class AppInstallCommand extends AbstractCommand
 
 
     public function __construct(
+        ApplicationConfig $applicationConfig,
         ApplicationSkeletonInstaller $applicationSkeletonInstaller,
         ApplicationCodeInstaller $applicationCodeInstaller,
         ApplicationDatabaseRefresher $applicationDatabaseRefresher,
@@ -62,6 +69,7 @@ class AppInstallCommand extends AbstractCommand
         LoggerInterface $logger = null,
         string $name = null
     ) {
+        $this->applicationConfig = $applicationConfig;
         $this->applicationSkeletonInstaller = $applicationSkeletonInstaller;
         $this->applicationCodeInstaller = $applicationCodeInstaller;
         $this->applicationDatabaseRefresher = $applicationDatabaseRefresher;
@@ -81,13 +89,6 @@ class AppInstallCommand extends AbstractCommand
         $this->setName('app:install')
             ->setDescription('Install application.')
             ->setHelp("This command installs an application based on configuration in a given application setup repo.")
-            ->addOption(
-                'app',
-                null,
-                InputOption::VALUE_OPTIONAL,
-                'Application code if you want to pull repo_url and environment from configuration'
-            )
-            ->addOption('all', null, InputOption::VALUE_NONE, 'Refresh assets for all apps in configuration')
             ->addOption('branch', null, InputOption::VALUE_OPTIONAL, 'The code branch to install.')
             ->addOption(
                 'filesystem',
@@ -133,7 +134,6 @@ class AppInstallCommand extends AbstractCommand
         $this->applicationAssetRefresher->setLogger($this->logger);
         $this->applicationDatabaseRefresher->setLogger($this->logger);
         $this->applicationBuilder->setLogger($this->logger);
-        $applications = $this->getApplications($input);
         $syncConfig = [
             'batch_size' => $input->getOption('asset-batch-size'),
         ];
@@ -155,40 +155,38 @@ class AppInstallCommand extends AbstractCommand
             $buildTriggers[] = ApplicationBuilder::TRIGGER_DATABASES;
         }
 
-        foreach ($applications as $code => $application) {
-            $this->logger->info("Refreshing application \"$code\" assets.");
-            $branch = $input->getOption('branch') ?? $application->getDefaultBranch();
-            $filesystem = $input->getOption('filesystem') ?? $application->getDefaultFilesystem();
-            $snapshot = $input->getOption('snapshot');
+        $appName = $this->applicationConfig->getAppName();
+        $this->logger->info("Refreshing application \"$appName\" assets.");
+        $branch = $input->getOption('branch') ?? $this->applicationConfig->getDefaultBranch();
+        $filesystem = $input->getOption('filesystem') ?? $this->applicationConfig->getDefaultFilesystem();
+        $snapshot = $input->getOption('snapshot');
 
-            $this->applicationSkeletonInstaller->prepareFileLayout($application);
+        $this->applicationSkeletonInstaller->prepareFileLayout();
 
-            if ($installCode) {
-                $this->applicationCodeInstaller->installCode($application, $branch, $reinstall);
-            }
-
-            $this->applicationSkeletonInstaller->installAppFiles($application, $branch, $reinstall);
-
-            if ($installAssets) {
-                $this->applicationAssetRefresher->refreshAssets($application, $filesystem, $snapshot, $syncConfig);
-            }
-
-            if ($installDatabases) {
-                $this->applicationDatabaseRefresher->refreshDatabases(
-                    $application,
-                    $filesystem,
-                    $snapshot,
-                    $branch,
-                    $reinstall
-                );
-            }
-
-            if ($runBuild) {
-                $this->applicationBuilder->buildInPlace($application, $branch, $buildPlan, $buildTriggers, $reinstall);
-            }
-
-            $this->logger->info("<info>Application \"$code\" installation complete!</info>");
+        if ($installCode) {
+            $this->applicationCodeInstaller->installCode($branch, $reinstall);
         }
+
+        $this->applicationSkeletonInstaller->installAppFiles($branch, $reinstall);
+
+        if ($installAssets) {
+            $this->applicationAssetRefresher->refreshAssets($filesystem, $snapshot, $syncConfig);
+        }
+
+        if ($installDatabases) {
+            $this->applicationDatabaseRefresher->refreshDatabases(
+                $filesystem,
+                $snapshot,
+                $branch,
+                $reinstall
+            );
+        }
+
+        if ($runBuild) {
+            $this->applicationBuilder->buildInPlace($branch, $buildPlan, $buildTriggers, $reinstall);
+        }
+
+        $this->logger->info("<info>Application \"$appName\" installation complete!</info>");
         return 0;
     }
 

@@ -5,21 +5,26 @@
 
 namespace DevopsToolAppOrchestration\Command;
 
+use DevopsToolAppOrchestration\ApplicationConfig;
 use DevopsToolAppOrchestration\ApplicationSnapshotTaker;
-use DevopsToolAppOrchestration\Exception;
 use DevopsToolCore\Filesystem\MountManager\MountManager;
 use DevopsToolCore\MonologConsoleHandlerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class AppSnapshotCommand extends AbstractCommand
+class AppSnapshotCommand extends Command
 {
     use MonologConsoleHandlerAwareTrait;
 
+    /**
+     * @var ApplicationConfig
+     */
+    private $applicationConfig;
     /**
      * @var ApplicationSnapshotTaker
      */
@@ -35,11 +40,13 @@ class AppSnapshotCommand extends AbstractCommand
 
 
     public function __construct(
+        ApplicationConfig $applicationConfig,
         ApplicationSnapshotTaker $applicationSnapshotTaker,
         MountManager $mountManager,
         LoggerInterface $logger = null,
         string $name = null
     ) {
+        $this->applicationConfig = $applicationConfig;
         $this->applicationSnapshotTaker = $applicationSnapshotTaker;
         $this->mountManager = $mountManager;
         if (is_null($logger)) {
@@ -58,13 +65,6 @@ class AppSnapshotCommand extends AbstractCommand
                 "This command creates an application snapshot intended for testing purposes on lower environments."
             )
             ->addArgument('name', InputArgument::OPTIONAL, 'Snapshot name. Defaults to environment name.')
-            ->addOption(
-                'app',
-                null,
-                InputOption::VALUE_OPTIONAL,
-                'Application code if you want to pull repo_url and environment from configuration'
-            )
-            ->addOption('all', null, InputOption::VALUE_NONE, 'Create a snapshot for all apps in configuration.')
             ->addOption(
                 'branch',
                 null,
@@ -106,7 +106,6 @@ class AppSnapshotCommand extends AbstractCommand
     {
         $this->injectOutputIntoLogger($output, $this->logger);
         $this->applicationSnapshotTaker->setLogger($this->logger);
-        $applications = $this->getApplications($input);
 
         $branch = $input->getOption('branch');
         $noAssets = $input->getOption('no-assets');
@@ -117,24 +116,24 @@ class AppSnapshotCommand extends AbstractCommand
             'batch_size' => $input->getOption('asset-batch-size'),
         ];
 
-        foreach ($applications as $code => $application) {
-            $snapshotName = $input->getArgument('name') ??
-            $application->getCurrentEnvironment() . (!$noScrub ? '-scrubbed' : '');
-            $filesystem = $input->getOption('filesystem') ?? $application->getDefaultFilesystem();
-            $this->logger->info("Creating snapshot \"$snapshotName\" from application \"$code\" and pushing to filesystem \"$filesystem\".");
-            $this->applicationSnapshotTaker->takeSnapshot(
-                $application,
-                $filesystem,
-                $snapshotName,
-                $branch,
-                !$noDatabases,
-                !$noAssets,
-                !$noScrub,
-                $delete,
-                $assetSyncConfig
-            );
-            $this->logger->info("<info>Application \"$code\" snapshot completed!</info>");
-        }
+        $appName = $this->applicationConfig->getAppName();
+        $snapshotName = $input->getArgument('name') ??
+            $this->applicationConfig->getCurrentEnvironment() . (!$noScrub ? '-scrubbed' : '');
+        $filesystem = $input->getOption('filesystem') ?? $this->applicationConfig->getDefaultFilesystem();
+        $this->logger->info(
+            "Creating snapshot \"$snapshotName\" from application \"$appName\" and pushing to filesystem \"$filesystem\"."
+        );
+        $this->applicationSnapshotTaker->takeSnapshot(
+            $filesystem,
+            $snapshotName,
+            $branch,
+            !$noDatabases,
+            !$noAssets,
+            !$noScrub,
+            $delete,
+            $assetSyncConfig
+        );
+        $this->logger->info("<info>Application \"$appName\" snapshot completed!</info>");
         return 0;
     }
 

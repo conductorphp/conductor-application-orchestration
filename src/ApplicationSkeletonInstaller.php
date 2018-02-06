@@ -19,6 +19,10 @@ use Twig\Loader\ArrayLoader as TwigArrayLoader;
 class ApplicationSkeletonInstaller
 {
     /**
+     * @var ApplicationConfig
+     */
+    private $applicationConfig;
+    /**
      * @var ShellCommandHelper
      */
     private $shellCommandHelper;
@@ -31,11 +35,20 @@ class ApplicationSkeletonInstaller
      */
     protected $logger;
 
+    /**
+     * ApplicationSkeletonInstaller constructor.
+     *
+     * @param ShellCommandHelper   $shellCommandHelper
+     * @param FileLayoutHelper     $fileLayoutHelper
+     * @param LoggerInterface|null $logger
+     */
     public function __construct(
+        ApplicationConfig $applicationConfig,
         ShellCommandHelper $shellCommandHelper,
         FileLayoutHelper $fileLayoutHelper,
         LoggerInterface $logger = null
     ) {
+        $this->applicationConfig = $applicationConfig;
         $this->shellCommandHelper = $shellCommandHelper;
         $this->fileLayoutHelper = $fileLayoutHelper;
         if (is_null($logger)) {
@@ -55,36 +68,29 @@ class ApplicationSkeletonInstaller
     }
 
     public function installSkeleton(
-        ApplicationConfig $application,
         string $branch,
         bool $replaceFiles = false
     ): void {
         $origUmask = umask(0);
-        $this->prepareFileLayout($application);
-        $this->installAppFiles($application, $branch, $replaceFiles);
+        $this->prepareFileLayout();
+        $this->installAppFiles($branch, $replaceFiles);
         umask($origUmask);
     }
 
-    /**
-     * @param ApplicationConfig $application
-     */
-    public function prepareFileLayout(ApplicationConfig $application): void
+    public function prepareFileLayout(): void
     {
         $this->logger->info('Preparing file layout.');
-        $this->prepareAppRootPath($application);
-        $this->prepareCodePath($application);
-        $this->prepareLocalPath($application);
-        $this->prepareSharedPath($application);
-        $this->prepareCurrentReleasePath($application);
+        $this->prepareAppRootPath();
+        $this->prepareCodePath();
+        $this->prepareLocalPath();
+        $this->prepareSharedPath();
+        $this->prepareCurrentReleasePath();
     }
 
-    /**
-     * @param ApplicationConfig $application
-     */
-    private function prepareAppRootPath(ApplicationConfig $application): void
+    private function prepareAppRootPath(): void
     {
-        $appRoot = $application->getAppRoot();
-        $defaultDirMode = $application->getDefaultDirMode();
+        $appRoot = $this->applicationConfig->getAppRoot();
+        $defaultDirMode = $this->applicationConfig->getDefaultDirMode();
         if (!is_writable($appRoot)) {
             if (is_writable(dirname($appRoot))) {
                 mkdir($appRoot, $defaultDirMode);
@@ -94,15 +100,12 @@ class ApplicationSkeletonInstaller
         }
     }
 
-    /**
-     * @param ApplicationConfig $application
-     */
-    private function prepareCodePath(ApplicationConfig $application): void
+    private function prepareCodePath(): void
     {
-        $codePath = $application->getCodePath();
-        if ($codePath != $application->getAppRoot()) {
+        $codePath = $this->applicationConfig->getCodePath();
+        if ($codePath != $this->applicationConfig->getAppRoot()) {
             if (!file_exists($codePath)) {
-                mkdir($codePath, $application->getDefaultDirMode(), true);
+                mkdir($codePath, $this->applicationConfig->getDefaultDirMode(), true);
                 $this->logger->debug("Created \"{$codePath}\".");
             } else {
                 $this->logger->debug("Skipped creating \"{$codePath}\". Already exists.");
@@ -110,15 +113,12 @@ class ApplicationSkeletonInstaller
         }
     }
 
-    /**
-     * @param ApplicationConfig $application
-     */
-    private function prepareLocalPath(ApplicationConfig $application): void
+    private function prepareLocalPath(): void
     {
-        $localPath = $application->getLocalPath();
-        if ($localPath != $application->getCodePath() && !file_exists($localPath)) {
+        $localPath = $this->applicationConfig->getLocalPath();
+        if ($localPath != $this->applicationConfig->getCodePath() && !file_exists($localPath)) {
             if (!file_exists($localPath)) {
-                mkdir($localPath, $application->getDefaultDirMode(), true);
+                mkdir($localPath, $this->applicationConfig->getDefaultDirMode(), true);
                 $this->logger->debug("Created \"{$localPath}\".");
             } else {
                 $this->logger->debug("Skipped creating \"{$localPath}\". Already exists.");
@@ -126,15 +126,12 @@ class ApplicationSkeletonInstaller
         }
     }
 
-    /**
-     * @param ApplicationConfig $application
-     */
-    private function prepareSharedPath(ApplicationConfig $application): void
+    private function prepareSharedPath(): void
     {
-        $sharedPath = $application->getSharedPath();
-        if ($sharedPath != $application->getCodePath() && !file_exists($sharedPath)) {
+        $sharedPath = $this->applicationConfig->getSharedPath();
+        if ($sharedPath != $this->applicationConfig->getCodePath() && !file_exists($sharedPath)) {
             if (!file_exists($sharedPath)) {
-                mkdir($sharedPath, $application->getDefaultDirMode(), true);
+                mkdir($sharedPath, $this->applicationConfig->getDefaultDirMode(), true);
                 $this->logger->debug("Created \"{$sharedPath}\".");
             } else {
                 $this->logger->debug("Skipped creating \"{$sharedPath}\". Already exists.");
@@ -142,14 +139,11 @@ class ApplicationSkeletonInstaller
         }
     }
 
-    /**
-     * @param ApplicationConfig $application
-     */
-    private function prepareCurrentReleasePath(ApplicationConfig $application): void
+    private function prepareCurrentReleasePath(): void
     {
-        if (FileLayoutAwareInterface::FILE_LAYOUT_BLUE_GREEN == $application->getFileLayout()) {
-            $appRoot = $application->getAppRoot();
-            $relativeCodePath = substr($application->getCodePath(), strlen($appRoot) + 1);
+        if (FileLayoutAwareInterface::FILE_LAYOUT_BLUE_GREEN == $this->applicationConfig->getFileLayout()) {
+            $appRoot = $this->applicationConfig->getAppRoot();
+            $relativeCodePath = substr($this->applicationConfig->getCodePath(), strlen($appRoot) + 1);
             if (!file_exists("$appRoot/current_release")) {
                 $this->logger->debug("Created symlink \"$appRoot/current_release\" -> \"$relativeCodePath\".");
                 symlink($relativeCodePath, "$appRoot/current_release");
@@ -162,24 +156,22 @@ class ApplicationSkeletonInstaller
     }
 
     /**
-     * @param ApplicationConfig $application
-     * @param string            $branch
-     * @param bool              $replace
+     * @param string $branch
+     * @param bool   $replace
      */
-    public function installAppFiles(ApplicationConfig $application, string $branch, bool $replace = false): void
+    public function installAppFiles(string $branch, bool $replace = false): void
     {
-        $this->installDirectories($application, $replace);
-        $this->installFiles($application, $branch, $replace);
-        $this->installSymlinks($application, $replace);
+        $this->installDirectories($replace);
+        $this->installFiles($branch, $replace);
+        $this->installSymlinks($replace);
     }
 
     /**
-     * @param ApplicationConfig $application
-     * @param bool              $replace
+     * @param bool $replace
      */
-    private function installDirectories(ApplicationConfig $application, bool $replace): void
+    private function installDirectories(bool $replace): void
     {
-        $files = $application->getFiles();
+        $files = $this->applicationConfig->getFiles();
         if (!empty($files['directories'])) {
             foreach ($files['directories'] as $filename => $directory) {
                 if (empty($directory['location'])) {
@@ -188,30 +180,28 @@ class ApplicationSkeletonInstaller
                     );
                 }
 
-                $resolvedFilename = $this->resolveFilename($application, $directory['location'], $filename);
-                $this->installDirectory($application, $resolvedFilename, $filename, $directory, $replace);
+                $resolvedFilename = $this->resolveFilename($directory['location'], $filename);
+                $this->installDirectory($resolvedFilename, $filename, $directory, $replace);
             }
         }
     }
 
     /**
-     * @param ApplicationConfig $application
-     * @param string            $resolvedFilename
-     * @param string            $filename
-     * @param array             $fileInfo
-     * @param bool              $replace
+     * @param string $resolvedFilename
+     * @param string $filename
+     * @param array  $fileInfo
+     * @param bool   $replace
      */
     private function installDirectory(
-        ApplicationConfig $application,
         string $resolvedFilename,
         string $filename,
         array $fileInfo,
         bool $replace
     ): void {
         if ($fileInfo['auto_symlink']) {
-            $symlinkResolvedFilename = $this->resolveFilename($application, 'code', $filename);
-            $symlinkResolvedTargetFilename = $this->resolveFilename($application, $fileInfo['location'], $filename);
-            $this->installSymlink($application, $symlinkResolvedFilename, $symlinkResolvedTargetFilename, $replace);
+            $symlinkResolvedFilename = $this->resolveFilename('code', $filename);
+            $symlinkResolvedTargetFilename = $this->resolveFilename($fileInfo['location'], $filename);
+            $this->installSymlink($symlinkResolvedFilename, $symlinkResolvedTargetFilename, $replace);
         }
 
         if (!$replace && file_exists($resolvedFilename)) {
@@ -225,9 +215,9 @@ class ApplicationSkeletonInstaller
         }
 
         $parentDir = dirname($resolvedFilename);
-        $this->ensureDirExists($application, $parentDir, $replace);
+        $this->ensureDirExists($parentDir, $replace);
 
-        $mode = $application->getDefaultDirMode();
+        $mode = $this->applicationConfig->getDefaultDirMode();
         if (isset($fileInfo['mode'])) {
             if (is_string($fileInfo['mode'])) {
                 if (decoct(octdec($fileInfo['mode'])) != $fileInfo['mode']) {
@@ -257,13 +247,12 @@ class ApplicationSkeletonInstaller
     }
 
     /**
-     * @param ApplicationConfig $application
-     * @param string            $branch
-     * @param bool              $replace
+     * @param string $branch
+     * @param bool   $replace
      */
-    private function installFiles(ApplicationConfig $application, string $branch, bool $replace): void
+    private function installFiles(string $branch, bool $replace): void
     {
-        $files = $application->getFiles();
+        $files = $this->applicationConfig->getFiles();
         if (!empty($files['files'])) {
             foreach ($files['files'] as $filename => $file) {
                 if (empty($file['location'])) {
@@ -272,22 +261,20 @@ class ApplicationSkeletonInstaller
                     );
                 }
 
-                $resolvedFilename = $this->resolveFilename($application, $file['location'], $filename);
-                $this->installFile($application, $resolvedFilename, $filename, $file, $branch, $replace);
+                $resolvedFilename = $this->resolveFilename($file['location'], $filename);
+                $this->installFile($resolvedFilename, $filename, $file, $branch, $replace);
             }
         }
     }
 
     /**
-     * @param ApplicationConfig $application
-     * @param string            $resolvedFilename
-     * @param string            $filename
-     * @param array             $fileInfo
-     * @param string            $branch
-     * @param bool              $replace
+     * @param string $resolvedFilename
+     * @param string $filename
+     * @param array  $fileInfo
+     * @param string $branch
+     * @param bool   $replace
      */
     private function installFile(
-        ApplicationConfig $application,
         string $resolvedFilename,
         string $filename,
         array $fileInfo,
@@ -295,9 +282,9 @@ class ApplicationSkeletonInstaller
         bool $replace
     ): void {
         if ($fileInfo['auto_symlink']) {
-            $symlinkResolvedFilename = $this->resolveFilename($application, 'code', $filename);
-            $symlinkResolvedTargetFilename = $this->resolveFilename($application, $fileInfo['location'], $filename);
-            $this->installSymlink($application, $symlinkResolvedFilename, $symlinkResolvedTargetFilename, $replace);
+            $symlinkResolvedFilename = $this->resolveFilename('code', $filename);
+            $symlinkResolvedTargetFilename = $this->resolveFilename($fileInfo['location'], $filename);
+            $this->installSymlink($symlinkResolvedFilename, $symlinkResolvedTargetFilename, $replace);
         }
 
         if (!$replace && file_exists($resolvedFilename)) {
@@ -311,10 +298,10 @@ class ApplicationSkeletonInstaller
         }
 
         $parentDir = dirname($resolvedFilename);
-        $this->ensureDirExists($application, $parentDir, $replace);
+        $this->ensureDirExists($parentDir, $replace);
 
-        $globalTemplateVars = $application->getTemplateVars();
-        $mode = $application->getDefaultDirMode();
+        $globalTemplateVars = $this->applicationConfig->getTemplateVars();
+        $mode = $this->applicationConfig->getDefaultDirMode();
         if (isset($fileInfo['mode'])) {
             if (is_string($fileInfo['mode'])) {
                 if (decoct(octdec($fileInfo['mode'])) != $fileInfo['mode']) {
@@ -329,7 +316,7 @@ class ApplicationSkeletonInstaller
         }
         $modeAsString = base_convert((string)$mode, 10, 8);
 
-        $content = $this->renderContent($application, $fileInfo, $globalTemplateVars, $resolvedFilename, $branch);
+        $content = $this->renderContent($fileInfo, $globalTemplateVars, $branch);
         if (file_exists($resolvedFilename)) {
             if (!is_file($resolvedFilename) || is_link($resolvedFilename)) {
                 if (is_dir($resolvedFilename)) {
@@ -351,12 +338,11 @@ class ApplicationSkeletonInstaller
     }
 
     /**
-     * @param ApplicationConfig $application
-     * @param bool              $replace
+     * @param bool $replace
      */
-    private function installSymlinks(ApplicationConfig $application, bool $replace): void
+    private function installSymlinks(bool $replace): void
     {
-        $files = $application->getFiles();
+        $files = $this->applicationConfig->getFiles();
         if (!empty($files['symlinks'])) {
             foreach ($files['symlinks'] as $sourcePath => $symlink) {
                 if (empty($symlink['location']) || empty($symlink['target_location']) || empty($symlink['target'])) {
@@ -365,28 +351,26 @@ class ApplicationSkeletonInstaller
                     );
                 }
 
-                $resolvedFilename = $this->resolveFilename($application, $symlink['location'], $sourcePath);
+                $resolvedFilename = $this->resolveFilename($symlink['location'], $sourcePath);
                 $resolvedTargetFilename = $this->resolveFilename(
-                    $application,
                     $symlink['target_location'],
                     $symlink['target']
                 );
-                $this->installSymlink($application, $resolvedFilename, $resolvedTargetFilename, $replace);
+                $this->installSymlink($resolvedFilename, $resolvedTargetFilename, $replace);
             }
         }
     }
 
     /**
-     * @param ApplicationConfig $application
-     * @param string            $location
-     * @param string            $filename
+     * @param string $location
+     * @param string $filename
      *
      * @return string
      */
-    private function resolveFilename(ApplicationConfig $application, string $location, string $filename): string
+    private function resolveFilename(string $location, string $filename): string
     {
-        $pathPrefix = $this->fileLayoutHelper->resolvePathPrefix($application, $location);
-        $resolvedFilename = $application->getAppRoot();
+        $pathPrefix = $this->fileLayoutHelper->resolvePathPrefix($this->applicationConfig, $location);
+        $resolvedFilename = $this->applicationConfig->getAppRoot();
         if ($pathPrefix) {
             $resolvedFilename .= "/$pathPrefix";
         }
@@ -395,21 +379,19 @@ class ApplicationSkeletonInstaller
     }
 
     /**
-     * @param ApplicationConfig $application
-     * @param array             $fileInfo
-     * @param array             $globalTemplateVars
-     * @param string            $resolvedFilename
-     * @param string            $branch
+     * @param array  $fileInfo
+     * @param array  $globalTemplateVars
+     * @param string $branch
      *
      * @return string
      */
-    private function renderContent(ApplicationConfig $application, array $fileInfo, array $globalTemplateVars, string $resolvedFilename, string $branch): string
+    private function renderContent(array $fileInfo, array $globalTemplateVars, string $branch): string
     {
         if (empty($fileInfo['source'])) {
             return '';
         }
 
-        $filename = $application->getSourceFile($fileInfo['source']);
+        $filename = $this->applicationConfig->getSourceFile($fileInfo['source']);
         $content = file_get_contents($filename);
 
         if (!empty($fileInfo['template_vars'])) {
@@ -425,7 +407,7 @@ class ApplicationSkeletonInstaller
 
         // Special use case to replace branch name in any configuration files in which it is needed with the branch
         // specific database name.
-        if ('branch' == $application->getFileLayout()) {
+        if ('branch' == $this->applicationConfig->getFileLayout()) {
             $databaseSanitizedBranchName = $this->sanitizeDatabaseName($branch);
             $urlSanitizedBranchName = $this->sanitizeUrl($branch);
             foreach ($templateVars as &$templateVar) {
@@ -454,12 +436,11 @@ class ApplicationSkeletonInstaller
 
 
     /**
-     * @param ApplicationConfig $application
-     * @param string            $resolvedFilename
-     * @param string            $resolvedTargetFilename
-     * @param bool              $replace
+     * @param string $resolvedFilename
+     * @param string $resolvedTargetFilename
+     * @param bool   $replace
      */
-    private function installSymlink(ApplicationConfig $application, string $resolvedFilename, string $resolvedTargetFilename, bool $replace): void
+    private function installSymlink(string $resolvedFilename, string $resolvedTargetFilename, bool $replace): void
     {
         if ($resolvedFilename == $resolvedTargetFilename) {
             return;
@@ -484,10 +465,10 @@ class ApplicationSkeletonInstaller
         }
 
         $parentDir = dirname($resolvedFilename);
-        $this->ensureDirExists($application, $parentDir, $replace);
+        $this->ensureDirExists($parentDir, $replace);
 
         $parentDir = dirname($resolvedTargetFilename);
-        $this->ensureDirExists($application, $parentDir, $replace);
+        $this->ensureDirExists($parentDir, $replace);
 
         if (file_exists($resolvedFilename) || is_link($resolvedFilename)) {
             if (is_link($resolvedFilename) || is_file($resolvedFilename)) {
@@ -525,13 +506,12 @@ class ApplicationSkeletonInstaller
     }
 
     /**
-     * @param ApplicationConfig $application
-     * @param string            $path
-     * @param bool              $force
+     * @param string $path
+     * @param bool   $force
      *
      * @throws Exception\RuntimeException if path already exists, but is not a directory
      */
-    private function ensureDirExists(ApplicationConfig $application, string $path, bool $force): void
+    private function ensureDirExists(string $path, bool $force): void
     {
         if (!(is_dir($path))) {
             if (file_exists($path)) {
@@ -541,7 +521,7 @@ class ApplicationSkeletonInstaller
                     throw new Exception\RuntimeException("Path \"$path\" already exists, but is not a directory.");
                 }
             }
-            mkdir($path, $application->getDefaultDirMode(), true);
+            mkdir($path, $this->applicationConfig->getDefaultDirMode(), true);
         }
     }
 

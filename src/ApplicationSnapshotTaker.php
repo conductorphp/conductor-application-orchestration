@@ -19,6 +19,10 @@ use Psr\Log\NullLogger;
 class ApplicationSnapshotTaker
 {
     /**
+     * @var ApplicationConfig
+     */
+    private $applicationConfig;
+    /**
      * @var DatabaseImportExportAdapterManager
      */
     private $databaseImportExportAdapterManager;
@@ -40,12 +44,14 @@ class ApplicationSnapshotTaker
     protected $logger;
 
     public function __construct(
+        ApplicationConfig $applicationConfig,
         DatabaseImportExportAdapterManager $databaseImportExportAdapterManager,
         MountManager $mountManager,
         FileLayoutHelper $fileLayoutHelper,
         string $workingDirectory = '/tmp/.conductor-snapshot',
         LoggerInterface $logger = null
     ) {
+        $this->applicationConfig = $applicationConfig;
         $this->databaseImportExportAdapterManager = $databaseImportExportAdapterManager;
         $this->mountManager = $mountManager;
         $this->fileLayoutHelper = $fileLayoutHelper;
@@ -57,7 +63,6 @@ class ApplicationSnapshotTaker
     }
 
     public function takeSnapshot(
-        ApplicationConfig $application,
         string $filesystem,
         string $snapshotName,
         string $branch = null,
@@ -75,11 +80,11 @@ class ApplicationSnapshotTaker
         $this->prepWorkingDirectory();
 
         if ($includeDatabases) {
-            $this->uploadDatabases($application, $filesystem, $snapshotName, $branch, $scrub);
+            $this->uploadDatabases($filesystem, $snapshotName, $branch, $scrub);
         }
 
         if ($includeAssets) {
-            $this->uploadAssets($application, $filesystem, $snapshotName, $assetSyncConfig);
+            $this->uploadAssets($filesystem, $snapshotName, $assetSyncConfig);
         }
     }
 
@@ -94,27 +99,26 @@ class ApplicationSnapshotTaker
     }
 
     /**
-     * @param ApplicationConfig $application
-     * @param string            $filesystem
-     * @param string            $snapshotName
-     * @param string            $branch
-     * @param bool              $scrub
+     * @param string $filesystem
+     * @param string $snapshotName
+     * @param string $branch
+     * @param bool   $scrub
      */
     private function uploadDatabases(
-        ApplicationConfig $application,
         string $filesystem,
         string $snapshotName,
         string $branch = null,
         bool $scrub
     ): void {
-        foreach ($application->getDatabases() as $databaseName => $database) {
-            $adapterName = $database['importexport_adapter'] ?? $application->getDefaultDatabaseImportExportAdapter();
+        foreach ($this->applicationConfig->getDatabases() as $databaseName => $database) {
+            $adapterName = $database['importexport_adapter'] ??
+                $this->applicationConfig->getDefaultDatabaseImportExportAdapter();
             $databaseImportExportAdapter = $this->databaseImportExportAdapterManager->getAdapter($adapterName);
 
             if (isset($databaseInfo['local_database_name'])) {
                 $localDatabaseName = $database['local_database_name'];
             } else {
-                if (FileLayoutAwareInterface::FILE_LAYOUT_BRANCH == $application->getFileLayout()) {
+                if (FileLayoutAwareInterface::FILE_LAYOUT_BRANCH == $this->applicationConfig->getFileLayout()) {
                     $localDatabaseName = $databaseName . '_' . $this->sanitizeDatabaseName($branch);
                 } else {
                     $localDatabaseName = $databaseName;
@@ -123,7 +127,7 @@ class ApplicationSnapshotTaker
 
             $exportOptions = [];
             if ($scrub && !empty($database['excludes'])) {
-                $exportOptions['ignore_tables'] = $this->expandDatabaseTableGroups($application, $database['excludes']);
+                $exportOptions['ignore_tables'] = $this->expandDatabaseTableGroups($database['excludes']);
             }
 
             $filename = $databaseImportExportAdapter->exportToFile(
@@ -138,38 +142,36 @@ class ApplicationSnapshotTaker
     }
 
     /**
-     * @param ApplicationConfig $application
-     * @param string            $filesystem
-     * @param string            $snapshotName
-     * @param array             $syncOptions
+     * @param string $filesystem
+     * @param string $snapshotName
+     * @param array  $syncOptions
      */
     private function uploadAssets(
-        ApplicationConfig $application,
         string $filesystem,
         string $snapshotName,
         array $syncOptions
     ): void {
-        foreach ($application->getAssets() as $assetPath => $asset) {
-            $pathPrefix = $this->fileLayoutHelper->resolvePathPrefix($application, $asset['location']);
+        foreach ($this->applicationConfig->getAssets() as $assetPath => $asset) {
+            $pathPrefix = $this->fileLayoutHelper->resolvePathPrefix($this->applicationConfig, $asset['location']);
             $sourcePath = $asset['local_path'] ?? $assetPath;
             if ($pathPrefix) {
                 $sourcePath = "$pathPrefix/$sourcePath";
             }
-            $sourcePath = $application->getAppRoot() . '/' . $sourcePath;
+            $sourcePath = $this->applicationConfig->getAppRoot() . '/' . $sourcePath;
             $targetPath = "$filesystem://snapshots/$snapshotName/assets/{$asset['location']}/$assetPath";
             $this->logger->debug("Syncing asset \"$sourcePath\" to \"$targetPath\".");
 
             if (!empty($asset['excludes'])) {
                 $syncOptions['excludes'] = array_merge(
                     $syncOptions['excludes'] ?? [],
-                    $this->expandAssetGroups($application, $asset['excludes'])
+                    $this->expandAssetGroups($asset['excludes'])
                 );
             }
 
             if (!empty($asset['includes'])) {
                 $syncOptions['includes'] = array_merge(
                     $syncOptions['includes'] ?? [],
-                    $this->expandAssetGroups($application, $asset['includes'])
+                    $this->expandAssetGroups($asset['includes'])
                 );
             }
 
@@ -189,19 +191,18 @@ class ApplicationSnapshotTaker
     }
 
     /**
-     * @param ApplicationConfig $application
-     * @param array             $assetGroups
+     * @param array $assetGroups
      *
      * @return array
      * @throws Exception
      */
-    private function expandAssetGroups(ApplicationConfig $application, array $assetGroups): array
+    private function expandAssetGroups(array $assetGroups): array
     {
         $expandedAssetGroups = [];
         foreach ($assetGroups as $assetGroup) {
             if ('@' == substr($assetGroup, 0, 1)) {
                 $group = substr($assetGroup, 1);
-                $applicationAssetGroups = $application->getAssetGroups();
+                $applicationAssetGroups = $this->applicationConfig->getAssetGroups();
                 if (!isset($applicationAssetGroups[$group])) {
                     $message = "Could not expand asset group \"$group\".";
                     $similarGroups = $this->findSimilarNames($group, array_keys($applicationAssetGroups));
@@ -213,7 +214,7 @@ class ApplicationSnapshotTaker
 
                 $expandedAssetGroups = array_merge(
                     $expandedAssetGroups,
-                    $this->expandAssetGroups($application, $applicationAssetGroups[$group])
+                    $this->expandAssetGroups($applicationAssetGroups[$group])
                 );
             } else {
                 $expandedAssetGroups[] = $assetGroup;
@@ -229,13 +230,13 @@ class ApplicationSnapshotTaker
      *
      * @return array
      */
-    private function expandDatabaseTableGroups(ApplicationConfig $application, array $databaseTableGroups): array
+    private function expandDatabaseTableGroups(array $databaseTableGroups): array
     {
         $expandedDatabaseTableGroups = [];
         foreach ($databaseTableGroups as $databaseTableGroup) {
             if ('@' == substr($databaseTableGroup, 0, 1)) {
                 $group = substr($databaseTableGroup, 1);
-                $applicationDatabaseTableGroups = $application->getDatabaseTableGroups();
+                $applicationDatabaseTableGroups = $this->applicationConfig->getDatabaseTableGroups();
                 if (!isset($applicationDatabaseTableGroups[$group])) {
                     $message = "Could not expand database table group \"$group\".";
                     $similarGroups = $this->findSimilarNames($group, array_keys($applicationDatabaseTableGroups));
@@ -247,7 +248,7 @@ class ApplicationSnapshotTaker
 
                 $expandedDatabaseTableGroups = array_merge(
                     $expandedDatabaseTableGroups,
-                    $this->expandDatabaseTableGroups($application, $applicationDatabaseTableGroups[$group])
+                    $this->expandDatabaseTableGroups($applicationDatabaseTableGroups[$group])
                 );
 
             } else {

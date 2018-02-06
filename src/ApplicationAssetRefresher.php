@@ -17,6 +17,10 @@ use Psr\Log\NullLogger;
 class ApplicationAssetRefresher
 {
     /**
+     * @var ApplicationConfig
+     */
+    private $applicationConfig;
+    /**
      * @var LoggerInterface
      */
     protected $logger;
@@ -30,10 +34,12 @@ class ApplicationAssetRefresher
     private $fileLayoutHelper;
 
     public function __construct(
+        ApplicationConfig $applicationConfig,
         FileLayoutHelper $fileLayoutHelper,
         MountManager $mountManager,
         LoggerInterface $logger = null
     ) {
+        $this->applicationConfig = $applicationConfig;
         $this->mountManager = $mountManager;
         if (is_null($logger)) {
             $logger = new NullLogger();
@@ -54,20 +60,19 @@ class ApplicationAssetRefresher
     }
 
     /**
-     * @param ApplicationConfig $application
-     * @param string            $sourceFilesystemPrefix
-     * @param string            $snapshotName
-     * @param array             $syncOptions
+     * @param string $sourceFilesystemPrefix
+     * @param string $snapshotName
+     * @param array  $syncOptions
      *
      * @throws Exception\RuntimeException if app skeleton has not yet been installed
      * @throws Exception\RuntimeException if there is an asset configuration error
      */
     public function refreshAssets(
-        ApplicationConfig $application,
         string $sourceFilesystemPrefix,
         string $snapshotName,
         array $syncOptions = []
     ): void {
+        $application = $this->applicationConfig;
         $fileLayout = new FileLayout(
             $application->getAppRoot(),
             $application->getFileLayout(),
@@ -75,14 +80,18 @@ class ApplicationAssetRefresher
         );
         $this->fileLayoutHelper->loadFileLayoutPaths($fileLayout);
         if (!$this->fileLayoutHelper->isFileLayoutInstalled($fileLayout)) {
-            throw new Exception\RuntimeException("App is not yet installed. Install app skeleton before refreshing assets.");
+            throw new Exception\RuntimeException(
+                "App is not yet installed. Install app skeleton before refreshing assets."
+            );
         }
 
         if ($application->getAssets()) {
             $this->logger->info('Refreshing assets');
             foreach ($application->getAssets() as $sourcePath => $asset) {
                 if (empty($asset['ensure']) || empty($asset['location'])) {
-                    throw new Exception\RuntimeException("Asset \"$sourcePath\" must have \"ensure\" and \"location\" properties set.");
+                    throw new Exception\RuntimeException(
+                        "Asset \"$sourcePath\" must have \"ensure\" and \"location\" properties set."
+                    );
                 }
 
                 if (!empty($asset['local_path'])) {

@@ -56,8 +56,13 @@ class ApplicationBuilder
      * @var bool
      */
     private $canCallBuild;
+    /**
+     * @var ApplicationConfig
+     */
+    private $applicationConfig;
 
     public function __construct(
+        ApplicationConfig $applicationConfig,
         ShellCommandHelper $shellCommandHelper,
         FileLayoutHelper $fileLayoutHelper,
         MountManager $mountManager,
@@ -65,6 +70,7 @@ class ApplicationBuilder
         int $diskSpaceWarningThreshold = 104857600,
         LoggerInterface $logger = null
     ) {
+        $this->applicationConfig = $applicationConfig;
         $this->shellCommandHelper = $shellCommandHelper;
         $this->fileLayoutHelper = $fileLayoutHelper;
         $this->mountManager = $mountManager;
@@ -77,28 +83,26 @@ class ApplicationBuilder
     }
 
     /**
-     * @param ApplicationConfig $application
-     * @param string            $gitReference
-     * @param string            $buildPlan
-     * @param array|null        $triggers
-     * @param bool              $forceCleanBuild
+     * @param string     $gitReference
+     * @param string     $buildPlan
+     * @param array|null $triggers
+     * @param bool       $forceCleanBuild
      */
     public function buildInPlace(
-        ApplicationConfig $application,
         string $gitReference,
         string $buildPlan,
         array $triggers = null,
         bool $forceCleanBuild = false
     ): void {
         $this->validateCanCallBuild();
-        $this->validateAppIsInstalled($application);
+        $this->validateAppIsInstalled();
 
-        $buildPath = $application->getCodePath($gitReference);
-        $this->prepareBuildPath($buildPath, true, $application);
+        $buildPath = $this->applicationConfig->getCodePath($gitReference);
+        $this->prepareBuildPath($buildPath, true);
         chdir($buildPath);
 
         $buildPlanName = $buildPlan;
-        $buildPlan = $this->getBuildPlan($application, $buildPlan, $forceCleanBuild);
+        $buildPlan = $this->getBuildPlan($buildPlan, $forceCleanBuild);
 
         if ($gitReference) {
             $this->checkoutReference($gitReference);
@@ -112,16 +116,14 @@ class ApplicationBuilder
     }
 
     /**
-     * @param ApplicationConfig $application
-     * @param string            $gitReference
-     * @param string            $buildPlan
-     * @param string            $buildId
-     * @param string            $savePath
+     * @param string $gitReference
+     * @param string $buildPlan
+     * @param string $buildId
+     * @param string $savePath
      *
      * @throws \Exception
      */
     public function build(
-        ApplicationConfig $application,
         string $gitReference,
         string $buildPlan,
         string $buildId,
@@ -129,12 +131,12 @@ class ApplicationBuilder
     ): void {
         $this->validateCanCallBuild();
         $buildPlanName = $buildPlan;
-        $buildPlan = $this->getBuildPlan($application, $buildPlan);
+        $buildPlan = $this->getBuildPlan($buildPlan);
 
-        $this->prepareBuildPath($this->buildPath, false, $application);
+        $this->prepareBuildPath($this->buildPath, false);
         chdir($this->buildPath);
 
-        $this->cloneRepoToBuildPath($application, $gitReference);
+        $this->cloneRepoToBuildPath($gitReference);
 
         try {
             // @todo How do we deal with the use case where a file that is part of the skeleton is needed to perform the
@@ -142,7 +144,7 @@ class ApplicationBuilder
             //       skeleton before running the build? We would have to be able to set environment also for the skeleton
             //       build. Is this really a valid use case anyways?
             $this->runBuildPlan($buildPlanName, $buildPlan);
-            $this->packageAndSaveBuild($application, $buildId, $savePath);
+            $this->packageAndSaveBuild($buildId, $savePath);
             $this->clearBuildPath();
         } catch (\Exception $e) {
             $this->clearBuildPath();
@@ -151,16 +153,15 @@ class ApplicationBuilder
     }
 
     /**
-     * @param ApplicationConfig $application
-     * @param string            $name
-     * @param bool              $forceCleanBuild Whether needing to run clean commands or not
+     * @param string $name
+     * @param bool   $forceCleanBuild Whether needing to run clean commands or not
      *
      * @throws Exception\RuntimeException if build plan is not valid
      * @return array
      */
-    private function getBuildPlan(ApplicationConfig $application, string $name, bool $forceCleanBuild = false): array
+    private function getBuildPlan(string $name, bool $forceCleanBuild = false): array
     {
-        $buildPlans = $application->getBuildPlans();
+        $buildPlans = $this->applicationConfig->getBuildPlans();
         if (empty($buildPlans[$name]) || !is_array($buildPlans[$name])) {
             throw new Exception\DomainException(
                 sprintf(
@@ -181,6 +182,7 @@ class ApplicationBuilder
         }
 
         // @todo Set up references for other commands or other build plans?
+//        if ($forceCleanBuild) {
 //        foreach ($buildPlan['steps'] as $index => $step) {
 //            if (0 === strpos($step, '@')) {
 //                $name = substr($step, 1);
@@ -196,17 +198,19 @@ class ApplicationBuilder
 //                }
 //            }
 //        }
+//        }
 
         return $buildPlan;
     }
 
     /**
      * @param string $buildPath
+     * @param bool   $inPlace
      *
      * @throws Exception\RuntimeException if writable directory cannot be ensured; if build path is not empty; or if
      *         build path doesn't have enough free space.
      */
-    private function prepareBuildPath(string $buildPath, bool $inPlace, ApplicationConfig $application): void
+    private function prepareBuildPath(string $buildPath, bool $inPlace): void
     {
         $this->logger->info('Preparing build path.');
         if (!$inPlace && !file_exists($buildPath)) {
@@ -223,10 +227,11 @@ class ApplicationBuilder
         }
 
         if ($inPlace) {
-            if (!$this->pathIsRepoClone($buildPath, $application)) {
+            if (!$this->pathIsRepoClone($buildPath)) {
                 throw new Exception\RuntimeException(
                     sprintf(
-                        'Build path "%s" is not a git repository of app "' . $application->getAppName() . '". '
+                        'Build path "%s" is not a git repository of app "' . $this->applicationConfig->getAppName()
+                        . '". '
                         . 'Install code before building.',
                         $buildPath
                     )
@@ -307,19 +312,19 @@ class ApplicationBuilder
     }
 
     /**
-     * @param ApplicationConfig $application
-     * @param string            $gitReference
+     * @param string $gitReference
      */
-    private function cloneRepoToBuildPath(ApplicationConfig $application, string $gitReference): void
+    private function cloneRepoToBuildPath(string $gitReference): void
     {
         $this->logger->info(
             sprintf(
                 'Cloning "%s:%s".',
-                $application->getRepoUrl(),
+                $this->applicationConfig->getRepoUrl(),
                 $gitReference
             )
         );
-        $command = 'git clone ' . escapeshellarg($application->getRepoUrl()) . ' ./ --branch ' . escapeshellarg($gitReference)
+        $command = 'git clone ' . escapeshellarg($this->applicationConfig->getRepoUrl()) . ' ./ --branch '
+            . escapeshellarg($gitReference)
             . ' --depth 1 --single-branch -v';
         $this->shellCommandHelper->runShellCommand($command);
     }
@@ -341,14 +346,14 @@ class ApplicationBuilder
      *
      * @return void
      */
-    private function packageAndSaveBuild(ApplicationConfig $application, string $buildId, string $savePath): void
+    private function packageAndSaveBuild(string $buildId, string $savePath): void
     {
         $this->logger->info('Packaging build.');
         $tarFilename = "$buildId.tgz";
 
-        $command = 'tar -pcaf ' . escapeshellarg($tarFilename) . ' ./* --exclude-vcs ';
+        $command = 'tar -czfv ' . escapeshellarg($tarFilename) . ' ./* --exclude-vcs ';
 
-        foreach ($application->getBuildExcludePaths() as $excludePath) {
+        foreach ($this->applicationConfig->getBuildExcludePaths() as $excludePath) {
             $command .= '--exclude ' . escapeshellarg($excludePath) . ' ';
         }
 
@@ -377,12 +382,11 @@ class ApplicationBuilder
     }
 
     /**
-     * @param string            $path
-     * @param ApplicationConfig $application
+     * @param string $path
      *
      * @return bool
      */
-    private function pathIsRepoClone(string $path, ApplicationConfig $application): bool
+    private function pathIsRepoClone(string $path): bool
     {
         try {
             $currentOriginRepoUrl = trim(
@@ -396,7 +400,7 @@ class ApplicationBuilder
             return false;
         }
 
-        return $currentOriginRepoUrl == $application->getRepoUrl();
+        return $currentOriginRepoUrl == $this->applicationConfig->getRepoUrl();
     }
 
     /**
@@ -461,16 +465,14 @@ class ApplicationBuilder
     }
 
     /**
-     * @param ApplicationConfig $application
-     *
      * @throws Exception\RuntimeException if app skeleton is not installed
      */
-    private function validateAppIsInstalled(ApplicationConfig $application): void
+    private function validateAppIsInstalled(): void
     {
         $fileLayout = new FileLayout(
-            $application->getAppRoot(),
-            $application->getFileLayout(),
-            $application->getRelativeDocumentRoot()
+            $this->applicationConfig->getAppRoot(),
+            $this->applicationConfig->getFileLayout(),
+            $this->applicationConfig->getRelativeDocumentRoot()
         );
         $this->fileLayoutHelper->loadFileLayoutPaths($fileLayout);
         if (!$this->fileLayoutHelper->isFileLayoutInstalled($fileLayout)) {

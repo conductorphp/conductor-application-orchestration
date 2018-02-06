@@ -6,18 +6,24 @@
 namespace DevopsToolAppOrchestration\Command;
 
 use DevopsToolAppOrchestration\ApplicationBuilder;
+use DevopsToolAppOrchestration\ApplicationConfig;
 use DevopsToolCore\MonologConsoleHandlerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class AppBuildCommand extends AbstractCommand
+class AppBuildCommand extends Command
 {
     use MonologConsoleHandlerAwareTrait;
 
+    /**
+     * @var ApplicationConfig
+     */
+    private $applicationConfig;
     /**
      * @var ApplicationBuilder
      */
@@ -29,10 +35,12 @@ class AppBuildCommand extends AbstractCommand
 
 
     public function __construct(
+        ApplicationConfig $applicationConfig,
         ApplicationBuilder $applicationBuilder,
         LoggerInterface $logger = null,
         string $name = null
     ) {
+        $this->applicationConfig = $applicationConfig;
         $this->applicationBuilder = $applicationBuilder;
         if (is_null($logger)) {
             $logger = new NullLogger();
@@ -78,12 +86,6 @@ class AppBuildCommand extends AbstractCommand
                 'A unique ID for this build. If not specified, the git-reference will be used with timestamp appended.'
             )
             ->addOption(
-                'app',
-                null,
-                InputOption::VALUE_REQUIRED,
-                'Application code from configuration. Required if there is more than one app.'
-            )
-            ->addOption(
                 'force-clean-build',
                 null,
                 InputOption::VALUE_NONE,
@@ -95,7 +97,6 @@ class AppBuildCommand extends AbstractCommand
     {
         $this->injectOutputIntoLogger($output, $this->logger);
         $this->applicationBuilder->setLogger($this->logger);
-        $applications = $this->getApplications($input);
         $gitReference = $input->getArgument('git-reference');
         $buildPlan = $input->getArgument('build-plan');
         $save = $input->getOption('save');
@@ -103,21 +104,19 @@ class AppBuildCommand extends AbstractCommand
         $buildId = $input->getOption('build-id') ?? $gitReference . '-' . time();
         $forceCleanBuild = $input->getOption('force-clean-build');
 
-        foreach ($applications as $code => $application) {
-            $this->logger->info("Building application \"$code\".");
-            if ($save) {
-                $this->applicationBuilder->build($application, $gitReference, $buildPlan, $buildId, $savePath);
-            } else {
-                $this->applicationBuilder->buildInPlace(
-                    $application,
-                    $gitReference,
-                    $buildPlan,
-                    null,
-                    $forceCleanBuild
-                );
-            }
-            $this->logger->info("<info>Application \"$code\" build complete!</info>");
+        $appName = $this->applicationConfig->getAppName();
+        $this->logger->info("Building application \"$appName\".");
+        if ($save) {
+            $this->applicationBuilder->build($gitReference, $buildPlan, $buildId, $savePath);
+        } else {
+            $this->applicationBuilder->buildInPlace(
+                $gitReference,
+                $buildPlan,
+                null,
+                $forceCleanBuild
+            );
         }
+        $this->logger->info("<info>Application \"$appName\" build complete!</info>");
         return 0;
     }
 
