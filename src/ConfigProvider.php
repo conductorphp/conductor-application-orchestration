@@ -2,8 +2,6 @@
 
 namespace DevopsToolAppOrchestration;
 
-use Symfony\Component\Yaml\Yaml;
-
 class ConfigProvider
 {
     /**
@@ -47,33 +45,6 @@ class ConfigProvider
     private function getApplicationOrchestrationConfig(): array
     {
         $config = require(__DIR__ . '/../config/application-orchestration.php');
-        $config['application'] = $this->getApplicationConfig();
-        return $config;
-    }
-
-    /**
-     * @return array
-     */
-    private function getApplicationConfig(): array
-    {
-        // @todo We should just use php files probably instead. Or make expressive generally ready yaml files. This module
-        //       shouldn't reacy out into config/autoload
-        $config = Yaml::parse(file_get_contents('config/autoload/application-orchestration/config.yaml'));
-        $config['config_root'] = realpath('config/autoload/application-orchestration');
-        $config['environments'] = [];
-
-        $environmentIterator = new \DirectoryIterator('config/autoload/application-orchestration/environments');
-        foreach ($environmentIterator as $environmentDir) {
-            if ($environmentDir->isDot()) {
-                continue;
-            }
-
-            $environmentCode = $environmentDir->getBasename();
-            $config['environments'][$environmentCode] = Yaml::parse(
-                file_get_contents($environmentDir->getPathname() . '/config.yaml')
-            );
-        }
-
         return $config;
     }
 

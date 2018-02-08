@@ -40,9 +40,10 @@ class ApplicationConfigFactory implements FactoryInterface
 
         $application = $config['application_orchestration']['application'];
         $environment = $config['environment'];
+        $zendExpressiveRoot = realpath(__DIR__ . '/../../../..');
         $sourceFilePathStack = [
-            "{$application['config_root']}/environments/$environment/files",
-            "{$application['config_root']}/files",
+            $zendExpressiveRoot . '/config/autoload/environments/ ' . $environment . '/files',
+            $zendExpressiveRoot . '/config/autoload/files',
         ];
 
         // Merge in environment config and set current environment

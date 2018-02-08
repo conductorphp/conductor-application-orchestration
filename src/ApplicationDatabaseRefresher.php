@@ -132,9 +132,7 @@ class ApplicationDatabaseRefresher
                     $databaseAdapter->createDatabase($databaseName);
                 }
 
-                // @todo Make working dir configurable
-                $workingDir = $application->getAppRoot() . '/'
-                    . DatabaseImportExportAdapterInterface::DEFAULT_WORKING_DIR;
+                $workingDir = getcwd() . '/' . DatabaseImportExportAdapterInterface::DEFAULT_WORKING_DIR;
                 $this->logger->debug("Downloading database script \"$filename\".");
                 $this->mountManager->sync(
                     "$sourceFilesystemPrefix://snapshots/$snapshotName/databases/$filename",
@@ -157,15 +155,14 @@ class ApplicationDatabaseRefresher
 
                     foreach ($database['post_import_scripts'] as $scriptFilename) {
 
-                        $filename = $application->getSourceFile($scriptFilename);
-                        $filename = $this->applyStringReplacements(
+                        $scriptFilename = $this->applyStringReplacements(
                             $branchUrl,
                             $branchDatabase,
-                            $filename
+                            $scriptFilename
                         );
 
                         $databaseAdapter->run(
-                            file_get_contents($filename),
+                            file_get_contents($scriptFilename),
                             $databaseName
                         );
                     }

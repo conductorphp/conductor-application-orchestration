@@ -74,12 +74,6 @@ class AppRefreshDatabasesCommand extends Command
                 )
             )
             ->addOption(
-                'reinstall',
-                null,
-                InputOption::VALUE_NONE,
-                'Reinstall if already installed. This will reinstall files, database, and assets.'
-            )
-            ->addOption(
                 'snapshot',
                 null,
                 InputOption::VALUE_REQUIRED,
@@ -98,8 +92,7 @@ class AppRefreshDatabasesCommand extends Command
         $filesystem = $input->getOption('filesystem') ?? $this->applicationConfig->getDefaultFilesystem();
         $snapshot = $input->getOption('snapshot');
         $branch = $input->getOption('branch');
-        $replaceIfExists = $input->getOption('reinstall');
-        $this->applicationDatabaseRefresher->refreshDatabases($filesystem, $snapshot, $branch, $replaceIfExists);
+        $this->applicationDatabaseRefresher->refreshDatabases($filesystem, $snapshot, $branch, true);
         $this->logger->info("<info>Application \"$appName\" databases refreshed!</info>");
         return 0;
     }

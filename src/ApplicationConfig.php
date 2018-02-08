@@ -247,14 +247,6 @@ class ApplicationConfig
     /**
      * @return string
      */
-    public function getConfigRoot(): string
-    {
-        return $this->config['config_root'];
-    }
-
-    /**
-     * @return string
-     */
     public function getCurrentEnvironment(): string
     {
         return $this->config['current_environment'];
@@ -317,6 +309,7 @@ class ApplicationConfig
         $required = [
             'app_root',
             'app_name',
+            'current_environment',
             'default_branch',
             'default_database_adapter',
             'default_database_importexport_adapter',
@@ -324,7 +317,6 @@ class ApplicationConfig
             'default_file_mode',
             'default_filesystem_adapter',
             'default_snapshot_name',
-            'environment',
             'maintenance_strategy',
             'platform',
             'relative_document_root',
