@@ -1,9 +1,9 @@
 {
-    "name": "robofirm/devops-tool-application-orchestration",
-    "description": "Robofirm DevOps Tool: Application Orchestration",
+    "name": "conductor/application-orchestration",
+    "description": "Conductor: Application Orchestration",
     "type": "library",
-    "homepage": "https://bitbucket.org/robofirm/devops-tool-application-orchestration",
-    "license": "MIT",
+    "homepage": "https://github.com/conductorphp/conductor-application-orchestration",
+    "license": "Apache 2.0",
     "authors": [
         {
             "name": "Kirk Madera",
@@ -15,24 +15,24 @@
     },
     "require": {
         "php": "^7.1",
-        "robofirm/devops-tool-core": "^0.1.0",
+        "conductor/core": "^0.1.0",
         "cypresslab/gitelephant": "^1.1",
         "twig/twig": "^2.0"
     },
     "suggest": {
-        "robofirm/devops-tool-drupal-platform-support": "Adds support for the Drupal platform.",
-        "robofirm/devops-tool-magento-1-platform-support": "Adds support for the Magento 1 platform.",
-        "robofirm/devops-tool-magento-2-platform-support": "Adds support for the Magento 2 platform.",
-        "robofirm/devops-tool-wordpress-platform-support": "Adds support for the Wordpress platform."
+        "conductor/drupal-platform-support": "Adds support for the Drupal platform.",
+        "conductor/magento-1-platform-support": "Adds support for the Magento 1 platform.",
+        "conductor/magento-2-platform-support": "Adds support for the Magento 2 platform.",
+        "conductor/wordpress-platform-support": "Adds support for the Wordpress platform."
     },
     "autoload": {
         "psr-4": {
-            "DevopsToolAppOrchestration\\": "src/"
+            "ConductorAppOrchestration\\": "src/"
         }
     },
     "extra": {
         "zf": {
-            "config-provider": "DevopsToolAppOrchestration\\ConfigProvider"
+            "config-provider": "ConductorAppOrchestration\\ConfigProvider"
         }
     }
 }

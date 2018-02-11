@@ -3,10 +3,10 @@
  * @author Kirk Madera <kmadera@robofirm.com>
  */
 
-namespace DevopsToolAppOrchestration;
+namespace ConductorAppOrchestration;
 
-use DevopsToolCore\Database\DatabaseAdapterInterface;
-use DevopsToolCore\Database\DatabaseAdapterManager;
+use ConductorCore\Database\DatabaseAdapterInterface;
+use ConductorCore\Database\DatabaseAdapterManager;
 use Exception;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;

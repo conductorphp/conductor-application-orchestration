@@ -3,19 +3,19 @@
  * @author Kirk Madera <kmadera@robofirm.com>
  */
 
-namespace DevopsToolAppOrchestration;
+namespace ConductorAppOrchestration;
 
-use DevopsToolCore\Database\DatabaseAdapterManager;
-use DevopsToolCore\Database\DatabaseImportExportAdapterInterface;
-use DevopsToolCore\Database\DatabaseImportExportAdapterManager;
-use DevopsToolCore\Filesystem\MountManager\MountManager;
+use ConductorCore\Database\DatabaseAdapterManager;
+use ConductorCore\Database\DatabaseImportExportAdapterInterface;
+use ConductorCore\Database\DatabaseImportExportAdapterManager;
+use ConductorCore\Filesystem\MountManager\MountManager;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 /**
  * Class ApplicationDatabaseRefresher
  *
- * @package DevopsToolAppOrchestration
+ * @package ConductorAppOrchestration
  */
 class ApplicationDatabaseRefresher
 {

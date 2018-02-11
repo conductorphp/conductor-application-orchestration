@@ -3,11 +3,11 @@
  * @author Kirk Madera <kmadera@robofirm.com>
  */
 
-namespace DevopsToolAppOrchestration;
+namespace ConductorAppOrchestration;
 
-use DevopsToolAppOrchestration\BuildCommand\BuildCommandInterface;
-use DevopsToolCore\Filesystem\MountManager\MountManager;
-use DevopsToolCore\ShellCommandHelper;
+use ConductorAppOrchestration\BuildCommand\BuildCommandInterface;
+use ConductorCore\Filesystem\MountManager\MountManager;
+use ConductorCore\ShellCommandHelper;
 use FilesystemIterator;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
@@ -16,7 +16,7 @@ use Psr\Log\NullLogger;
 /**
  * Class ApplicationBuilder
  *
- * @package DevopsToolAppOrchestration
+ * @package ConductorAppOrchestration
  */
 class ApplicationBuilder
 {

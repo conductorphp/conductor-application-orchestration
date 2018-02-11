@@ -3,11 +3,11 @@
  * @author Kirk Madera <kmadera@robofirm.com>
  */
 
-namespace DevopsToolAppOrchestration\Command;
+namespace ConductorAppOrchestration\Command;
 
-use DevopsToolAppOrchestration\ApplicationConfig;
-use DevopsToolAppOrchestration\MaintenanceStrategy\MaintenanceStrategyInterface;
-use DevopsToolCore\MonologConsoleHandlerAwareTrait;
+use ConductorAppOrchestration\ApplicationConfig;
+use ConductorAppOrchestration\MaintenanceStrategy\MaintenanceStrategyInterface;
+use ConductorCore\MonologConsoleHandlerAwareTrait;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;

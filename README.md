@@ -1,5 +1,5 @@
-DevOps Tool: Application Orchestration
+Conductor: Application Orchestration
 ====================================
 
 This module adds application orchestration functionality to the 
-[Robofirm DevOps Tool](https://bitbucket.org/robofirm/robofirm-devops).
+[Conductor](https://github.com/conductorphp/conductor-core).

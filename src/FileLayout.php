@@ -1,6 +1,6 @@
 <?php
 
-namespace DevopsToolAppOrchestration;
+namespace ConductorAppOrchestration;
 
 class FileLayout implements FileLayoutAwareInterface
 {

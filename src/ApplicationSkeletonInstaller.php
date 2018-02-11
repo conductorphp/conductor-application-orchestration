@@ -3,9 +3,9 @@
  * @author Kirk Madera <kmadera@robofirm.com>
  */
 
-namespace DevopsToolAppOrchestration;
+namespace ConductorAppOrchestration;
 
-use DevopsToolCore\ShellCommandHelper;
+use ConductorCore\ShellCommandHelper;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Twig\Environment as TwigEnvironment;
@@ -14,7 +14,7 @@ use Twig\Loader\ArrayLoader as TwigArrayLoader;
 /**
  * Class ApplicationSkeletonInstaller
  *
- * @package DevopsToolAppOrchestration
+ * @package ConductorAppOrchestration
  */
 class ApplicationSkeletonInstaller
 {

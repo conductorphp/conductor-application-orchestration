@@ -1,6 +1,6 @@
 <?php
 
-namespace DevopsToolAppOrchestration\Command;
+namespace ConductorAppOrchestration\Command;
 
 return [
     'commands' => [

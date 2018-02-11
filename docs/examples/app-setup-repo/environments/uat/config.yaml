@@ -22,7 +22,7 @@ template_vars:
   database_name: acmetunnels
   database_user: dev
   database_password: password1
-  devops_environment: uat
+  conductor_environment: uat
 
 servers:
   - host: uathost

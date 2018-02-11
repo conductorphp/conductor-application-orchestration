@@ -12,7 +12,7 @@ template_vars:
   database_name: acmetunnels
   database_user: acmetunnels
   database_password: abc123
-  devops_environment: prod
+  conductor_environment: prod
   maintenance_whitelist:
     John Smith @ Company1:
       - 50.99.145.222

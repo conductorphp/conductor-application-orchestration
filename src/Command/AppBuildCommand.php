@@ -3,11 +3,11 @@
  * @author Kirk Madera <kmadera@robofirm.com>
  */
 
-namespace DevopsToolAppOrchestration\Command;
+namespace ConductorAppOrchestration\Command;
 
-use DevopsToolAppOrchestration\ApplicationBuilder;
-use DevopsToolAppOrchestration\ApplicationConfig;
-use DevopsToolCore\MonologConsoleHandlerAwareTrait;
+use ConductorAppOrchestration\ApplicationBuilder;
+use ConductorAppOrchestration\ApplicationConfig;
+use ConductorCore\MonologConsoleHandlerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Console\Command\Command;

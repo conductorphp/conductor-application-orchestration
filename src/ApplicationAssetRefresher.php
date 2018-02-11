@@ -3,16 +3,16 @@
  * @author Kirk Madera <kmadera@robofirm.com>
  */
 
-namespace DevopsToolAppOrchestration;
+namespace ConductorAppOrchestration;
 
-use DevopsToolCore\Filesystem\MountManager\MountManager;
+use ConductorCore\Filesystem\MountManager\MountManager;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 /**
  * Class ApplicationAssetRefresher
  *
- * @package DevopsToolAppOrchestration
+ * @package ConductorAppOrchestration
  */
 class ApplicationAssetRefresher
 {

@@ -22,7 +22,7 @@ template_vars:
   database_name: acmetunnels
   database_user: dev
   database_password: password1
-  devops_environment: local
+  conductor_environment: local
   redis_object_host: localhost
   redis_object_port: 6385
   redis_session_host: localhost

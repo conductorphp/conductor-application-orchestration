@@ -123,4 +123,4 @@ template_vars:
   database_host: localhost
   database_name: acmetunnels
   database_user: acmetunnels
-  devops_app_setup_repo_url: git@bitbucket.org:robofirm/acme-instant-tunnels-app-setup.git
+  conductor_app_setup_repo_url: git@bitbucket.org:robofirm/acme-instant-tunnels-app-setup.git

@@ -1,6 +1,6 @@
 <?php
 
-namespace DevopsToolAppOrchestration\BuildCommand;
+namespace ConductorAppOrchestration\BuildCommand;
 
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;

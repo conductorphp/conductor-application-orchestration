@@ -3,9 +3,9 @@
  * @author Kirk Madera <kmadera@robofirm.com>
  */
 
-namespace DevopsToolAppOrchestration\Command;
+namespace ConductorAppOrchestration\Command;
 
-use DevopsToolAppOrchestration\ApplicationConfig;
+use ConductorAppOrchestration\ApplicationConfig;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Input\InputArgument;

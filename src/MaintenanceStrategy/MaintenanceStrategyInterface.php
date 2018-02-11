@@ -1,6 +1,6 @@
 <?php
 
-namespace DevopsToolAppOrchestration\MaintenanceStrategy;
+namespace ConductorAppOrchestration\MaintenanceStrategy;
 
 interface MaintenanceStrategyInterface
 {

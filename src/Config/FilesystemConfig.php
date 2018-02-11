@@ -3,7 +3,7 @@
  * @author Kirk Madera <kmadera@robofirm.com>
  */
 
-namespace DevopsToolAppOrchestration\Config;
+namespace ConductorAppOrchestration\Config;
 
 use Exception;
 

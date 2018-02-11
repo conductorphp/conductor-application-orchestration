@@ -3,16 +3,16 @@
  * @author Kirk Madera <kmadera@robofirm.com>
  */
 
-namespace DevopsToolAppOrchestration\Command;
+namespace ConductorAppOrchestration\Command;
 
-use DevopsToolAppOrchestration\ApplicationAssetRefresher;
-use DevopsToolAppOrchestration\ApplicationBuilder;
-use DevopsToolAppOrchestration\ApplicationCodeInstaller;
-use DevopsToolAppOrchestration\ApplicationConfig;
-use DevopsToolAppOrchestration\ApplicationDatabaseRefresher;
-use DevopsToolAppOrchestration\ApplicationSkeletonInstaller;
-use DevopsToolCore\Filesystem\MountManager\MountManager;
-use DevopsToolCore\MonologConsoleHandlerAwareTrait;
+use ConductorAppOrchestration\ApplicationAssetRefresher;
+use ConductorAppOrchestration\ApplicationBuilder;
+use ConductorAppOrchestration\ApplicationCodeInstaller;
+use ConductorAppOrchestration\ApplicationConfig;
+use ConductorAppOrchestration\ApplicationDatabaseRefresher;
+use ConductorAppOrchestration\ApplicationSkeletonInstaller;
+use ConductorCore\Filesystem\MountManager\MountManager;
+use ConductorCore\MonologConsoleHandlerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Console\Command\Command;

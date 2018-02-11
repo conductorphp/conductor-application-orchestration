@@ -1,6 +1,6 @@
 <?php
 
-namespace DevopsToolAppOrchestration\BuildCommand;
+namespace ConductorAppOrchestration\BuildCommand;
 
 use MatthiasMullie\Minify;
 use Psr\Log\LoggerAwareInterface;

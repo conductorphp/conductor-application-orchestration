@@ -3,10 +3,10 @@
  * @author Kirk Madera <kmadera@robofirm.com>
  */
 
-namespace DevopsToolAppOrchestration;
+namespace ConductorAppOrchestration;
 
-use DevopsToolAppOrchestration\Config\FilesystemConfig;
-use DevopsToolAppOrchestration\Exception;
+use ConductorAppOrchestration\Config\FilesystemConfig;
+use ConductorAppOrchestration\Exception;
 
 class ApplicationConfig
 {

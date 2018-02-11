@@ -13,7 +13,7 @@ database under load if you don't have an existing tool like Percona XtraDB Backu
 
 To take a snapshot:
 ```bash
-devops app:snapshot
+conductor app:snapshot
 ```
 
 The default settings will create a scrubbed snapshot named "$environment-scrubbed", where $environment is the 
@@ -47,17 +47,17 @@ snapshot is being taken from. To do so, a "--branch mybranch" flag.
 To take a non-scrubbed snapshot and install it on Staging, run:
 ```bash
 # On Production, run:
-devops app:snapshot --no-scrub
+conductor app:snapshot --no-scrub
 
 # On Staging, run:
-devops app:install --snapshot production --reinstall
+conductor app:install --snapshot production --reinstall
 ```
 
 To take a scrubbed snapshot and create a "release-1.2.3" branch on UAT from it:
 ```bash
 # On Production, run:
-devops app:snapshot --filesystem test
+conductor app:snapshot --filesystem test
 
 # On UAT, run:
-devops app:install --branch release-1.2.3;
+conductor app:install --branch release-1.2.3;
 ```

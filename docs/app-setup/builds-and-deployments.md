@@ -1,7 +1,7 @@
 Builds & Deployments
 ========================
 
-The devops tool can create builds, upload them to a remote filesystem, and then deploy them. The build 
+The conductor can create builds, upload them to a remote filesystem, and then deploy them. The build 
 process can also be used to prepare a local working directory.
 
 Quick Reference
@@ -28,7 +28,7 @@ run this from the root of your repository.
  
 ```bash
 cd /path/to/your/repo;
-devops app:build
+conductor app:build
 ```
 
 You can also build a different branch. Your working directory must be clean. 
@@ -38,14 +38,14 @@ You can ensure this with the
 
 ```bash
 cd /path/to/your/repo;
-devops app:build development release-1.2.3
+conductor app:build development release-1.2.3
 ``` 
 
 To build a release for deployment, specify a build id. This uses a temporary working directory always and
 can be run from anywhere.
 
 ```bash
-devops app:build production release-1.2.3 1.2.3-rc1
+conductor app:build production release-1.2.3 1.2.3-rc1
 ``` 
 
 Configuration

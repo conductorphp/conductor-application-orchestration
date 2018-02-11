@@ -23,7 +23,7 @@ apps:
 
 For more information, see [App Setup Configuration](app-setup/configuration.md).
 
-All commands include a `--help` option with more information. You can also type `devops app` to see a full list of
+All commands include a `--help` option with more information. You can also type `conductor app` to see a full list of
 available commands.
 
 Snapshots
@@ -45,7 +45,7 @@ before pushing the snapshot to the external file system.
 
 To take a snapshot:
 ```bash
-devops app:snapshot
+conductor app:snapshot
 ```
 
 Form more information, see [Snapshots](app-setup/snapshots.md).
@@ -58,7 +58,7 @@ included in the applications code repository.
 
 To install an application in full, run:
 ```bash
-devops app:install
+conductor app:install
 ```
 
 If you have multiple applications on one server, you will be prompted to specify which app or choose to run this for all
@@ -67,16 +67,16 @@ in `configuration`.
 
 ```bash
 # Install the "myapp" app
-devops app:install --app myapp
+conductor app:install --app myapp
 
 # Install all apps
-devops app:install --all
+conductor app:install --all
 ```
 
 If the application has already been installed, you can specify the `--reinstall` flag to refresh it. You can also refresh
 only the file structure without refreshing databases and media by running a command like this:
 ```bash
-devops app:install --reinstall --skeleton
+conductor app:install --reinstall --skeleton
 ```
 
 There are also `--no-assets` and `--no-databases` flags.
@@ -90,10 +90,10 @@ built for this.
 
 ```bash
 # Refresh databases from the "production-scrubbed" snapshot on the default filesystem
-devops app:refresh-databases
+conductor app:refresh-databases
 
 # Refresh assets from the "mysnapshot" snapshot on the "myfilesystem" filesystem
-devops app:refresh-assets --snapshot mysnapshot --filesystem myfilesystem
+conductor app:refresh-assets --snapshot mysnapshot --filesystem myfilesystem
 ```
 
 Destroy
@@ -104,13 +104,13 @@ over again, even if the app is already installed, and ensure the correct state (
 
 This will destroy your application, along with its databases and assets:
 ```bash
-devops app:destroy
+conductor app:destroy
 ```
 
 Builds & Deployments
 --------------------
 
-The devops tool can create builds, upload them to a remote filesystem, and then deploy them. The build 
+The conductor can create builds, upload them to a remote filesystem, and then deploy them. The build 
 process can also be used to prepare a local working directory.
 
 See [Builds & Deployments](app-setup/builds-and-deployments.md) for more information.
@@ -136,11 +136,11 @@ servers:
 Then, run these commands:
 ```bash
 # Enable maintenance mode
-devops app:maintenance:enable
+conductor app:maintenance:enable
 
 # Disable maintenance mode
-devops app:maintenance:disable
+conductor app:maintenance:disable
 
 # Check if maintenance mode is enabled
-devops app:maintenance:status
+conductor app:maintenance:status
 ```

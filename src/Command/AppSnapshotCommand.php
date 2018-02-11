@@ -3,12 +3,12 @@
  * @author Kirk Madera <kmadera@robofirm.com>
  */
 
-namespace DevopsToolAppOrchestration\Command;
+namespace ConductorAppOrchestration\Command;
 
-use DevopsToolAppOrchestration\ApplicationConfig;
-use DevopsToolAppOrchestration\ApplicationSnapshotTaker;
-use DevopsToolCore\Filesystem\MountManager\MountManager;
-use DevopsToolCore\MonologConsoleHandlerAwareTrait;
+use ConductorAppOrchestration\ApplicationConfig;
+use ConductorAppOrchestration\ApplicationSnapshotTaker;
+use ConductorCore\Filesystem\MountManager\MountManager;
+use ConductorCore\MonologConsoleHandlerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Console\Command\Command;

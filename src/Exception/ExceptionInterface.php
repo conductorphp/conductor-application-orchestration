@@ -1,6 +1,6 @@
 <?php
 
-namespace DevopsToolAppOrchestration\Exception;
+namespace ConductorAppOrchestration\Exception;
 
 interface ExceptionInterface
 {

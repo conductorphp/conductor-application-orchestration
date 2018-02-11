@@ -3,7 +3,7 @@
  * @author Kirk Madera <kmadera@robofirm.com>
  */
 
-namespace DevopsToolAppOrchestration;
+namespace ConductorAppOrchestration;
 
 use GitElephant\Repository;
 use Psr\Log\LoggerInterface;
@@ -12,7 +12,7 @@ use Psr\Log\NullLogger;
 /**
  * Class ApplicationCodeInstaller
  *
- * @package DevopsToolAppOrchestration
+ * @package ConductorAppOrchestration
  */
 class ApplicationCodeInstaller
 {

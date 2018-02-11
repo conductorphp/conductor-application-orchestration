@@ -1,7 +1,7 @@
 Database Import/Export
 ======================
 
-The devops tool can create database exports in different formats, upload them to a remote filesystem, and 
+The conductor can create database exports in different formats, upload them to a remote filesystem, and 
 import them.
 
 Quick Reference
@@ -32,12 +32,12 @@ Formats
 To create a database export using mysqldump, run this:
 
 ```bash
-devops database:export mydatabase myfilename.sql.gz --format sql
+conductor database:export mydatabase myfilename.sql.gz --format sql
 ```
 
 To import it, run this:
 ```bash
-devops database:import mydatabase myfilename.sql.gz --format sql
+conductor database:import mydatabase myfilename.sql.gz --format sql
 ```
 
 ### Mydumper
@@ -45,13 +45,13 @@ devops database:import mydatabase myfilename.sql.gz --format sql
 To create a database export using mydumper, you must first install mydumper. Then run this command:
 
 ```bash
-devops database:export mydatabase myfilename.tgz --format mydumper
+conductor database:export mydatabase myfilename.tgz --format mydumper
 ```
 
 And to import:
 
 ```bash
-devops database:import mydatabase myfilename.tgz --format mydumper
+conductor database:import mydatabase myfilename.tgz --format mydumper
 ```
 
 ### Tab Delimited
@@ -59,12 +59,12 @@ devops database:import mydatabase myfilename.tgz --format mydumper
 To create a tab delimited database export, run this. 
 
 ```bash
-devops database:export mydatabase myfilename.tgz --format tab
+conductor database:export mydatabase myfilename.tgz --format tab
 ```
 
 And to import:
 ```bash
-devops database:import mydatabase myfilename.tgz --format tab
+conductor database:import mydatabase myfilename.tgz --format tab
 ```
 
 Note: You can leave off the file extension from the filename argument. The command will append the file 
@@ -87,4 +87,3 @@ cmake .
 make
 make install
 ```
- 

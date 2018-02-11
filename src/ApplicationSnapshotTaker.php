@@ -3,10 +3,10 @@
  * @author Kirk Madera <kmadera@robofirm.com>
  */
 
-namespace DevopsToolAppOrchestration;
+namespace ConductorAppOrchestration;
 
-use DevopsToolCore\Database\DatabaseImportExportAdapterManager;
-use DevopsToolCore\Filesystem\MountManager\MountManager;
+use ConductorCore\Database\DatabaseImportExportAdapterManager;
+use ConductorCore\Filesystem\MountManager\MountManager;
 use Exception;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;

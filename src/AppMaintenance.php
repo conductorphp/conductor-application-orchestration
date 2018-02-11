@@ -1,8 +1,8 @@
 <?php
 
-namespace DevopsToolAppOrchestration;
+namespace ConductorAppOrchestration;
 
-use DevopsToolAppOrchestration\MaintenanceStrategy\MaintenanceStrategyInterface;
+use ConductorAppOrchestration\MaintenanceStrategy\MaintenanceStrategyInterface;
 
 class AppMaintenance
 {
