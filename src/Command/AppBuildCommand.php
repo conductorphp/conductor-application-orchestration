@@ -95,6 +95,7 @@ class AppBuildCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        $this->applicationConfig->validate();
         $this->injectOutputIntoLogger($output, $this->logger);
         $this->applicationBuilder->setLogger($this->logger);
         $gitReference = $input->getArgument('git-reference');

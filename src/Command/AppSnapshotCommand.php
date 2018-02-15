@@ -104,6 +104,7 @@ class AppSnapshotCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        $this->applicationConfig->validate();
         $this->injectOutputIntoLogger($output, $this->logger);
         $this->applicationSnapshotTaker->setLogger($this->logger);
 

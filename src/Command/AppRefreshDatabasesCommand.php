@@ -84,6 +84,7 @@ class AppRefreshDatabasesCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        $this->applicationConfig->validate();
         $this->injectOutputIntoLogger($output, $this->logger);
         $this->applicationDatabaseRefresher->setLogger($this->logger);
 

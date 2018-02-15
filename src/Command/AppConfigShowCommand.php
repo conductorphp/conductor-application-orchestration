@@ -39,6 +39,7 @@ class AppConfigShowCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        $this->applicationConfig->validate();
         $filter = $input->getArgument('filter');
         $outputTable = new Table($output);
         $outputTable

@@ -32,7 +32,6 @@ class ApplicationConfig
     public function __construct(array $config)
     {
         $config = $this->filter($config);
-        $this->validate($config);
         $this->config = $config;
     }
 
@@ -299,12 +298,10 @@ class ApplicationConfig
     /**
      * @todo Validate by schema instead
      *
-     * @param array $config
-     *
      * @throws Exception\RuntimeException
      * @throws Exception\DomainException
      */
-    private function validate(array $config): void
+    public function validate(): void
     {
         $required = [
             'app_root',
@@ -324,7 +321,7 @@ class ApplicationConfig
         ];
         $missingRequired = [];
         foreach ($required as $name) {
-            if (empty($config[$name])) {
+            if (empty($this->config[$name])) {
                 $missingRequired[] = $name;
             }
         }
@@ -336,14 +333,14 @@ class ApplicationConfig
         }
 
         if (!in_array(
-            $config['file_layout'],
+            $this->config['file_layout'],
             [
                 FileLayoutAwareInterface::FILE_LAYOUT_BLUE_GREEN,
                 FileLayoutAwareInterface::FILE_LAYOUT_BRANCH,
                 FileLayoutAwareInterface::FILE_LAYOUT_DEFAULT
             ]
         )) {
-            throw new Exception\DomainException("Invalid file layout \"{$config['file_layout']}\".");
+            throw new Exception\DomainException("Invalid file layout \"{$this->config['file_layout']}\".");
         }
     }
 

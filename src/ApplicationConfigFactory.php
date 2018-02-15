@@ -28,43 +28,42 @@ class ApplicationConfigFactory implements FactoryInterface
     public function __invoke(ContainerInterface $container, $requestedName, array $options = null)
     {
         $config = $container->get('config');
-        if (!isset($config['application_orchestration']['application'])) {
-            throw new Exception\RuntimeException(
-                '"application_orchestration/application" key must be set in configuration.'
-            );
-        }
 
-        if (!isset($config['environment'])) {
-            throw new Exception\RuntimeException('"environment" key must be set in configuration.');
-        }
-
-        $application = $config['application_orchestration']['application'];
-        $environment = $config['environment'];
         $zendExpressiveRoot = realpath(__DIR__ . '/../../../..');
+        $environment = $config['environment'] ?? 'development';
         $sourceFilePathStack = [
             $zendExpressiveRoot . '/config/autoload/environments/ ' . $environment . '/files',
             $zendExpressiveRoot . '/config/autoload/files',
         ];
+        $application = [
+            'environment' => $environment,
+        ];
 
-        // Merge in environment config and set current environment
-        if (isset($application['environments'][$environment])) {
-            $environmentConfig = $application['environments'][$environment];
-            $application = array_replace_recursive($application, $environmentConfig);
-        }
-        unset($application['environments']);
-        $application['current_environment'] = $environment;
+        if (isset($config['application_orchestration']['application'])) {
+            $application = array_replace_recursive($config['application_orchestration']['application'], $application);
 
-        // Merge in platform config
-        if (isset($config['application_orchestration']['platforms'][$application['platform']])) {
-            $platformConfig = $config['application_orchestration']['platforms'][$application['platform']];
-            if (!empty($platformConfig['source_file_path'])) {
-                $sourceFilePathStack[] = $platformConfig['source_file_path'];
-                unset($platformConfig['source_file_path']);
+            // Merge in environment config and set current environment
+            if (isset($application['environments'][$environment])) {
+                $environmentConfig = $application['environments'][$environment];
+                $application = array_replace_recursive($application, $environmentConfig);
             }
-            $application = array_replace_recursive($platformConfig, $application);
+            unset($application['environments']);
+
+            // Merge in platform config
+            if (isset($config['application_orchestration']['platforms'][$application['platform']])) {
+                $platformConfig = $config['application_orchestration']['platforms'][$application['platform']];
+                if (!empty($platformConfig['source_file_path'])) {
+                    $sourceFilePathStack[] = $platformConfig['source_file_path'];
+                    unset($platformConfig['source_file_path']);
+                }
+                $application = array_replace_recursive($platformConfig, $application);
+            }
         }
 
-        $applicationConfig = array_replace_recursive($config['application_orchestration']['defaults'], $application);
+        $applicationConfig = array_replace_recursive(
+            $config['application_orchestration']['defaults'],
+            $application
+        );
         $applicationConfig['source_file_paths'] = $sourceFilePathStack;
 
         return new ApplicationConfig($applicationConfig);

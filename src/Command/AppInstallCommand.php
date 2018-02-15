@@ -128,6 +128,7 @@ class AppInstallCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        $this->applicationConfig->validate();
         $this->injectOutputIntoLogger($output, $this->logger);
         $this->applicationSkeletonInstaller->setLogger($this->logger);
         $this->applicationCodeInstaller->setLogger($this->logger);
