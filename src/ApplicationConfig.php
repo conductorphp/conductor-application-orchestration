@@ -248,7 +248,7 @@ class ApplicationConfig
      */
     public function getCurrentEnvironment(): string
     {
-        return $this->config['current_environment'];
+        return $this->config['environment'];
     }
 
     /**
@@ -306,7 +306,7 @@ class ApplicationConfig
         $required = [
             'app_root',
             'app_name',
-            'current_environment',
+            'environment',
             'default_branch',
             'default_database_adapter',
             'default_database_importexport_adapter',
