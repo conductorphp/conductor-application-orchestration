@@ -5,8 +5,8 @@
 
 namespace ConductorAppOrchestration\Command;
 
-use ConductorAppOrchestration\ApplicationAssetRefresher;
 use ConductorAppOrchestration\ApplicationConfig;
+use ConductorAppOrchestration\ApplicationDatabaseInstaller;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\MonologConsoleHandlerAwareTrait;
 use Psr\Log\LoggerInterface;
@@ -16,7 +16,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class AppRefreshAssetsCommand extends Command
+class AppInstallDatabasesCommand extends Command
 {
     use MonologConsoleHandlerAwareTrait;
 
@@ -25,9 +25,9 @@ class AppRefreshAssetsCommand extends Command
      */
     private $applicationConfig;
     /**
-     * @var ApplicationAssetRefresher
+     * @var ApplicationDatabaseInstaller
      */
-    private $applicationAssetRefresher;
+    private $applicationDatabaseInstaller;
     /**
      * @var MountManager
      */
@@ -40,13 +40,13 @@ class AppRefreshAssetsCommand extends Command
 
     public function __construct(
         ApplicationConfig $applicationConfig,
-        ApplicationAssetRefresher $applicationAssetRefresher,
+        ApplicationDatabaseInstaller $applicationDatabaseImportRefresher,
         MountManager $mountManager,
         LoggerInterface $logger = null,
         string $name = null
     ) {
         $this->applicationConfig = $applicationConfig;
-        $this->applicationAssetRefresher = $applicationAssetRefresher;
+        $this->applicationDatabaseInstaller = $applicationDatabaseImportRefresher;
         $this->mountManager = $mountManager;
         if (is_null($logger)) {
             $logger = new NullLogger();
@@ -58,11 +58,12 @@ class AppRefreshAssetsCommand extends Command
     protected function configure()
     {
         $filesystemPrefixes = $this->mountManager->getFilesystemPrefixes();
-        $this->setName('app:refresh-assets')
-            ->setDescription('Refresh application assets.')
+        $this->setName('app:install:databases')
+            ->setDescription('Install application databases.')
             ->setHelp(
-                "This command refreshes application assets based on configuration."
+                "This command installs application databases based on configuration."
             )
+            ->addOption('branch', null, InputOption::VALUE_REQUIRED, 'The branch to install database into.')
             ->addOption(
                 'filesystem',
                 null,
@@ -80,16 +81,10 @@ class AppRefreshAssetsCommand extends Command
                 'production-scrubbed'
             )
             ->addOption(
-                'delete',
+                'replace',
                 null,
                 InputOption::VALUE_NONE,
-                'Delete local assets which are not present in snapshot.'
-            )
-            ->addOption(
-                'batch-size',
-                null,
-                InputOption::VALUE_REQUIRED,
-                'Batch size for asset sync.'
+                'Replace if already installed.'
             );
     }
 
@@ -97,18 +92,16 @@ class AppRefreshAssetsCommand extends Command
     {
         $this->applicationConfig->validate();
         $this->injectOutputIntoLogger($output, $this->logger);
-        $this->applicationAssetRefresher->setLogger($this->logger);
-        $syncConfig = [
-            'delete'     => $input->getOption('delete'),
-            'batch_size' => $input->getOption('batch-size'),
-        ];
+        $this->applicationDatabaseInstaller->setLogger($this->logger);
+        $replace = $input->getOption('replace');
 
         $appName = $this->applicationConfig->getAppName();
-        $this->logger->info("Refreshing application \"$appName\" assets.");
+        $this->logger->info("Installing application \"$appName\" databases.");
         $filesystem = $input->getOption('filesystem') ?? $this->applicationConfig->getDefaultFilesystem();
         $snapshot = $input->getOption('snapshot');
-        $this->applicationAssetRefresher->refreshAssets($filesystem, $snapshot, $syncConfig);
-        $this->logger->info("<info>Application \"$appName\" assets refreshed!</info>");
+        $branch = $input->getOption('branch');
+        $this->applicationDatabaseInstaller->installDatabases($filesystem, $snapshot, $branch, $replace);
+        $this->logger->info("<info>Application \"$appName\" databases installed!</info>");
         return 0;
     }
 

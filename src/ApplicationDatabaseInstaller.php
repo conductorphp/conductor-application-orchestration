@@ -13,11 +13,11 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 /**
- * Class ApplicationDatabaseRefresher
+ * Class ApplicationDatabaseInstaller
  *
  * @package ConductorAppOrchestration
  */
-class ApplicationDatabaseRefresher
+class ApplicationDatabaseInstaller
 {
     /**
      * @var ApplicationConfig
@@ -36,10 +36,6 @@ class ApplicationDatabaseRefresher
      */
     private $databaseAdapterManager;
     /**
-     * @var FileLayoutHelper
-     */
-    private $fileLayoutHelper;
-    /**
      * @var LoggerInterface
      */
     protected $logger;
@@ -49,7 +45,6 @@ class ApplicationDatabaseRefresher
         MountManager $mountManager,
         DatabaseAdapterManager $databaseAdapterManager,
         DatabaseImportExportAdapterManager $databaseImportAdapterManager,
-        FileLayoutHelper $fileLayoutHelper,
         LoggerInterface $logger = null
     ) {
         $this->applicationConfig = $applicationConfig;
@@ -59,7 +54,6 @@ class ApplicationDatabaseRefresher
         if (is_null($logger)) {
             $logger = new NullLogger();
         }
-        $this->fileLayoutHelper = $fileLayoutHelper;
         $this->logger = $logger;
     }
 
@@ -81,27 +75,16 @@ class ApplicationDatabaseRefresher
      *
      * @throws Exception\RuntimeException if app skeleton has not yet been installed
      */
-    public function refreshDatabases(
+    public function installDatabases(
         string $sourceFilesystemPrefix,
         string $snapshotName,
         string $branch = null,
-        bool $replaceIfExists = false
+        bool $replace = false
     ): void {
         $application = $this->applicationConfig;
-        $fileLayout = new FileLayout(
-            $application->getAppRoot(),
-            $application->getFileLayout(),
-            $application->getRelativeDocumentRoot()
-        );
-        $this->fileLayoutHelper->loadFileLayoutPaths($fileLayout);
-        if (!$this->fileLayoutHelper->isFileLayoutInstalled($fileLayout)) {
-            throw new Exception\RuntimeException(
-                "App is not yet installed. Install app skeleton before refreshing databases."
-            );
-        }
 
         if ($application->getDatabases()) {
-            $this->logger->info('Refreshing databases');
+            $this->logger->info('Installing databases');
             foreach ($application->getDatabases() as $databaseName => $database) {
 
                 $adapterName = $database['adapter'] ?? $application->getDefaultDatabaseAdapter();
@@ -117,7 +100,7 @@ class ApplicationDatabaseRefresher
 
                 if ($databaseAdapter->databaseExists($databaseName)) {
                     if (!$databaseAdapter->databaseIsEmpty($databaseName)) {
-                        if (!$replaceIfExists) {
+                        if (!$replace) {
                             $this->logger->debug("Database \"$databaseName\" exists and is not empty. Skipping.");
                             continue;
                         }

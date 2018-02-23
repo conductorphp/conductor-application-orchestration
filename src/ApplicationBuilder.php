@@ -477,7 +477,7 @@ class ApplicationBuilder
         $this->fileLayoutHelper->loadFileLayoutPaths($fileLayout);
         if (!$this->fileLayoutHelper->isFileLayoutInstalled($fileLayout)) {
             throw new Exception\RuntimeException(
-                "App is not yet installed. Install app skeleton before running a build."
+                "Application skeleton is not yet installed. Run app:install or app:install:skeleton first."
             );
         }
     }

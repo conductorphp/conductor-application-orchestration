@@ -69,11 +69,11 @@ class ApplicationSkeletonInstaller
 
     public function installSkeleton(
         string $branch,
-        bool $replaceFiles = false
+        bool $replace = false
     ): void {
         $origUmask = umask(0);
         $this->prepareFileLayout();
-        $this->installAppFiles($branch, $replaceFiles);
+        $this->installAppFiles($branch, $replace);
         umask($origUmask);
     }
 
@@ -198,7 +198,7 @@ class ApplicationSkeletonInstaller
         array $fileInfo,
         bool $replace
     ): void {
-        if ($fileInfo['auto_symlink']) {
+        if (!empty($fileInfo['auto_symlink'])) {
             $symlinkResolvedFilename = $this->resolveFilename('code', $filename);
             $symlinkResolvedTargetFilename = $this->resolveFilename($fileInfo['location'], $filename);
             $this->installSymlink($symlinkResolvedFilename, $symlinkResolvedTargetFilename, $replace);

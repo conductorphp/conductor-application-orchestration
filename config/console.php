@@ -8,9 +8,11 @@ return [
         AppConfigShowCommand::class,
         AppDestroyCommand::class,
         AppInstallCommand::class,
+        AppInstallAssetsCommand::class,
+        AppInstallCodeCommand::class,
+        AppInstallDatabasesCommand::class,
+        AppInstallSkeletonCommand::class,
         AppMaintenanceCommand::class,
-        AppRefreshAssetsCommand::class,
-        AppRefreshDatabasesCommand::class,
         AppSnapshotCommand::class,
     ],
 ];

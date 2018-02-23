@@ -8,6 +8,7 @@ Conductor: Application Orchestration
 - Refactored application configuration to pull from local config rather than app setup repo
 - Removed support for multiple apps
 - Replaced app:config:list and app:config:get with app:config:show
+- Made app:install commands more cohesive
 
 # 0.1.0
 - Initial build copied over from Conductor

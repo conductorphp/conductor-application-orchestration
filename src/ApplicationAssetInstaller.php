@@ -10,11 +10,11 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 /**
- * Class ApplicationAssetRefresher
+ * Class ApplicationAssetInstaller
  *
  * @package ConductorAppOrchestration
  */
-class ApplicationAssetRefresher
+class ApplicationAssetInstaller
 {
     /**
      * @var ApplicationConfig
@@ -67,7 +67,7 @@ class ApplicationAssetRefresher
      * @throws Exception\RuntimeException if app skeleton has not yet been installed
      * @throws Exception\RuntimeException if there is an asset configuration error
      */
-    public function refreshAssets(
+    public function installAssets(
         string $sourceFilesystemPrefix,
         string $snapshotName,
         array $syncOptions = []
@@ -81,12 +81,12 @@ class ApplicationAssetRefresher
         $this->fileLayoutHelper->loadFileLayoutPaths($fileLayout);
         if (!$this->fileLayoutHelper->isFileLayoutInstalled($fileLayout)) {
             throw new Exception\RuntimeException(
-                "App is not yet installed. Install app skeleton before refreshing assets."
+                "Application skeleton is not yet installed. Run app:install or app:install:skeleton first."
             );
         }
 
         if ($application->getAssets()) {
-            $this->logger->info('Refreshing assets');
+            $this->logger->info('Installing assets');
             foreach ($application->getAssets() as $sourcePath => $asset) {
                 if (empty($asset['ensure']) || empty($asset['location'])) {
                     throw new Exception\RuntimeException(

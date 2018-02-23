@@ -5,11 +5,11 @@
 
 namespace ConductorAppOrchestration\Command;
 
-use ConductorAppOrchestration\ApplicationAssetRefresher;
+use ConductorAppOrchestration\ApplicationAssetInstaller;
 use ConductorAppOrchestration\ApplicationBuilder;
 use ConductorAppOrchestration\ApplicationCodeInstaller;
 use ConductorAppOrchestration\ApplicationConfig;
-use ConductorAppOrchestration\ApplicationDatabaseRefresher;
+use ConductorAppOrchestration\ApplicationDatabaseInstaller;
 use ConductorAppOrchestration\ApplicationSkeletonInstaller;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\MonologConsoleHandlerAwareTrait;
@@ -37,13 +37,13 @@ class AppInstallCommand extends Command
      */
     private $applicationCodeInstaller;
     /**
-     * @var ApplicationDatabaseRefresher
+     * @var ApplicationDatabaseInstaller
      */
-    private $applicationDatabaseRefresher;
+    private $applicationDatabaseInstaller;
     /**
-     * @var ApplicationAssetRefresher
+     * @var ApplicationAssetInstaller
      */
-    private $applicationAssetRefresher;
+    private $applicationAssetInstaller;
     /**
      * @var ApplicationBuilder
      */
@@ -62,8 +62,8 @@ class AppInstallCommand extends Command
         ApplicationConfig $applicationConfig,
         ApplicationSkeletonInstaller $applicationSkeletonInstaller,
         ApplicationCodeInstaller $applicationCodeInstaller,
-        ApplicationDatabaseRefresher $applicationDatabaseRefresher,
-        ApplicationAssetRefresher $applicationAssetRefresher,
+        ApplicationDatabaseInstaller $applicationDatabaseInstaller,
+        ApplicationAssetInstaller $applicationAssetInstaller,
         ApplicationBuilder $applicationBuilder,
         MountManager $mountManager,
         LoggerInterface $logger = null,
@@ -72,8 +72,8 @@ class AppInstallCommand extends Command
         $this->applicationConfig = $applicationConfig;
         $this->applicationSkeletonInstaller = $applicationSkeletonInstaller;
         $this->applicationCodeInstaller = $applicationCodeInstaller;
-        $this->applicationDatabaseRefresher = $applicationDatabaseRefresher;
-        $this->applicationAssetRefresher = $applicationAssetRefresher;
+        $this->applicationDatabaseInstaller = $applicationDatabaseInstaller;
+        $this->applicationAssetInstaller = $applicationAssetInstaller;
         $this->applicationBuilder = $applicationBuilder;
         $this->mountManager = $mountManager;
         if (is_null($logger)) {
@@ -88,7 +88,7 @@ class AppInstallCommand extends Command
         $filesystemPrefixes = $this->mountManager->getFilesystemPrefixes();
         $this->setName('app:install')
             ->setDescription('Install application.')
-            ->setHelp("This command installs an application based on configuration in a given application setup repo.")
+            ->setHelp("This command installs an application based on configuration.")
             ->addOption('branch', null, InputOption::VALUE_OPTIONAL, 'The code branch to install.')
             ->addOption(
                 'filesystem',
@@ -106,16 +106,15 @@ class AppInstallCommand extends Command
                 'The snapshot to pull assets from.',
                 'production-scrubbed'
             )
-            ->addOption('skeleton', null, InputOption::VALUE_NONE, 'Install app skeleton only')
             ->addOption('no-code', null, InputOption::VALUE_NONE, 'Do not install code')
             ->addOption('no-assets', null, InputOption::VALUE_NONE, 'Do not install assets')
             ->addOption('no-databases', null, InputOption::VALUE_NONE, 'Do not install databases')
             ->addOption('no-build', null, InputOption::VALUE_NONE, 'Do not perform a build after install')
             ->addOption(
-                'reinstall',
+                'replace',
                 null,
                 InputOption::VALUE_NONE,
-                'Reinstall if already installed. This will reinstall files, database, and assets.'
+                'Replace if already installed. This will replace files, database, and assets.'
             )
             ->addOption(
                 'asset-batch-size',
@@ -132,18 +131,18 @@ class AppInstallCommand extends Command
         $this->injectOutputIntoLogger($output, $this->logger);
         $this->applicationSkeletonInstaller->setLogger($this->logger);
         $this->applicationCodeInstaller->setLogger($this->logger);
-        $this->applicationAssetRefresher->setLogger($this->logger);
-        $this->applicationDatabaseRefresher->setLogger($this->logger);
+        $this->applicationAssetInstaller->setLogger($this->logger);
+        $this->applicationDatabaseInstaller->setLogger($this->logger);
         $this->applicationBuilder->setLogger($this->logger);
         $syncConfig = [
             'batch_size' => $input->getOption('asset-batch-size'),
         ];
-        $installCode = !$input->getOption('skeleton') && !$input->getOption('no-code');
-        $installAssets = !$input->getOption('skeleton') && !$input->getOption('no-assets');
-        $installDatabases = !$input->getOption('skeleton') && !$input->getOption('no-databases');
-        $runBuild = !$input->getOption('skeleton') && !$input->getOption('no-build');
+        $installCode = !$input->getOption('no-code');
+        $installAssets = !$input->getOption('no-assets');
+        $installDatabases = !$input->getOption('no-databases');
+        $runBuild = !$input->getOption('no-build');
         $buildPlan = $input->getOption('build-plan');
-        $reinstall = $input->getOption('reinstall');
+        $replace = $input->getOption('replace');
 
         $buildTriggers = [];
         if ($installCode) {
@@ -157,7 +156,7 @@ class AppInstallCommand extends Command
         }
 
         $appName = $this->applicationConfig->getAppName();
-        $this->logger->info("Refreshing application \"$appName\" assets.");
+        $this->logger->info("Installing application \"$appName\".");
         $branch = $input->getOption('branch') ?? $this->applicationConfig->getDefaultBranch();
         $filesystem = $input->getOption('filesystem') ?? $this->applicationConfig->getDefaultFilesystem();
         $snapshot = $input->getOption('snapshot');
@@ -165,31 +164,30 @@ class AppInstallCommand extends Command
         $this->applicationSkeletonInstaller->prepareFileLayout();
 
         if ($installCode) {
-            $this->applicationCodeInstaller->installCode($branch, $reinstall);
+            $this->applicationCodeInstaller->installCode($branch, $replace);
         }
 
-        $this->applicationSkeletonInstaller->installAppFiles($branch, $reinstall);
+        $this->applicationSkeletonInstaller->installAppFiles($branch, $replace);
 
         if ($installAssets) {
-            $this->applicationAssetRefresher->refreshAssets($filesystem, $snapshot, $syncConfig);
+            $this->applicationAssetInstaller->installAssets($filesystem, $snapshot, $syncConfig);
         }
 
         if ($installDatabases) {
-            $this->applicationDatabaseRefresher->refreshDatabases(
+            $this->applicationDatabaseInstaller->installDatabases(
                 $filesystem,
                 $snapshot,
                 $branch,
-                $reinstall
+                $replace
             );
         }
 
         if ($runBuild) {
-            $this->applicationBuilder->buildInPlace($branch, $buildPlan, $buildTriggers, $reinstall);
+            $this->applicationBuilder->buildInPlace($branch, $buildPlan, $buildTriggers, $replace);
         }
 
-        $this->logger->info("<info>Application \"$appName\" installation complete!</info>");
+        $this->logger->info("<info>Application \"$appName\" installed!</info>");
         return 0;
     }
-
 
 }

@@ -5,7 +5,7 @@
 
 namespace ConductorAppOrchestration;
 
-use GitElephant\Repository;
+use ConductorAppOrchestration\GitElephant\Repository;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -54,13 +54,13 @@ class ApplicationCodeInstaller
 
     /**
      * @param string $branch
-     * @param bool   $update
+     * @param bool   $replace
      *
      * @throws Exception\RuntimeException if app skeleton has not yet been installed
      */
     public function installCode(
         string $branch,
-        $update = false
+        $replace = false
     ): void {
         $application = $this->applicationConfig;
         $fileLayout = new FileLayout(
@@ -71,25 +71,38 @@ class ApplicationCodeInstaller
         $this->fileLayoutHelper->loadFileLayoutPaths($fileLayout);
         if (!$this->fileLayoutHelper->isFileLayoutInstalled($fileLayout)) {
             throw new Exception\RuntimeException(
-                "App is not yet installed. Install app skeleton before refreshing code."
+                "Application skeleton is not yet installed. Run app:install first."
             );
         }
 
         $codePath = $application->getCodePath();
         $repoUrl = $application->getRepoUrl();
+
         if (!file_exists("{$codePath}/.git")) {
             $this->logger->info("Cloning repository \"$repoUrl:$branch\" to \"{$codePath}\".");
             $repo = new Repository($codePath);
-            $repo->cloneFrom($repoUrl, $codePath);
+            try {
+                $repo->cloneFrom($repoUrl, $codePath);
+            } catch (\RuntimeException $e) {
+
+                if (false === strpos($e->getMessage(), 'already exists and is not an empty directory')) {
+                    throw $e;
+                }
+
+                throw new Exception\RuntimeException('Code must be installed initially with skeleton. To install code '
+                    . 'with this command you must first remove all files from "' . $application->getCodePath() . '" or '
+                    . 'run app:destroy.');
+            }
             $repo->checkout($branch);
-        } elseif ($update) {
-            $this->logger->info("Pulling the latest code from \"$repoUrl:$branch\" to \"{$codePath}\".");
+        } elseif ($replace) {
+            $this->logger->info("Stashing file changes and pulling the latest code from \"$repoUrl:$branch\" to \"{$codePath}\".");
             $repo = new Repository($codePath);
+            $repo->stash('Conductor app:install:code code stash', true);
             $repo->checkout($branch);
             $repo->pull('origin', $branch, false);
         } else {
             $this->logger->info(
-                "Skipping clone/pull of code repository because it already exists and \$update was not specified."
+                "Skipping clone/pull of code repository because it already exists and \$replace is false."
             );
         }
     }
