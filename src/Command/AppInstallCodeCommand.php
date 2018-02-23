@@ -56,10 +56,16 @@ class AppInstallCodeCommand extends Command
             ->setHelp("This command installs application code based on configuration.")
             ->addOption('branch', null, InputOption::VALUE_OPTIONAL, 'The code branch to install.')
             ->addOption(
-                'replace',
+                'update',
                 null,
                 InputOption::VALUE_NONE,
-                'If code is already installed, this does a git checkout and pulls the latest of the branch.'
+                'Pull the latest of the given branch if code is already installed.'
+            )
+            ->addOption(
+                'stash',
+                null,
+                InputOption::VALUE_NONE,
+                'Stash any local working directory changes.'
             );
     }
 
@@ -69,11 +75,12 @@ class AppInstallCodeCommand extends Command
         $this->injectOutputIntoLogger($output, $this->logger);
         $this->applicationCodeInstaller->setLogger($this->logger);
         $branch = $input->getOption('branch') ?? $this->applicationConfig->getDefaultBranch();
-        $replace = $input->getOption('replace');
+        $update = $input->getOption('update');
+        $stash = $input->getOption('stash');
 
         $appName = $this->applicationConfig->getAppName();
         $this->logger->info("Installing application \"$appName\" code.");
-        $this->applicationCodeInstaller->installCode($branch, $replace);
+        $this->applicationCodeInstaller->installCode($branch, $update, $stash);
         $this->logger->info("<info>Application \"$appName\" code installed!</info>");
         return 0;
     }

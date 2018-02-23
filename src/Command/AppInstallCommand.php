@@ -164,7 +164,7 @@ class AppInstallCommand extends Command
         $this->applicationSkeletonInstaller->prepareFileLayout();
 
         if ($installCode) {
-            $this->applicationCodeInstaller->installCode($branch, $replace);
+            $this->applicationCodeInstaller->installCode($branch, $replace, $replace);
         }
 
         $this->applicationSkeletonInstaller->installAppFiles($branch, $replace);

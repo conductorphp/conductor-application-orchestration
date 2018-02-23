@@ -54,13 +54,15 @@ class ApplicationCodeInstaller
 
     /**
      * @param string $branch
-     * @param bool   $replace
+     * @param bool   $update
+     * @param bool   $stash
      *
      * @throws Exception\RuntimeException if app skeleton has not yet been installed
      */
     public function installCode(
         string $branch,
-        $replace = false
+        $update = false,
+        $stash = false
     ): void {
         $application = $this->applicationConfig;
         $fileLayout = new FileLayout(
@@ -94,15 +96,23 @@ class ApplicationCodeInstaller
                     . 'run app:destroy.');
             }
             $repo->checkout($branch);
-        } elseif ($replace) {
-            $this->logger->info("Stashing file changes and pulling the latest code from \"$repoUrl:$branch\" to \"{$codePath}\".");
+        } elseif ($update) {
             $repo = new Repository($codePath);
-            $repo->stash('Conductor app:install:code code stash', true);
+            if ($stash) {
+                $this->logger->info("Stashing file changes and pulling the latest code from \"$repoUrl:$branch\" to \"{$codePath}\".");
+                $repo->stash('Conductor stash', true);
+            } else {
+                if ($repo->isDirty()) {
+                    throw new Exception\RuntimeException('Working directory "' . $codePath . '" is dirty. Run this '
+                        . 'again with the stash option or manually clean your working directory.');
+                }
+                $this->logger->info("Pulling the latest code from \"$repoUrl:$branch\" to \"{$codePath}\".");
+            }
             $repo->checkout($branch);
             $repo->pull('origin', $branch, false);
         } else {
             $this->logger->info(
-                "Skipping clone/pull of code repository because it already exists and \$replace is false."
+                "Skipping clone/pull of code repository because it already exists and \$update is false."
             );
         }
     }
