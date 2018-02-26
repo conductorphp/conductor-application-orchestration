@@ -17,7 +17,6 @@ return [
         'default_snapshot_name' => 'production-scrubbed',
         'file_layout' => 'default',
         'files' => [],
-        'maintenance_strategy' => 'default',
         'platform' => 'custom',
         'platforms' => [],
         'relative_document_root' => '.',

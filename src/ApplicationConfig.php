@@ -172,11 +172,19 @@ class ApplicationConfig
     }
 
     /**
-     * @return string
+     * @return array
      */
-    public function getMaintenanceStrategy(): string
+    public function getMaintenanceShellAdapters(): array
     {
-        return $this->config['maintenance_strategy'];
+        return $this->config['maintenance']['shell_adapters'] ?? ['local'];
+    }
+
+    /**
+     * @return array
+     */
+    public function getMaintenanceFilesystemAdapters(): array
+    {
+        return $this->config['maintenance']['filesystem_adapters'] ?? ['local'];
     }
 
     /**
@@ -201,14 +209,6 @@ class ApplicationConfig
     public function getRelativeDocumentRoot(): ?string
     {
         return $this->config['relative_document_root'];
-    }
-
-    /**
-     * @return array
-     */
-    public function getServers(): array
-    {
-        return $this->config['servers'] ?? [];
     }
 
     /**
@@ -314,7 +314,6 @@ class ApplicationConfig
             'default_file_mode',
             'default_filesystem_adapter',
             'default_snapshot_name',
-            'maintenance_strategy',
             'platform',
             'relative_document_root',
             'repo_url',
