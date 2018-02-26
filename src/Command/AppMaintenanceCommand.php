@@ -56,7 +56,7 @@ class AppMaintenanceCommand extends Command
             ->setHelp(
                 "This command can check if maintenance mode is enabled or enable/disable maintenance mode for an application."
             )
-            ->addArgument('action', InputArgument::REQUIRED, 'Action to take. May use: status, enable, or disable')
+            ->addArgument('action', InputArgument::OPTIONAL, 'Action to take. May use: status, enable, or disable')
             ->addOption(
                 'branch',
                 null,
@@ -73,7 +73,7 @@ class AppMaintenanceCommand extends Command
             $this->maintenanceStrategy->setLogger($this->logger);
         }
 
-        $action = $input->getArgument('action');
+        $action = $input->getArgument('action') ?? 'status';
         $branch = $input->getOption('branch');
 
         $appName = $this->applicationConfig->getAppName();
