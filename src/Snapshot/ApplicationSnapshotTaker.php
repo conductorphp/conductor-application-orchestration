@@ -3,9 +3,10 @@
  * @author Kirk Madera <kmadera@robofirm.com>
  */
 
-namespace ConductorAppOrchestration;
+namespace ConductorAppOrchestration\Snapshot;
 
 use ConductorAppOrchestration\Config\ApplicationConfig;
+use ConductorAppOrchestration\FileLayoutHelper;
 use ConductorCore\Database\DatabaseImportExportAdapterManager;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorAppOrchestration\Exception;

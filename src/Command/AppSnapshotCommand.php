@@ -5,7 +5,7 @@
 
 namespace ConductorAppOrchestration\Command;
 
-use ConductorAppOrchestration\ApplicationSnapshotTaker;
+use ConductorAppOrchestration\Snapshot\ApplicationSnapshotTaker;
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\MonologConsoleHandlerAwareTrait;

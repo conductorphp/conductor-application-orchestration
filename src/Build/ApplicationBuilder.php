@@ -3,10 +3,12 @@
  * @author Kirk Madera <kmadera@robofirm.com>
  */
 
-namespace ConductorAppOrchestration;
+namespace ConductorAppOrchestration\Build;
 
-use ConductorAppOrchestration\BuildCommand\BuildCommandInterface;
+use ConductorAppOrchestration\Exception;
+use ConductorAppOrchestration\Build\Command\BuildCommandInterface;
 use ConductorAppOrchestration\Config\ApplicationConfig;
+use ConductorAppOrchestration\PlanRunner;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\Shell\Adapter\ShellAdapterInterface;
 use FilesystemIterator;
@@ -24,10 +26,6 @@ class ApplicationBuilder
      * @var ShellAdapterInterface
      */
     private $shellAdapter;
-    /**
-     * @var FileLayoutHelper
-     */
-    private $fileLayoutHelper;
     /**
      * @var MountManager
      */
@@ -53,16 +51,15 @@ class ApplicationBuilder
      */
     private $applicationConfig;
     /**
-     * @var StepRunner
+     * @var PlanRunner
      */
-    private $stepRunner;
+    private $planRunner;
 
     public function __construct(
         ApplicationConfig $applicationConfig,
         ShellAdapterInterface $shellAdapter,
-        FileLayoutHelper $fileLayoutHelper,
         MountManager $mountManager,
-        StepRunner $stepRunner,
+        PlanRunner $planRunner,
         int $diskSpaceErrorThreshold = 52428800,
         int $diskSpaceWarningThreshold = 104857600,
         string $buildPath = '/tmp/.conductor/build',
@@ -70,10 +67,9 @@ class ApplicationBuilder
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->shellAdapter = $shellAdapter;
-        $this->fileLayoutHelper = $fileLayoutHelper;
         $this->mountManager = $mountManager;
-        $stepRunner->setExpectedClassInterface(BuildCommandInterface::class);
-        $this->stepRunner = $stepRunner;
+        $planRunner->setExpectedClassInterface(BuildCommandInterface::class);
+        $this->planRunner = $planRunner;
         if (is_null($logger)) {
             $logger = new NullLogger();
         }
@@ -105,11 +101,14 @@ class ApplicationBuilder
 
         try {
             $this->logger->info(sprintf('Running build plan "%s".', $buildPlanName));
-            $this->stepRunner->runSteps(
-                $buildPlan['steps'],
-                ['repoReference' => $repoReference, 'buildId' => $buildId]
+            $this->planRunner->runPlan(
+                $buildPlan,
+                [
+                    'repoReference' => $repoReference,
+                    'buildId' => $buildId,
+                    'savePath' => $savePath,
+                ]
             );
-            $this->packageAndSaveBuild($buildId, $buildPlan['excludes'], $savePath);
             $this->clearBuildPath();
         } catch (\Exception $e) {
             $this->clearBuildPath();
@@ -135,8 +134,7 @@ class ApplicationBuilder
             );
         }
 
-        $buildPlan = $this->validateAndNormalizeBuildPlan($buildPlans[$name]);
-        return $buildPlan;
+        return $this->planRunner->validateAndNormalizePlan($buildPlans[$name]);
     }
 
     /**
@@ -193,33 +191,6 @@ class ApplicationBuilder
         }
     }
 
-    /**
-     * @param string $buildId
-     * @param array  $excludes
-     * @param string $savePath
-     *
-     * @return void
-     */
-    private function packageAndSaveBuild(string $buildId, array $excludes, string $savePath): void
-    {
-        $this->logger->info('Packaging build.');
-        $tarFilename = "$buildId.tgz";
-
-        $command = 'tar -czv -f ' . escapeshellarg($tarFilename) . ' ./* --exclude-vcs ';
-
-        if (!empty($excludes)) {
-            foreach ($excludes as $excludePath) {
-                $command .= '--exclude ' . escapeshellarg($excludePath) . ' ';
-            }
-        }
-
-        $this->shellAdapter->runShellCommand($command);
-
-        $filename = realpath($tarFilename);
-        $this->logger->info("Saving build to \"$savePath/$tarFilename\".");
-        $this->mountManager->putFile("local://$filename", "$savePath/$tarFilename");
-    }
-
     private function clearBuildPath(): void
     {
         $this->logger->info('Clearing build path.');
@@ -235,7 +206,7 @@ class ApplicationBuilder
     public function setLogger(LoggerInterface $logger): void
     {
         $this->logger = $logger;
-        $this->stepRunner->setLogger($logger);
+        $this->planRunner->setLogger($logger);
     }
 
     public function setBuildPath(string $buildPath)
@@ -243,26 +214,4 @@ class ApplicationBuilder
         $this->buildPath = $buildPath;
     }
 
-    /**
-     * @param array $buildPlan
-     *
-     * @return array
-     *
-     */
-    private function validateAndNormalizeBuildPlan(array $buildPlan): array
-    {
-        if (empty($buildPlan['steps'])) {
-            throw new Exception\RuntimeException(
-                'Build plan "steps" key must be set.'
-            );
-        }
-
-        $normalizedBuildPlan = [
-            'steps'    => [],
-            'excludes' => $buildPlan['excludes'] ?? [],
-        ];
-
-        $normalizedBuildPlan['steps'] = $this->stepRunner->validateAndNormalizeSteps($buildPlan['steps']);
-        return $normalizedBuildPlan;
-    }
 }

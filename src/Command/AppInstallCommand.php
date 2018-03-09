@@ -6,7 +6,7 @@
 namespace ConductorAppOrchestration\Command;
 
 use ConductorAppOrchestration\ApplicationAssetInstaller;
-use ConductorAppOrchestration\ApplicationBuilder;
+use ConductorAppOrchestration\Build\ApplicationBuilder;
 use ConductorAppOrchestration\ApplicationCodeInstaller;
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\ApplicationDatabaseInstaller;

@@ -5,7 +5,7 @@
 
 namespace ConductorAppOrchestration\Command;
 
-use ConductorAppOrchestration\ApplicationBuilder;
+use ConductorAppOrchestration\Build\ApplicationBuilder;
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\MonologConsoleHandlerAwareTrait;

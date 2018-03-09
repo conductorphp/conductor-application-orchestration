@@ -1,9 +1,11 @@
 <?php
 
-namespace ConductorAppOrchestration\BuildCommand;
+namespace ConductorAppOrchestration\Build\Command;
 
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\Config\ApplicationConfigAwareInterface;
+use ConductorCore\Filesystem\MountManager\MountManager;
+use ConductorCore\Filesystem\MountManager\MountManagerAwareInterface;
 use ConductorCore\Shell\Adapter\ShellAdapterAwareInterface;
 use ConductorCore\Shell\Adapter\ShellAdapterInterface;
 use Psr\Log\LoggerAwareInterface;
@@ -14,10 +16,9 @@ use ConductorAppOrchestration\Exception;
 /**
  * Class CloneRepoCommand
  *
- * @todo    Remove git assumption and handle via RepositoryInterface
- * @package ConductorAppOrchestration\BuildCommand
+ * @package ConductorAppOrchestration\Build\Command
  */
-class CloneRepoCommand
+class PackageBuildCommand
     implements BuildCommandInterface, ApplicationConfigAwareInterface, ShellAdapterAwareInterface, LoggerAwareInterface
 {
     /**
@@ -33,7 +34,7 @@ class CloneRepoCommand
      */
     private $shellAdapter;
 
-    public function __construct($test)
+    public function __construct()
     {
         $this->logger = new NullLogger();
     }
@@ -41,7 +42,7 @@ class CloneRepoCommand
     /**
      * @inheritdoc
      */
-    public function run(string $repoReference, string $buildId): ?string
+    public function run(string $repoReference, string $buildId, string $savePath, array $options = null): void
     {
         if (!isset($this->applicationConfig)) {
             throw new Exception\RuntimeException('$this->applicationConfig must be set.');
@@ -53,16 +54,24 @@ class CloneRepoCommand
 
         $this->logger->info(
             sprintf(
-                'Cloning "%s:%s".',
-                $this->applicationConfig->getRepoUrl(),
-                $repoReference
+                'Packaging build as "%s.tgz".',
+                $buildId
             )
         );
 
-        $command = 'git clone ' . escapeshellarg($this->applicationConfig->getRepoUrl()) . ' ./ --branch '
-            . escapeshellarg($repoReference)
-            . ' --depth 1 --single-branch -v';
-        return $this->shellAdapter->runShellCommand($command);
+        $tarFilename = "$buildId.tgz";
+        $command = 'tar -czv -f ' . escapeshellarg($tarFilename) . ' ./* --exclude-vcs ';
+
+        if (!empty($options['excludes'])) {
+            foreach ($options['excludes'] as $excludePath) {
+                if (0 === strpos($excludePath, '/')) {
+                    $excludePath = '.' . $excludePath; // Tar expects . for paths relative to root of tarball
+                }
+                $command .= '--exclude ' . escapeshellarg($excludePath) . ' ';
+            }
+        }
+
+        $this->shellAdapter->runShellCommand($command);
     }
 
     /**
@@ -87,10 +96,5 @@ class CloneRepoCommand
     public function setLogger(LoggerInterface $logger): void
     {
         $this->logger = $logger;
-    }
-
-    public static function test($blah = null)
-    {
-        return $blah;
     }
 }

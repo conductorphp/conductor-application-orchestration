@@ -1,6 +1,6 @@
 <?php
 
-namespace ConductorAppOrchestration\BuildCommand;
+namespace ConductorAppOrchestration\Build\Command;
 
 use MatthiasMullie\Minify;
 use Psr\Log\LoggerAwareInterface;

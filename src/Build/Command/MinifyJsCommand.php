@@ -1,6 +1,6 @@
 <?php
 
-namespace ConductorAppOrchestration\BuildCommand;
+namespace ConductorAppOrchestration\Build\Command;
 
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;

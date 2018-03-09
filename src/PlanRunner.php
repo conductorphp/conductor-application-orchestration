@@ -5,13 +5,15 @@ namespace ConductorAppOrchestration;
 use Amp\Loop;
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\Config\ApplicationConfigAwareInterface;
+use ConductorCore\Filesystem\MountManager\MountManager;
+use ConductorCore\Filesystem\MountManager\MountManagerAwareInterface;
 use ConductorCore\Shell\Adapter\ShellAdapterAwareInterface;
 use ConductorCore\Shell\Adapter\ShellAdapterInterface;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
-class StepRunner implements LoggerAwareInterface
+class PlanRunner implements LoggerAwareInterface
 {
     /**
      * @var ApplicationConfig
@@ -21,6 +23,10 @@ class StepRunner implements LoggerAwareInterface
      * @var ShellAdapterInterface
      */
     private $shellAdapter;
+    /**
+     * @var MountManager
+     */
+    private $mountManager;
     /**
      * @var LoggerInterface
      */
@@ -33,10 +39,12 @@ class StepRunner implements LoggerAwareInterface
     public function __construct(
         ApplicationConfig $applicationConfig,
         ShellAdapterInterface $shellAdapter,
+        MountManager $mountManager,
         LoggerInterface $logger
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->shellAdapter = $shellAdapter;
+        $this->mountManager = $mountManager;
         if (is_null($logger)) {
             $logger = new NullLogger();
         }
@@ -44,17 +52,17 @@ class StepRunner implements LoggerAwareInterface
     }
 
     /**
-     * @param array $steps
+     * @param array $plan
      * @param array $options
      */
-    public function runSteps(array $steps, array $options = []): void
+    public function runPlan(array $plan, array $options = []): void
     {
-        foreach ($steps as $name => $step) {
+        foreach ($plan as $name => $step) {
             $this->runStep($name, $step, $options);
         }
     }
 
-    public function runStep(string $name, array $step, array $options = []): void
+    private function runStep(string $name, array $step, array $options = []): void
     {
         // If array, run commands in parallel
         if (!empty($step['steps'])) {
@@ -79,7 +87,7 @@ class StepRunner implements LoggerAwareInterface
                 $step['environment_variables'] ?? []
             );
 
-            $output = $this->shellAdapter->runShellCommand(
+            $this->shellAdapter->runShellCommand(
                 $step['command'],
                 $step['working_directory'] ?? $this->applicationConfig->getCodePath(),
                 $environmentVariables,
@@ -87,9 +95,9 @@ class StepRunner implements LoggerAwareInterface
                 $step['options'] ?? null
             );
         } elseif (!empty($step['callable'])) {
-            $output = call_user_func_array($step['callable'], $step['arguments'] ?? []);
+            call_user_func_array($step['callable'], $step['arguments'] ?? []);
         } else {
-            $stepObject = new $step['class']($step['arguments'] ?? null);
+            $stepObject = new $step['class']();
             if ($stepObject instanceof LoggerAwareInterface) {
                 $stepObject->setLogger($this->logger);
             }
@@ -102,36 +110,36 @@ class StepRunner implements LoggerAwareInterface
                 $stepObject->setShellAdapter($this->shellAdapter);
             }
 
-            $output = call_user_func_array([$stepObject, 'run'], $options);
-        }
-
-        if ($output) {
-            if (false !== strpos(trim($output), "\n")) {
-                $output = "\n$output";
+            if ($stepObject instanceof MountManagerAwareInterface) {
+                $stepObject->setMountManager($this->mountManager);
             }
-            $this->logger->debug("Step \"$name\" output: $output");
+
+            call_user_func_array(
+                [$stepObject, 'run'],
+                array_merge($options, ['options' => $step['options'] ?? []])
+            );
         }
     }
 
     /**
-     * @param array $steps
+     * @param array $plan
      *
      * @return array
      *
      */
-    public function validateAndNormalizeSteps(array $steps): array
+    public function validateAndNormalizePlan(array $plan): array
     {
-        $normalizedSteps = [];
-        foreach ($steps as $name => $step) {
+        $normalizedPlan = [];
+        foreach ($plan as $name => $step) {
             [$name, $step] = $this->validateAndNormalizeStep($name, $step);
             if (!is_null($name)) {
-                $normalizedSteps[$name] = $step;
+                $normalizedPlan[$name] = $step;
             } else {
-                $normalizedSteps[] = $step;
+                $normalizedPlan[] = $step;
             }
         }
 
-        return $normalizedSteps;
+        return $normalizedPlan;
     }
 
     /**
