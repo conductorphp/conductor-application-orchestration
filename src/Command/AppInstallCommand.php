@@ -8,7 +8,7 @@ namespace ConductorAppOrchestration\Command;
 use ConductorAppOrchestration\ApplicationAssetInstaller;
 use ConductorAppOrchestration\ApplicationBuilder;
 use ConductorAppOrchestration\ApplicationCodeInstaller;
-use ConductorAppOrchestration\ApplicationConfig;
+use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\ApplicationDatabaseInstaller;
 use ConductorAppOrchestration\ApplicationSkeletonInstaller;
 use ConductorCore\Filesystem\MountManager\MountManager;
@@ -103,7 +103,7 @@ class AppInstallCommand extends Command
                 'snapshot',
                 null,
                 InputOption::VALUE_REQUIRED,
-                'The snapshot to pull assets from.',
+                'The snapshot to pull assets and database from.',
                 'production-scrubbed'
             )
             ->addOption('no-code', null, InputOption::VALUE_NONE, 'Do not install code')
@@ -114,7 +114,7 @@ class AppInstallCommand extends Command
                 'replace',
                 null,
                 InputOption::VALUE_NONE,
-                'Replace if already installed. This will replace files, database, and assets.'
+                'Replace if already installed. This will update code and replace database and assets.'
             )
             ->addOption(
                 'asset-batch-size',
@@ -127,6 +127,7 @@ class AppInstallCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        throw new \Exception('This command is deprecated. Use app:deploy instead.');
         $this->applicationConfig->validate();
         $this->injectOutputIntoLogger($output, $this->logger);
         $this->applicationSkeletonInstaller->setLogger($this->logger);

@@ -4,6 +4,6 @@ namespace ConductorAppOrchestration;
 
 return [
     'factories' => [
-        ApplicationConfig::class => ApplicationConfigFactory::class,
+        Config\ApplicationConfig::class => Config\ApplicationConfigFactory::class,
     ],
 ];

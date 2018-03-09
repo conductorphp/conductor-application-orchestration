@@ -5,6 +5,7 @@
 
 namespace ConductorAppOrchestration;
 
+use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\GitElephant\Repository;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;

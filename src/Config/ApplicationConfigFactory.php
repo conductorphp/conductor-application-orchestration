@@ -1,8 +1,7 @@
 <?php
 
-namespace ConductorAppOrchestration;
+namespace ConductorAppOrchestration\Config;
 
-use ConductorMySqlSupport\Exception;
 use Interop\Container\ContainerInterface;
 use Interop\Container\Exception\ContainerException;
 use Zend\ServiceManager\Exception\ServiceNotCreatedException;
@@ -29,7 +28,7 @@ class ApplicationConfigFactory implements FactoryInterface
     {
         $config = $container->get('config');
 
-        $zendExpressiveRoot = realpath(__DIR__ . '/../../../..');
+        $zendExpressiveRoot = realpath(__DIR__ . '/../../../../..');
         $environment = $config['environment'] ?? 'development';
         $sourceFilePathStack = [
             $zendExpressiveRoot . '/config/autoload/environments/ ' . $environment . '/files',

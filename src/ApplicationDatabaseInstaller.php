@@ -5,10 +5,13 @@
 
 namespace ConductorAppOrchestration;
 
+use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorCore\Database\DatabaseAdapterManager;
 use ConductorCore\Database\DatabaseImportExportAdapterInterface;
 use ConductorCore\Database\DatabaseImportExportAdapterManager;
 use ConductorCore\Filesystem\MountManager\MountManager;
+use ConductorCore\Shell\Adapter\LocalShellAdapter;
+use ConductorCore\Shell\Adapter\ShellAdapterInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -36,6 +39,10 @@ class ApplicationDatabaseInstaller
      */
     private $databaseAdapterManager;
     /**
+     * @var LocalShellAdapter
+     */
+    private $localShellAdapter;
+    /**
      * @var LoggerInterface
      */
     protected $logger;
@@ -45,12 +52,14 @@ class ApplicationDatabaseInstaller
         MountManager $mountManager,
         DatabaseAdapterManager $databaseAdapterManager,
         DatabaseImportExportAdapterManager $databaseImportAdapterManager,
+        LocalShellAdapter $localShellAdapter,
         LoggerInterface $logger = null
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->mountManager = $mountManager;
         $this->databaseImportAdapterManager = $databaseImportAdapterManager;
         $this->databaseAdapterManager = $databaseAdapterManager;
+        $this->localShellAdapter = $localShellAdapter;
         if (is_null($logger)) {
             $logger = new NullLogger();
         }
@@ -82,10 +91,22 @@ class ApplicationDatabaseInstaller
         bool $replace = false
     ): void {
         $application = $this->applicationConfig;
+        $databaseConfig = $this->applicationConfig->getDatabaseConfig();
 
-        if ($application->getDatabases()) {
+        if ($databaseConfig->getPreInstallCommands()) {
+            $this->logger->info('Running database pre-installation commands.');
+            $this->runCommands($databaseConfig->getPreInstallCommands());
+        }
+
+        if ($databaseConfig->getDatabases()) {
             $this->logger->info('Installing databases');
-            foreach ($application->getDatabases() as $databaseName => $database) {
+            foreach ($databaseConfig->getDatabases() as $databaseName => $database) {
+
+                // @todo Only run if actually replacing the db or db doesn't exist
+                if (!empty($database['pre_install_commands'])) {
+                    $this->logger->info("Running database \"$databaseName\" pre-installation commands.");
+                    $this->runCommands($database['pre_install_commands']);
+                }
 
                 $adapterName = $database['adapter'] ?? $application->getDefaultDatabaseAdapter();
                 $databaseAdapter = $this->databaseAdapterManager->getAdapter($adapterName);
@@ -137,7 +158,6 @@ class ApplicationDatabaseInstaller
                     }
 
                     foreach ($database['post_import_scripts'] as $scriptFilename) {
-
                         $scriptFilename = $this->applyStringReplacements(
                             $branchUrl,
                             $branchDatabase,
@@ -150,9 +170,19 @@ class ApplicationDatabaseInstaller
                         );
                     }
                 }
+
+                if (!empty($database['post_install_commands'])) {
+                    $this->logger->info("Running database \"$databaseName\" post-installation commands.");
+                    $this->runCommands($database['post_install_commands']);
+                }
             }
         } else {
             $this->logger->info('No databases specified in configuration.');
+        }
+
+        if ($databaseConfig->getPostInstallCommands()) {
+            $this->logger->info('Running database post-installation commands.');
+            $this->runCommands($databaseConfig->getPostInstallCommands());
         }
 
         // @todo Remove working directory contents after finishing?
@@ -217,5 +247,44 @@ class ApplicationDatabaseInstaller
             $filename = (new \SplFileInfo($tempFile))->getPathname();
         }
         return $filename;
+    }
+
+    /**
+     * @param array $commands
+     */
+    private function runCommands(array $commands): void
+    {
+        // Sort by priority
+        uasort($commands, function ($a, $b) {
+            $priorityA = $a['priority'] ?? 0;
+            $priorityB = $b['priority'] ?? 0;
+            return ($priorityA > $priorityB) ? -1 : 1;
+        });
+
+        foreach ($commands as $name => $command) {
+            $this->logger->debug("Running command \"$name\".");
+            if (is_string($command)) {
+                $command = [
+                    'command' => $command,
+                ];
+            }
+
+            if (is_callable($command['command'])) {
+                call_user_func_array($command['command'], $command['arguments'] ?? []);
+                continue;
+            }
+
+            $output = $this->localShellAdapter->runShellCommand(
+                $command['command'],
+                $command['working_directory'] ?? $this->applicationConfig->getCodePath(),
+                $command['environment_variables'] ?? null,
+                $command['run_priority'] ?? ShellAdapterInterface::PRIORITY_NORMAL,
+                $command['options'] ?? null
+            );
+            if (false !== strpos(trim($output), "\n")) {
+                $output = "\n$output";
+            }
+            $this->logger->debug('Command output: ' . $output);
+        }
     }
 }

@@ -5,7 +5,8 @@
 
 namespace ConductorAppOrchestration;
 
-use ConductorCore\ShellCommandHelper;
+use ConductorAppOrchestration\Config\ApplicationConfig;
+use ConductorCore\Shell\Adapter\LocalShellAdapter;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Twig\Environment as TwigEnvironment;
@@ -23,9 +24,9 @@ class ApplicationSkeletonInstaller
      */
     private $applicationConfig;
     /**
-     * @var ShellCommandHelper
+     * @var LocalShellAdapter
      */
-    private $shellCommandHelper;
+    private $localShellAdapter;
     /**
      * @var FileLayoutHelper
      */
@@ -38,18 +39,18 @@ class ApplicationSkeletonInstaller
     /**
      * ApplicationSkeletonInstaller constructor.
      *
-     * @param ShellCommandHelper   $shellCommandHelper
+     * @param LocalShellAdapter   $localShellAdapter
      * @param FileLayoutHelper     $fileLayoutHelper
      * @param LoggerInterface|null $logger
      */
     public function __construct(
         ApplicationConfig $applicationConfig,
-        ShellCommandHelper $shellCommandHelper,
+        LocalShellAdapter $localShellAdapter,
         FileLayoutHelper $fileLayoutHelper,
         LoggerInterface $logger = null
     ) {
         $this->applicationConfig = $applicationConfig;
-        $this->shellCommandHelper = $shellCommandHelper;
+        $this->localShellAdapter = $localShellAdapter;
         $this->fileLayoutHelper = $fileLayoutHelper;
         if (is_null($logger)) {
             $logger = new NullLogger();
@@ -171,9 +172,9 @@ class ApplicationSkeletonInstaller
      */
     private function installDirectories(bool $replace): void
     {
-        $files = $this->applicationConfig->getFiles();
-        if (!empty($files['directories'])) {
-            foreach ($files['directories'] as $filename => $directory) {
+        $directories = $this->applicationConfig->getSkeletonConfig()->getDirectories();
+        if ($directories) {
+            foreach ($directories as $filename => $directory) {
                 if (empty($directory['location'])) {
                     throw new Exception\RuntimeException(
                         "Directory \"$filename\" must have \"location\" property set."
@@ -252,9 +253,9 @@ class ApplicationSkeletonInstaller
      */
     private function installFiles(string $branch, bool $replace): void
     {
-        $files = $this->applicationConfig->getFiles();
-        if (!empty($files['files'])) {
-            foreach ($files['files'] as $filename => $file) {
+        $files = $this->applicationConfig->getSkeletonConfig()->getFiles();
+        if (!empty($files)) {
+            foreach ($files as $filename => $file) {
                 if (empty($file['location'])) {
                     throw new Exception\RuntimeException(
                         "Directory \"$filename\" must have \"location\" property set."
@@ -321,7 +322,7 @@ class ApplicationSkeletonInstaller
             if (!is_file($resolvedFilename) || is_link($resolvedFilename)) {
                 if (is_dir($resolvedFilename)) {
                     $command = 'rm -rf ' . escapeshellarg($resolvedFilename);
-                    $this->shellCommandHelper->runShellCommand($command);
+                    $this->localShellAdapter->runShellCommand($command);
                 } else {
                     unlink($resolvedFilename);
                 }
@@ -342,9 +343,9 @@ class ApplicationSkeletonInstaller
      */
     private function installSymlinks(bool $replace): void
     {
-        $files = $this->applicationConfig->getFiles();
-        if (!empty($files['symlinks'])) {
-            foreach ($files['symlinks'] as $sourcePath => $symlink) {
+        $symlinks = $this->applicationConfig->getSkeletonConfig()->getSymlinks();
+        if (!empty($symlinks)) {
+            foreach ($symlinks as $sourcePath => $symlink) {
                 if (empty($symlink['location']) || empty($symlink['target_location']) || empty($symlink['target'])) {
                     throw new Exception\RuntimeException(
                         "Symlink \"$sourcePath\" must have \"location\", \"target_location\", and \"target\" properties set."
@@ -475,7 +476,7 @@ class ApplicationSkeletonInstaller
                 unlink($resolvedFilename);
             } else {
                 $command = 'rm -rf ' . escapeshellarg($resolvedFilename);
-                $this->shellCommandHelper->runShellCommand($command);
+                $this->localShellAdapter->runShellCommand($command);
             }
             symlink($resolvedTargetFilename, $resolvedFilename);
             $this->logger->debug("Ensured \"$resolvedFilename\" is a symlink pointed to \"$resolvedTargetFilename\".");

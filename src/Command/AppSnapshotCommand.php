@@ -5,8 +5,8 @@
 
 namespace ConductorAppOrchestration\Command;
 
-use ConductorAppOrchestration\ApplicationConfig;
 use ConductorAppOrchestration\ApplicationSnapshotTaker;
+use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\MonologConsoleHandlerAwareTrait;
 use Psr\Log\LoggerInterface;
@@ -60,45 +60,55 @@ class AppSnapshotCommand extends Command
     {
         $filesystemPrefixes = $this->mountManager->getFilesystemPrefixes();
         $this->setName('app:snapshot')
-            ->setDescription('Creates application snapshot.')
+            ->setDescription('Create application asset/database snapshot.')
             ->setHelp(
-                "This command creates an application snapshot intended for testing purposes on lower environments."
+                "This command creates an application snapshot of databases and assets."
             )
-            ->addArgument('name', InputArgument::OPTIONAL, 'Snapshot name. Defaults to environment name.')
-            ->addOption(
-                'branch',
-                null,
+            // @todo Remove default snapshot-name to force people to specify a snapshot name?
+            ->addArgument(
+                'snapshot-name',
                 InputArgument::OPTIONAL,
-                'The branch to take snapshot from. Only relevant when using branch file layout.'
+                'Snapshot name.',
+                $this->applicationConfig->getCurrentEnvironment()
             )
             ->addOption(
-                'filesystem',
+                'snapshot-plan',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Snapshot plan to run.',
+                $this->applicationConfig->getDefaultSnapshotPlan()
+            )
+            ->addOption(
+                'snapshot-path',
                 null,
                 InputOption::VALUE_OPTIONAL,
                 sprintf(
-                    'The filesystem to push snapshot to. <comment>Configured filesystems: %s. [default: application default filesystem]</comment>.',
+                    'The filesystem to push the snapshot to. <comment>[allowed: %s]</comment>,',
                     implode(', ', $filesystemPrefixes)
-                )
-            )
-            ->addOption('no-databases', null, InputOption::VALUE_NONE, 'Do not include databases in snapshot.')
-            ->addOption('no-assets', null, InputOption::VALUE_NONE, 'Do not include assets in snapshot.')
-            ->addOption(
-                'no-scrub',
-                null,
-                InputOption::VALUE_NONE,
-                'Do not scrub the database or assets. Use this if you need to get an exact copy of production down to a test environment.'
+                ),
+                $this->applicationConfig->getDefaultFilesystem() . '://snapshots'
             )
             ->addOption(
-                'delete',
+                'branch',
                 null,
-                InputOption::VALUE_NONE,
-                'Delete any existing snapshot by this name first before pushing.'
+                InputOption::VALUE_REQUIRED,
+                'Branch to snapshot db from. Only relevant with branch file layout.'
             )
+            // @todo Allow for more granular setting of which databases/assets should be in the snapshot?
+            ->addOption('databases', null, InputOption::VALUE_NONE, 'Include databases in snapshot. True if neither databases or assets specified.')
+            ->addOption('assets', null, InputOption::VALUE_NONE, 'Include assets in snapshot. True if neither databases or assets specified.')
             ->addOption(
                 'asset-batch-size',
                 null,
                 InputOption::VALUE_REQUIRED,
-                'Batch size for asset sync.'
+                'Batch size for asset sync.',
+                100
+            )
+            ->addOption(
+                'append',
+                null,
+                InputOption::VALUE_NONE,
+                'Append to snapshot, if exists.'
             );
     }
 
@@ -108,30 +118,32 @@ class AppSnapshotCommand extends Command
         $this->injectOutputIntoLogger($output, $this->logger);
         $this->applicationSnapshotTaker->setLogger($this->logger);
 
+        $appName = $this->applicationConfig->getAppName();
+        $snapshotName = $input->getArgument('snapshot-name') ?? $this->applicationConfig->getCurrentEnvironment();
+        $snapshotPlan = $input->getOption('snapshot-plan') ?? $this->applicationConfig->getDefaultSnapshotPlan();
+        $snapshotPath = $input->getOption('snapshot-path');
         $branch = $input->getOption('branch');
-        $noAssets = $input->getOption('no-assets');
-        $noDatabases = $input->getOption('no-databases');
-        $noScrub = $input->getOption('no-scrub');
-        $delete = $input->getOption('delete');
+        $includeDatabases = $input->getOption('databases');
+        $includeAssets = $input->getOption('assets');
+        if (!($includeDatabases || $includeAssets)) {
+            $includeDatabases = $includeAssets = true;
+        }
         $assetSyncConfig = [
             'batch_size' => $input->getOption('asset-batch-size'),
         ];
+        $append = $input->getOption('append');
 
-        $appName = $this->applicationConfig->getAppName();
-        $snapshotName = $input->getArgument('name') ??
-            $this->applicationConfig->getCurrentEnvironment() . (!$noScrub ? '-scrubbed' : '');
-        $filesystem = $input->getOption('filesystem') ?? $this->applicationConfig->getDefaultFilesystem();
         $this->logger->info(
-            "Creating snapshot \"$snapshotName\" from application \"$appName\" and pushing to filesystem \"$filesystem\"."
+            "Creating snapshot \"$snapshotName\" and saving to \"$snapshotPath/$snapshotName\"."
         );
         $this->applicationSnapshotTaker->takeSnapshot(
-            $filesystem,
+            $snapshotPlan,
             $snapshotName,
+            $snapshotPath,
             $branch,
-            !$noDatabases,
-            !$noAssets,
-            !$noScrub,
-            $delete,
+            $includeDatabases,
+            $includeAssets,
+            $append,
             $assetSyncConfig
         );
         $this->logger->info("<info>Application \"$appName\" snapshot completed!</info>");

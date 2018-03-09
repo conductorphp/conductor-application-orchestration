@@ -5,7 +5,9 @@ namespace ConductorAppOrchestration\BuildCommand;
 interface BuildCommandInterface
 {
     /**
-     * @param array $options
+     * @param string $repoReference
+     * @param string $buildId
+     * @return string|null
      */
-    public function run(array $options): void;
+    public function run(string $repoReference, string $buildId): ?string;
 }

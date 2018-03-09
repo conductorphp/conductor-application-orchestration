@@ -1,22 +1,19 @@
 <?php
 
+// @todo Determine what of these defaults are unused
 return [
     'defaults' => [
-        'asset_groups' => [],
-        'assets' => [],
-        'build_plans' => [],
-        'build_exclude_paths' => [],
-        'databases' => [],
-        'database_table_groups' => [],
+        'build' => [
+            'default_plan' => 'default',
+            'plans' => [],
+        ],
         'default_branch' => 'master',
         'default_database_adapter' => 'default',
         'default_database_importexport_adapter' => 'default',
         'default_dir_mode' => 0750,
         'default_file_mode' => 0640,
-        'default_filesystem_adapter' => 'default',
-        'default_snapshot_name' => 'production-scrubbed',
+        'default_filesystem_adapter' => 'local',
         'file_layout' => 'default',
-        'files' => [],
         'platform' => 'custom',
         'platforms' => [],
         'relative_document_root' => '.',
@@ -26,6 +23,12 @@ return [
             'username' => 'webuser',
         ],
         'servers' => [],
+        'snapshot' => [
+            'asset_groups' => [],
+            'database_table_groups' => [],
+            'default_plan' => 'default',
+            'plans' => [],
+        ],
         'source_file_paths' => [],
         'template_vars' => [],
     ],

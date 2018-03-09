@@ -6,7 +6,8 @@
 namespace ConductorAppOrchestration\Command;
 
 use ConductorAppOrchestration\ApplicationBuilder;
-use ConductorAppOrchestration\ApplicationConfig;
+use ConductorAppOrchestration\Config\ApplicationConfig;
+use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\MonologConsoleHandlerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -29,6 +30,10 @@ class AppBuildCommand extends Command
      */
     private $applicationBuilder;
     /**
+     * @var MountManager
+     */
+    private $mountManager;
+    /**
      * @var LoggerInterface
      */
     private $logger;
@@ -36,12 +41,14 @@ class AppBuildCommand extends Command
 
     public function __construct(
         ApplicationConfig $applicationConfig,
-        ApplicationBuilder $applicationBuilder,
+        ApplicationBuilder $applicationDeployer,
+        MountManager $mountManager,
         LoggerInterface $logger = null,
         string $name = null
     ) {
         $this->applicationConfig = $applicationConfig;
-        $this->applicationBuilder = $applicationBuilder;
+        $this->applicationBuilder = $applicationDeployer;
+        $this->mountManager = $mountManager;
         if (is_null($logger)) {
             $logger = new NullLogger();
         }
@@ -51,45 +58,37 @@ class AppBuildCommand extends Command
 
     protected function configure()
     {
+        $filesystemPrefixes = $this->mountManager->getFilesystemPrefixes();
         $this->setName('app:build')
-            ->setDescription('Build application and optionally push artifacts to a filesystem.')
-            ->setHelp("This command runs a build process and then optionally pushes artifacts to a filesystem.")
+            ->setDescription('Build application code from repository and save as tgz to a filesystem.')
+            ->setHelp("This command builds the application code from the repository and saves as tgz to a filesystem.")
             ->addArgument(
-                'git-reference',
-                InputArgument::OPTIONAL,
-                'The code reference (branch, tag, commit) to build.',
-                'master'
+                'repo-reference',
+                InputArgument::REQUIRED,
+                'The repository reference (branch, tag, commit) to build.'
             )
             ->addArgument(
-                'build-plan',
-                InputArgument::OPTIONAL,
-                'Build plan to run.',
-                'development'
-            )
-            ->addOption(
-                'save',
-                null,
-                InputOption::VALUE_NONE,
-                'Triggers build mode that creates a tgz file and saves to a given path.'
-            )
-            ->addOption(
-                'save-path',
-                null,
-                InputOption::VALUE_REQUIRED,
-                'Path to save build to, including filesystem prefix.',
-                'local://' . getcwd()
-            )
-            ->addOption(
                 'build-id',
-                null,
                 InputArgument::OPTIONAL,
-                'A unique ID for this build. If not specified, the git-reference will be used with timestamp appended.'
+                'The build id to upload this. Generated based on other parameters if not provided. The build '
+                . 'id is written to stdout.'
             )
             ->addOption(
-                'force-clean-build',
+                'build-plan',
                 null,
-                InputOption::VALUE_NONE,
-                'Force a clean build; Only relevant if building in place (no build-id set).'
+                InputOption::VALUE_OPTIONAL,
+                'Build plan to run.',
+                $this->applicationConfig->getBuildConfig()->getDefaultPlan()
+            )
+            ->addOption(
+                'build-path',
+                null,
+                InputOption::VALUE_OPTIONAL,
+                sprintf(
+                    'The filesystem and path to push the build to. <comment>[allowed: %s]</comment>,',
+                    implode(', ', $filesystemPrefixes)
+                ),
+                $this->applicationConfig->getDefaultFilesystem() . '://builds'
             );
     }
 
@@ -98,26 +97,16 @@ class AppBuildCommand extends Command
         $this->applicationConfig->validate();
         $this->injectOutputIntoLogger($output, $this->logger);
         $this->applicationBuilder->setLogger($this->logger);
-        $gitReference = $input->getArgument('git-reference');
-        $buildPlan = $input->getArgument('build-plan');
-        $save = $input->getOption('save');
-        $savePath = $input->getOption('save-path');
-        $buildId = $input->getOption('build-id') ?? $gitReference . '-' . time();
-        $forceCleanBuild = $input->getOption('force-clean-build');
+        $buildPlan = $input->getOption('build-plan');
+        $repoReference = $input->getArgument('repo-reference');
+        $buildId = $input->getArgument('build-id') ?? $repoReference . '-' . $buildPlan . '-' . time();
+        $buildPath = $input->getOption('build-path');
 
         $appName = $this->applicationConfig->getAppName();
         $this->logger->info("Building application \"$appName\".");
-        if ($save) {
-            $this->applicationBuilder->build($gitReference, $buildPlan, $buildId, $savePath);
-        } else {
-            $this->applicationBuilder->buildInPlace(
-                $gitReference,
-                $buildPlan,
-                null,
-                $forceCleanBuild
-            );
-        }
+        $this->applicationBuilder->build($buildPlan, $repoReference, $buildId, $buildPath);
         $this->logger->info("<info>Application \"$appName\" build complete!</info>");
+        $output->write($buildId);
         return 0;
     }
 

@@ -5,6 +5,7 @@
 
 namespace ConductorAppOrchestration;
 
+use ConductorAppOrchestration\Config\ApplicationConfig;
 use Exception;
 
 /**

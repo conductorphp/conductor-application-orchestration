@@ -5,6 +5,7 @@
 
 namespace ConductorAppOrchestration;
 
+use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorCore\Database\DatabaseAdapterInterface;
 use ConductorCore\Database\DatabaseAdapterManager;
 use Exception;
@@ -91,10 +92,11 @@ class ApplicationDestroyer
             $this->logger->debug("Removed symlink \"$appRoot/" . ApplicationConfig::PATH_CURRENT_RELEASE . "\".");
         }
 
-        if ($application->getDatabases()) {
+        $databaseConfig = $this->applicationConfig->getDatabaseConfig();
+        if ($databaseConfig->getDatabases()) {
             $this->logger->debug("Destroying databases.");
             $databasesToDestroy = [];
-            foreach ($application->getDatabases() as $database => $databaseInfo) {
+            foreach ($databaseConfig->getDatabases() as $database => $databaseInfo) {
                 if ('branch' == $application->getFileLayout()) {
                     if ($branch) {
                         $database .= '_' . $this->sanitizeDatabaseName($branch);

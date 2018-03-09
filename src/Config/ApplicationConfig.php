@@ -3,10 +3,10 @@
  * @author Kirk Madera <kmadera@robofirm.com>
  */
 
-namespace ConductorAppOrchestration;
+namespace ConductorAppOrchestration\Config;
 
-use ConductorAppOrchestration\Config\FilesystemConfig;
 use ConductorAppOrchestration\Exception;
+use ConductorAppOrchestration\FileLayoutAwareInterface;
 
 class ApplicationConfig
 {
@@ -21,18 +21,108 @@ class ApplicationConfig
     const PATH_LOCAL = 'local';
     const PATH_SHARED = 'shared';
 
-    /** @var array */
-    protected $config;
+    /**
+     * @var array
+     */
+    private $config;
+    /**
+     * @var BuildConfig
+     */
+    private $buildConfig;
+    /**
+     * @var DeployConfig
+     */
+    private $deployConfig;
+    /**
+     * @var SnapshotConfig
+     */
+    private $snapshotConfig;
+    /**
+     * @var SkeletonConfig
+     */
+    private $skeletonConfig;
 
     /**
-     * AppConfig constructor.
+     * ApplicationConfig constructor.
      *
      * @param array $config
      */
     public function __construct(array $config)
     {
+        $this->buildConfig = new BuildConfig($config['build'] ?? []);
+        $this->deployConfig = new DeployConfig($config['deploy'] ?? []);
+        $this->snapshotConfig = new SnapshotConfig($config['snapshot'] ?? []);
+        $this->skeletonConfig = new SkeletonConfig($config['skeleton'] ?? []);
+        unset($config['build'], $config['deploy'], $config['snapshot'], $config['skeleton']);
         $config = $this->filter($config);
         $this->config = $config;
+    }
+
+    /**
+     * @return array
+     */
+    public function toArray(): array
+    {
+        return array_merge(
+            $this->config,
+            ['build' => $this->buildConfig->toArray()],
+            ['deploy' => $this->deployConfig->toArray()],
+            ['snapshot' => $this->snapshotConfig->toArray()],
+            ['skeleton' => $this->skeletonConfig->toArray()]
+        );
+    }
+
+    /**
+     * @todo Validate by schema instead
+     *
+     * @throws Exception\RuntimeException
+     * @throws Exception\DomainException
+     */
+    public function validate(): void
+    {
+        $required = [
+            'app_root',
+            'app_name',
+            'default_filesystem',
+            'environment',
+            'default_branch',
+            'default_database_adapter',
+            'default_database_importexport_adapter',
+            'default_dir_mode',
+            'default_file_mode',
+            'default_filesystem_adapter',
+            'platform',
+            'relative_document_root',
+            'repo_url',
+        ];
+        $missingRequired = [];
+        foreach ($required as $name) {
+            if (empty($this->config[$name])) {
+                $missingRequired[] = $name;
+            }
+        }
+        if ($missingRequired) {
+            throw new Exception\RuntimeException(
+                'Missing required values for top level configuration key(s): "' . implode('", "', $missingRequired)
+                . '"'
+            );
+        }
+
+        if (!in_array(
+            $this->config['file_layout'],
+            [
+                FileLayoutAwareInterface::FILE_LAYOUT_BLUE_GREEN,
+                FileLayoutAwareInterface::FILE_LAYOUT_BRANCH,
+                FileLayoutAwareInterface::FILE_LAYOUT_DEFAULT
+            ]
+        )) {
+            throw new Exception\DomainException("Invalid file layout \"{$this->config['file_layout']}\".");
+        }
+
+        $this->buildConfig->validate();
+        $this->deployConfig->validate();
+        $this->snapshotConfig->validate();
+        $this->skeletonConfig->validate();
     }
 
     /**
@@ -52,52 +142,46 @@ class ApplicationConfig
     }
 
     /**
-     * @return array
+     * @return BuildConfig
      */
-    public function getAssetGroups(): array
+    public function getBuildConfig(): BuildConfig
     {
-        return $this->config['asset_groups'] ?? [];
+        return $this->buildConfig;
     }
 
     /**
-     * @return array
+     * @return DeployConfig
      */
-    public function getAssets(): array
+    public function getDeployConfig(): DeployConfig
     {
-        return $this->config['assets'] ?? [];
+        return $this->deployConfig;
     }
 
     /**
-     * @return array
+     * @return SnapshotConfig
      */
-    public function getBuildExcludePaths(): array
+    public function getSnapshotConfig(): SnapshotConfig
     {
-        return $this->config['build_exclude_paths'] ?? [];
+        return $this->snapshotConfig;
     }
 
     /**
-     * @return array|mixed
+     * @return SkeletonConfig
      */
-    public function getBuildPlans(): array
+    public function getSkeletonConfig(): SkeletonConfig
     {
-        return $this->config['build_plans'] ?? [];
+        return $this->skeletonConfig;
     }
 
     /**
-     * @return array
+     * @return string
      */
-    public function getDatabases(): array
+    public function getDefaultFilesystem(): string
     {
-        return $this->config['databases'] ?? [];
+        return $this->config['default_filesystem'];
     }
 
-    /**
-     * @return array
-     */
-    public function getDatabaseTableGroups(): array
-    {
-        return $this->config['database_table_groups'] ?? [];
-    }
+
 
     /**
      * @return string
@@ -142,17 +226,9 @@ class ApplicationConfig
     /**
      * @return string
      */
-    public function getDefaultSnapshotName(): string
+    public function getDefaultSnapshotPlan(): string
     {
-        return $this->config['default_snapshot_name'];
-    }
-
-    /**
-     * @return string
-     */
-    public function getDefaultFilesystem(): string
-    {
-        return $this->config['default_filesystem'];
+        return $this->config['snapshot']['default_plan'] ?? 'default';
     }
 
     /**
@@ -161,14 +237,6 @@ class ApplicationConfig
     public function getFileLayout(): string
     {
         return $this->config['file_layout'];
-    }
-
-    /**
-     * @return array
-     */
-    public function getFiles(): array
-    {
-        return $this->config['files'] ?? [];
     }
 
     /**
@@ -295,54 +363,6 @@ class ApplicationConfig
         return $filteredConfig;
     }
 
-    /**
-     * @todo Validate by schema instead
-     *
-     * @throws Exception\RuntimeException
-     * @throws Exception\DomainException
-     */
-    public function validate(): void
-    {
-        $required = [
-            'app_root',
-            'app_name',
-            'environment',
-            'default_branch',
-            'default_database_adapter',
-            'default_database_importexport_adapter',
-            'default_dir_mode',
-            'default_file_mode',
-            'default_filesystem_adapter',
-            'default_snapshot_name',
-            'platform',
-            'relative_document_root',
-            'repo_url',
-        ];
-        $missingRequired = [];
-        foreach ($required as $name) {
-            if (empty($this->config[$name])) {
-                $missingRequired[] = $name;
-            }
-        }
-        if ($missingRequired) {
-            throw new Exception\RuntimeException(
-                'Missing required values for top level configuration key(s): "' . implode('", "', $missingRequired)
-                . '"'
-            );
-        }
-
-        if (!in_array(
-            $this->config['file_layout'],
-            [
-                FileLayoutAwareInterface::FILE_LAYOUT_BLUE_GREEN,
-                FileLayoutAwareInterface::FILE_LAYOUT_BRANCH,
-                FileLayoutAwareInterface::FILE_LAYOUT_DEFAULT
-            ]
-        )) {
-            throw new Exception\DomainException("Invalid file layout \"{$this->config['file_layout']}\".");
-        }
-    }
-
 
     /**
      * @param string $relativeFilename
@@ -369,23 +389,6 @@ class ApplicationConfig
         }
 
         return $filename;
-    }
-
-    /**
-     * @param string
-     *
-     * @return FilesystemConfig
-     * @throws Exception\DomainException if filesystem doesn't exist in application configuration
-     */
-    public function getFilesystemConfig($filesystemName): FilesystemConfig
-    {
-        if (empty($this->config['file_systems'][$filesystemName])) {
-            throw new Exception\DomainException(
-                'Filesystem "' . $filesystemName . '" not defined in application configuration.'
-            );
-        }
-
-        return new FilesystemConfig($this->config['file_systems'][$filesystemName]);
     }
 
     /**
