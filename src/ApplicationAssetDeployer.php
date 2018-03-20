@@ -13,11 +13,11 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 /**
- * Class ApplicationAssetInstaller
+ * Class ApplicationAssetDeployer
  *
  * @package ConductorAppOrchestration
  */
-class ApplicationAssetInstaller
+class ApplicationAssetDeployer
 {
     /**
      * @var ApplicationConfig
@@ -76,7 +76,7 @@ class ApplicationAssetInstaller
      * @throws Exception\RuntimeException if app skeleton has not yet been installed
      * @throws Exception\RuntimeException if there is an asset configuration error
      */
-    public function installAssets(
+    public function deployAssets(
         string $sourceFilesystemPrefix,
         string $snapshotName,
         array $syncOptions = []

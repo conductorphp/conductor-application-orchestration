@@ -181,14 +181,20 @@ class ApplicationConfig
         return $this->config['default_filesystem'];
     }
 
-
-
     /**
      * @return string
      */
     public function getDefaultBranch(): string
     {
         return $this->config['default_branch'];
+    }
+
+    /**
+     * @return array
+     */
+    public function getDatabases(): array
+    {
+        return $this->config['databases'] ?? [];
     }
 
     /**

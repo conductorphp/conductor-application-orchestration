@@ -5,12 +5,12 @@
 
 namespace ConductorAppOrchestration\Command;
 
-use ConductorAppOrchestration\ApplicationAssetInstaller;
+use ConductorAppOrchestration\ApplicationAssetDeployer;
 use ConductorAppOrchestration\Build\ApplicationBuilder;
-use ConductorAppOrchestration\ApplicationCodeInstaller;
+use ConductorAppOrchestration\ApplicationCodeDeployer;
 use ConductorAppOrchestration\Config\ApplicationConfig;
-use ConductorAppOrchestration\ApplicationDatabaseInstaller;
-use ConductorAppOrchestration\ApplicationSkeletonInstaller;
+use ConductorAppOrchestration\ApplicationDatabaseDeployer;
+use ConductorAppOrchestration\ApplicationSkeletonDeployer;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\MonologConsoleHandlerAwareTrait;
 use Psr\Log\LoggerInterface;
@@ -29,21 +29,21 @@ class AppInstallCommand extends Command
      */
     private $applicationConfig;
     /**
-     * @var ApplicationSkeletonInstaller
+     * @var ApplicationSkeletonDeployer
      */
-    private $applicationSkeletonInstaller;
+    private $applicationSkeletonDeployer;
     /**
-     * @var ApplicationCodeInstaller
+     * @var ApplicationCodeDeployer
      */
     private $applicationCodeInstaller;
     /**
-     * @var ApplicationDatabaseInstaller
+     * @var ApplicationDatabaseDeployer
      */
-    private $applicationDatabaseInstaller;
+    private $applicationDatabaseDeployer;
     /**
-     * @var ApplicationAssetInstaller
+     * @var ApplicationAssetDeployer
      */
-    private $applicationAssetInstaller;
+    private $applicationAssetDeployer;
     /**
      * @var ApplicationBuilder
      */
@@ -60,20 +60,20 @@ class AppInstallCommand extends Command
 
     public function __construct(
         ApplicationConfig $applicationConfig,
-        ApplicationSkeletonInstaller $applicationSkeletonInstaller,
-        ApplicationCodeInstaller $applicationCodeInstaller,
-        ApplicationDatabaseInstaller $applicationDatabaseInstaller,
-        ApplicationAssetInstaller $applicationAssetInstaller,
+        ApplicationSkeletonDeployer $applicationSkeletonDeployer,
+        ApplicationCodeDeployer $applicationCodeInstaller,
+        ApplicationDatabaseDeployer $applicationDatabaseDeployer,
+        ApplicationAssetDeployer $applicationAssetDeployer,
         ApplicationBuilder $applicationBuilder,
         MountManager $mountManager,
         LoggerInterface $logger = null,
         string $name = null
     ) {
         $this->applicationConfig = $applicationConfig;
-        $this->applicationSkeletonInstaller = $applicationSkeletonInstaller;
+        $this->applicationSkeletonDeployer = $applicationSkeletonDeployer;
         $this->applicationCodeInstaller = $applicationCodeInstaller;
-        $this->applicationDatabaseInstaller = $applicationDatabaseInstaller;
-        $this->applicationAssetInstaller = $applicationAssetInstaller;
+        $this->applicationDatabaseDeployer = $applicationDatabaseDeployer;
+        $this->applicationAssetDeployer = $applicationAssetDeployer;
         $this->applicationBuilder = $applicationBuilder;
         $this->mountManager = $mountManager;
         if (is_null($logger)) {
@@ -130,10 +130,10 @@ class AppInstallCommand extends Command
         throw new \Exception('This command is deprecated. Use app:deploy instead.');
         $this->applicationConfig->validate();
         $this->injectOutputIntoLogger($output, $this->logger);
-        $this->applicationSkeletonInstaller->setLogger($this->logger);
+        $this->applicationSkeletonDeployer->setLogger($this->logger);
         $this->applicationCodeInstaller->setLogger($this->logger);
-        $this->applicationAssetInstaller->setLogger($this->logger);
-        $this->applicationDatabaseInstaller->setLogger($this->logger);
+        $this->applicationAssetDeployer->setLogger($this->logger);
+        $this->applicationDatabaseDeployer->setLogger($this->logger);
         $this->applicationBuilder->setLogger($this->logger);
         $syncConfig = [
             'batch_size' => $input->getOption('asset-batch-size'),
@@ -162,20 +162,20 @@ class AppInstallCommand extends Command
         $filesystem = $input->getOption('filesystem') ?? $this->applicationConfig->getDefaultFilesystem();
         $snapshot = $input->getOption('snapshot');
 
-        $this->applicationSkeletonInstaller->prepareFileLayout();
+        $this->applicationSkeletonDeployer->prepareFileLayout();
 
         if ($installCode) {
-            $this->applicationCodeInstaller->installCode($branch, $replace, $replace);
+            $this->applicationCodeInstaller->deployCode($branch, $replace, $replace);
         }
 
-        $this->applicationSkeletonInstaller->installAppFiles($branch, $replace);
+        $this->applicationSkeletonDeployer->installAppFiles($branch, $replace);
 
         if ($installAssets) {
-            $this->applicationAssetInstaller->installAssets($filesystem, $snapshot, $syncConfig);
+            $this->applicationAssetDeployer->deployAssets($filesystem, $snapshot, $syncConfig);
         }
 
         if ($installDatabases) {
-            $this->applicationDatabaseInstaller->installDatabases(
+            $this->applicationDatabaseDeployer->deployDatabases(
                 $filesystem,
                 $snapshot,
                 $branch,

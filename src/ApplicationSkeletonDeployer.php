@@ -13,11 +13,11 @@ use Twig\Environment as TwigEnvironment;
 use Twig\Loader\ArrayLoader as TwigArrayLoader;
 
 /**
- * Class ApplicationSkeletonInstaller
+ * Class ApplicationSkeletonDeployer
  *
  * @package ConductorAppOrchestration
  */
-class ApplicationSkeletonInstaller
+class ApplicationSkeletonDeployer
 {
     /**
      * @var ApplicationConfig
@@ -37,9 +37,9 @@ class ApplicationSkeletonInstaller
     protected $logger;
 
     /**
-     * ApplicationSkeletonInstaller constructor.
+     * ApplicationSkeletonDeployer constructor.
      *
-     * @param LocalShellAdapter   $localShellAdapter
+     * @param LocalShellAdapter    $localShellAdapter
      * @param FileLayoutHelper     $fileLayoutHelper
      * @param LoggerInterface|null $logger
      */
@@ -68,19 +68,24 @@ class ApplicationSkeletonInstaller
         $this->logger = $logger;
     }
 
-    public function installSkeleton(
-        string $branch,
-        bool $replace = false
+    public function deploySkeleton(
+        string $branch = null
     ): void {
+        if ('branch' == $this->applicationConfig->getFileLayout() && !$branch) {
+            throw new Exception\RuntimeException(
+                '$branch must be set for this environment because it is running the '
+                . '"branch" file layout.'
+            );
+        }
+
         $origUmask = umask(0);
         $this->prepareFileLayout();
-        $this->installAppFiles($branch, $replace);
+        $this->installAppFiles($branch);
         umask($origUmask);
     }
 
     public function prepareFileLayout(): void
     {
-        $this->logger->info('Preparing file layout.');
         $this->prepareAppRootPath();
         $this->prepareCodePath();
         $this->prepareLocalPath();
@@ -157,20 +162,16 @@ class ApplicationSkeletonInstaller
     }
 
     /**
-     * @param string $branch
-     * @param bool   $replace
+     * @param string|null $branch
      */
-    public function installAppFiles(string $branch, bool $replace = false): void
+    public function installAppFiles(string $branch = null): void
     {
-        $this->installDirectories($replace);
-        $this->installFiles($branch, $replace);
-        $this->installSymlinks($replace);
+        $this->installDirectories();
+        $this->installFiles($branch);
+        $this->installSymlinks();
     }
 
-    /**
-     * @param bool $replace
-     */
-    private function installDirectories(bool $replace): void
+    private function installDirectories(): void
     {
         $directories = $this->applicationConfig->getSkeletonConfig()->getDirectories();
         if ($directories) {
@@ -182,7 +183,7 @@ class ApplicationSkeletonInstaller
                 }
 
                 $resolvedFilename = $this->resolveFilename($directory['location'], $filename);
-                $this->installDirectory($resolvedFilename, $filename, $directory, $replace);
+                $this->installDirectory($resolvedFilename, $filename, $directory);
             }
         }
     }
@@ -191,32 +192,20 @@ class ApplicationSkeletonInstaller
      * @param string $resolvedFilename
      * @param string $filename
      * @param array  $fileInfo
-     * @param bool   $replace
      */
     private function installDirectory(
         string $resolvedFilename,
         string $filename,
-        array $fileInfo,
-        bool $replace
+        array $fileInfo
     ): void {
         if (!empty($fileInfo['auto_symlink'])) {
             $symlinkResolvedFilename = $this->resolveFilename('code', $filename);
             $symlinkResolvedTargetFilename = $this->resolveFilename($fileInfo['location'], $filename);
-            $this->installSymlink($symlinkResolvedFilename, $symlinkResolvedTargetFilename, $replace);
-        }
-
-        if (!$replace && file_exists($resolvedFilename)) {
-            if (is_dir($resolvedFilename) && !is_link($resolvedFilename)) {
-                $this->logger->debug("Skipped creating directory \"$resolvedFilename\". Already exists.");
-                return;
-            }
-
-            $this->logger->error("\"$resolvedFilename\" exists, but is not a directory.");
-            return;
+            $this->installSymlink($symlinkResolvedFilename, $symlinkResolvedTargetFilename);
         }
 
         $parentDir = dirname($resolvedFilename);
-        $this->ensureDirExists($parentDir, $replace);
+        $this->ensureDirExists($parentDir);
 
         $mode = $this->applicationConfig->getDefaultDirMode();
         if (isset($fileInfo['mode'])) {
@@ -248,10 +237,9 @@ class ApplicationSkeletonInstaller
     }
 
     /**
-     * @param string $branch
-     * @param bool   $replace
+     * @param string|null $branch
      */
-    private function installFiles(string $branch, bool $replace): void
+    private function installFiles(string $branch = null): void
     {
         $files = $this->applicationConfig->getSkeletonConfig()->getFiles();
         if (!empty($files)) {
@@ -263,43 +251,31 @@ class ApplicationSkeletonInstaller
                 }
 
                 $resolvedFilename = $this->resolveFilename($file['location'], $filename);
-                $this->installFile($resolvedFilename, $filename, $file, $branch, $replace);
+                $this->installFile($resolvedFilename, $filename, $file, $branch);
             }
         }
     }
 
     /**
-     * @param string $resolvedFilename
-     * @param string $filename
-     * @param array  $fileInfo
-     * @param string $branch
-     * @param bool   $replace
+     * @param string      $resolvedFilename
+     * @param string      $filename
+     * @param array       $fileInfo
+     * @param string|null $branch
      */
     private function installFile(
         string $resolvedFilename,
         string $filename,
         array $fileInfo,
-        string $branch,
-        bool $replace
+        string $branch = null
     ): void {
         if ($fileInfo['auto_symlink']) {
             $symlinkResolvedFilename = $this->resolveFilename('code', $filename);
             $symlinkResolvedTargetFilename = $this->resolveFilename($fileInfo['location'], $filename);
-            $this->installSymlink($symlinkResolvedFilename, $symlinkResolvedTargetFilename, $replace);
-        }
-
-        if (!$replace && file_exists($resolvedFilename)) {
-            if (is_file($resolvedFilename) && !is_link($resolvedFilename)) {
-                $this->logger->debug("Skipped creating file \"$resolvedFilename\". Already exists.");
-                return;
-            }
-
-            $this->logger->error("\"$resolvedFilename\" exists, but is not a file.");
-            return;
+            $this->installSymlink($symlinkResolvedFilename, $symlinkResolvedTargetFilename);
         }
 
         $parentDir = dirname($resolvedFilename);
-        $this->ensureDirExists($parentDir, $replace);
+        $this->ensureDirExists($parentDir);
 
         $globalTemplateVars = $this->applicationConfig->getTemplateVars();
         $mode = $this->applicationConfig->getDefaultDirMode();
@@ -338,10 +314,7 @@ class ApplicationSkeletonInstaller
         }
     }
 
-    /**
-     * @param bool $replace
-     */
-    private function installSymlinks(bool $replace): void
+    private function installSymlinks(): void
     {
         $symlinks = $this->applicationConfig->getSkeletonConfig()->getSymlinks();
         if (!empty($symlinks)) {
@@ -357,7 +330,7 @@ class ApplicationSkeletonInstaller
                     $symlink['target_location'],
                     $symlink['target']
                 );
-                $this->installSymlink($resolvedFilename, $resolvedTargetFilename, $replace);
+                $this->installSymlink($resolvedFilename, $resolvedTargetFilename);
             }
         }
     }
@@ -380,13 +353,13 @@ class ApplicationSkeletonInstaller
     }
 
     /**
-     * @param array  $fileInfo
-     * @param array  $globalTemplateVars
-     * @param string $branch
+     * @param array       $fileInfo
+     * @param array       $globalTemplateVars
+     * @param string|null $branch
      *
      * @return string
      */
-    private function renderContent(array $fileInfo, array $globalTemplateVars, string $branch): string
+    private function renderContent(array $fileInfo, array $globalTemplateVars, string $branch = null): string
     {
         if (empty($fileInfo['source'])) {
             return '';
@@ -439,37 +412,18 @@ class ApplicationSkeletonInstaller
     /**
      * @param string $resolvedFilename
      * @param string $resolvedTargetFilename
-     * @param bool   $replace
      */
-    private function installSymlink(string $resolvedFilename, string $resolvedTargetFilename, bool $replace): void
+    private function installSymlink(string $resolvedFilename, string $resolvedTargetFilename): void
     {
         if ($resolvedFilename == $resolvedTargetFilename) {
             return;
         }
 
-        if (!$replace && file_exists($resolvedFilename)) {
-            if (is_link($resolvedFilename)) {
-                $existingLinkTarget = readlink($resolvedFilename);
-                if ($resolvedTargetFilename == $existingLinkTarget) {
-                    $this->logger->debug(
-                        "Skipped creating symlink \"$resolvedFilename\" pointed to \"$resolvedTargetFilename\". Already exists."
-                    );
-                    return;
-                }
-
-                $this->logger->error("\"$resolvedFilename\" is a symlink, but is pointed to \"$existingLinkTarget\".");
-                return;
-            }
-
-            $this->logger->error("\"$resolvedFilename\" exists, but is not a symlink.");
-            return;
-        }
-
         $parentDir = dirname($resolvedFilename);
-        $this->ensureDirExists($parentDir, $replace);
+        $this->ensureDirExists($parentDir);
 
         $parentDir = dirname($resolvedTargetFilename);
-        $this->ensureDirExists($parentDir, $replace);
+        $this->ensureDirExists($parentDir);
 
         if (file_exists($resolvedFilename) || is_link($resolvedFilename)) {
             if (is_link($resolvedFilename) || is_file($resolvedFilename)) {
@@ -508,19 +462,12 @@ class ApplicationSkeletonInstaller
 
     /**
      * @param string $path
-     * @param bool   $force
-     *
-     * @throws Exception\RuntimeException if path already exists, but is not a directory
      */
-    private function ensureDirExists(string $path, bool $force): void
+    private function ensureDirExists(string $path): void
     {
         if (!(is_dir($path))) {
             if (file_exists($path)) {
-                if ($force) {
-                    unlink($path);
-                } else {
-                    throw new Exception\RuntimeException("Path \"$path\" already exists, but is not a directory.");
-                }
+                unlink($path);
             }
             mkdir($path, $this->applicationConfig->getDefaultDirMode(), true);
         }

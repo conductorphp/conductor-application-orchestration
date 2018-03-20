@@ -33,19 +33,13 @@ class SaveBuildCommand
     /**
      * @inheritdoc
      */
-    public function run(string $repoReference, string $buildId, string $savePath, array $options = null): void
+    public function run(string $branch, string $buildId, string $savePath, array $options = null): ?string
     {
-        $this->logger->info(
-            sprintf(
-                'Packaging build as "%s.tgz".',
-                $buildId
-            )
-        );
-
         $tarFilename = "$buildId.tgz";
         $filename = realpath($tarFilename);
         $this->logger->info("Saving build to \"$savePath/$tarFilename\".");
         $this->mountManager->putFile("local://$filename", "$savePath/$tarFilename");
+        return null;
     }
 
     /**

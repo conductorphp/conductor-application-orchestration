@@ -5,10 +5,17 @@ namespace ConductorAppOrchestration;
 use Amp\Loop;
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\Config\ApplicationConfigAwareInterface;
+use ConductorAppOrchestration\MaintenanceStrategy\MaintenanceStrategyAwareInterface;
+use ConductorAppOrchestration\MaintenanceStrategy\MaintenanceStrategyInterface;
+use ConductorCore\Database\DatabaseAdapterManager;
+use ConductorCore\Database\DatabaseAdapterManagerAwareInterface;
+use ConductorCore\Database\DatabaseImportExportAdapterManager;
+use ConductorCore\Database\DatabaseImportExportAdapterManagerAwareInterface;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\Filesystem\MountManager\MountManagerAwareInterface;
 use ConductorCore\Shell\Adapter\ShellAdapterAwareInterface;
 use ConductorCore\Shell\Adapter\ShellAdapterInterface;
+use FilesystemIterator;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -28,23 +35,91 @@ class PlanRunner implements LoggerAwareInterface
      */
     private $mountManager;
     /**
+     * @var MaintenanceStrategyInterface
+     */
+    private $maintenanceStrategy;
+    /**
+     * @var FileLayoutHelperAwareInterface
+     */
+    private $fileLayoutHelper;
+    /**
+     * @var DatabaseAdapterManager
+     */
+    private $databaseAdapterManager;
+    /**
+     * @var DatabaseImportExportAdapterManager
+     */
+    private $databaseImportExportAdapterManager;
+    /**
+     * @var ApplicationSkeletonDeployer
+     */
+    private $applicationSkeletonDeployer;
+    /**
+     * @var ApplicationCodeDeployer
+     */
+    private $applicationCodeInstaller;
+    /**
+     * @var ApplicationAssetDeployer
+     */
+    private $applicationAssetDeployer;
+    /**
+     * @var ApplicationDatabaseDeployer
+     */
+    private $applicationDatabaseDeployer;
+    /**
+     * @var int
+     */
+    private $diskSpaceErrorThreshold;
+    /**
+     * @var int
+     */
+    private $diskSpaceWarningThreshold;
+    /**
      * @var LoggerInterface
      */
     private $logger;
     /**
+     * @var array
+     */
+    private $plans;
+    /**
      * @var string
      */
-    private $expectedClassInterface;
+    private $stepInterface;
+    /**
+     * @var string
+     */
+    private $planPath;
 
     public function __construct(
         ApplicationConfig $applicationConfig,
         ShellAdapterInterface $shellAdapter,
         MountManager $mountManager,
+        MaintenanceStrategyInterface $maintenanceStrategy,
+        FileLayoutHelper $fileLayoutHelper,
+        DatabaseAdapterManager $databaseAdapterManager,
+        DatabaseImportExportAdapterManager $databaseImportExportAdapterManager,
+        ApplicationSkeletonDeployer $applicationSkeletonDeployer,
+        ApplicationCodeDeployer $applicationCodeInstaller,
+        ApplicationAssetDeployer $applicationAssetDeployer,
+        ApplicationDatabaseDeployer $applicationDatabaseDeployer,
+        int $diskSpaceErrorThreshold = 52428800,
+        int $diskSpaceWarningThreshold = 104857600,
         LoggerInterface $logger
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->shellAdapter = $shellAdapter;
         $this->mountManager = $mountManager;
+        $this->maintenanceStrategy = $maintenanceStrategy;
+        $this->fileLayoutHelper = $fileLayoutHelper;
+        $this->databaseAdapterManager = $databaseAdapterManager;
+        $this->databaseImportExportAdapterManager = $databaseImportExportAdapterManager;
+        $this->applicationSkeletonDeployer = $applicationSkeletonDeployer;
+        $this->applicationCodeInstaller = $applicationCodeInstaller;
+        $this->applicationAssetDeployer = $applicationAssetDeployer;
+        $this->applicationDatabaseDeployer = $applicationDatabaseDeployer;
+        $this->diskSpaceErrorThreshold = $diskSpaceErrorThreshold;
+        $this->diskSpaceWarningThreshold = $diskSpaceWarningThreshold;
         if (is_null($logger)) {
             $logger = new NullLogger();
         }
@@ -52,25 +127,213 @@ class PlanRunner implements LoggerAwareInterface
     }
 
     /**
-     * @param array $plan
-     * @param array $options
+     * @param array $plans
      */
-    public function runPlan(array $plan, array $options = []): void
+    public function setPlans(array $plans): void
     {
-        foreach ($plan as $name => $step) {
-            $this->runStep($name, $step, $options);
+        $this->plans = $plans;
+    }
+
+    /**
+     * @todo Deal with user ctrl+c input and clear working directory before exiting
+     * @see  http://php.net/manual/en/function.pcntl-signal.php
+     *
+     * @param string $planName
+     * @param array  $conditions
+     * @param array  $stepArguments
+     * @param bool   $clean
+     * @param bool   $rollback
+     *
+     * @throws \Exception
+     */
+    public function runPlan(
+        string $planName,
+        array $conditions,
+        array $stepArguments,
+        $clean = false,
+        $rollback = false
+    ): void {
+        $origWorkingDirectory = getcwd();
+        if (is_null($this->planPath)) {
+            $this->planPath = getcwd();
+        }
+
+        try {
+            $plan = $this->getPlan($planName);
+            $this->preparePlanPath($plan);
+
+            if ($rollback) {
+                $rollbackPreflightSteps = $plan->getRollbackSteps();
+                $rollbackSteps = $plan->getRollbackSteps();
+                if (!$rollbackSteps) {
+                    throw new Exception\RuntimeException(
+                        'Rollback requested but plan "' . $planName . '" does not '
+                        . 'include any rollback steps.'
+                    );
+                }
+
+                if ($rollbackPreflightSteps) {
+                    $this->logger->info(sprintf('Plan: %s (rollback_preflight)', $planName));
+                    foreach ($rollbackPreflightSteps as $name => $step) {
+                        $this->runStep($name, $step, $conditions, $stepArguments);
+                    }
+                }
+
+                $this->logger->info(sprintf('Plan: %s (rollback)', $planName));
+                foreach ($rollbackSteps as $name => $step) {
+                    $this->runStep($name, $step, $conditions, $stepArguments);
+                }
+            } else {
+                $preflightSteps = $plan->getPreflightSteps();
+                $steps = $plan->getSteps();
+                if (!$steps) {
+                    throw new Exception\RuntimeException(
+                        'Plan "' . $planName . '" does not include any steps.'
+                    );
+                }
+
+                if ($preflightSteps) {
+                    $this->logger->info(sprintf('Plan: %s (preflight)', $planName));
+                    foreach ($preflightSteps as $name => $step) {
+                        $this->runStep($name, $step, $conditions, $stepArguments);
+                    }
+                }
+
+                $cleanSteps = $plan->getCleanSteps();
+                if ($clean && !empty($cleanSteps)) {
+                    $this->logger->info(sprintf('Plan: %s (cleanup)', $planName));
+                    foreach ($cleanSteps as $name => $step) {
+                        $this->runStep($name, $step, $conditions, $stepArguments);
+                    }
+                }
+
+                $this->logger->info(sprintf('Plan: %s', $planName));
+                foreach ($plan->getSteps() as $name => $step) {
+                    $this->runStep($name, $step, $conditions, $stepArguments);
+                }
+            }
+
+            if (!$plan->runInAppRoot()) {
+                $this->clearPlanPath();
+                chdir($origWorkingDirectory);
+            }
+        } catch (\Exception $e) {
+            $this->logger->error('An error occurred running plan "' . $planName . '".');
+            if (!(isset($plan) && $plan->runInAppRoot())) {
+                $this->clearPlanPath();
+            }
+            chdir($origWorkingDirectory);
+            throw $e;
         }
     }
 
-    private function runStep(string $name, array $step, array $options = []): void
+    /**
+     * @inheritdoc
+     */
+    public function setLogger(LoggerInterface $logger): void
+    {
+        $this->logger = $logger;
+    }
+
+    /**
+     * @param string $className
+     */
+    public function setStepInterface(string $className): void
+    {
+        $this->stepInterface = $className;
+    }
+
+    /**
+     * @param string $name
+     *
+     * @return Plan
+     */
+    private function getPlan(string $name): Plan
+    {
+        if (empty($this->plans[$name])) {
+            throw new Exception\DomainException(
+                sprintf(
+                    'Invalid plan "%s" specified.',
+                    $name
+                )
+            );
+        }
+
+        return new Plan($name, $this->plans[$name], $this->stepInterface);
+    }
+
+    /**
+     * @param Plan $plan
+     */
+    private function preparePlanPath(Plan $plan): void
+    {
+        if ($plan->runInAppRoot()) {
+            $this->planPath = $this->applicationConfig->getAppRoot();
+            return;
+        }
+
+        $this->logger->info('Preparing path.');
+        if (!file_exists($this->planPath)) {
+            mkdir($this->planPath, 0777, true);
+        }
+
+        if (!(is_dir($this->planPath) && is_writable($this->planPath))) {
+            throw new Exception\RuntimeException(
+                sprintf(
+                    'Path "%s" is not a writable directory.',
+                    $this->planPath
+                )
+            );
+        }
+
+        $isEmpty = !(new FilesystemIterator($this->planPath))->valid();
+        if (!$isEmpty) {
+            throw new Exception\RuntimeException(
+                sprintf(
+                    'Path "%s" is not empty. Ensure path is empty, then run this command again.',
+                    $this->planPath
+                )
+            );
+        }
+
+        $freeDiskSpace = disk_free_space($this->planPath);
+        if ($freeDiskSpace <= $this->diskSpaceErrorThreshold) {
+            throw new Exception\RuntimeException(
+                sprintf(
+                    'Less than %sB of space left in path "%s". Aborting.',
+                    $this->diskSpaceErrorThreshold,
+                    $this->planPath
+                )
+            );
+        }
+
+        if ($freeDiskSpace <= $this->diskSpaceWarningThreshold) {
+            $this->logger->warning(
+                sprintf(
+                    'Less than %sB of space left in path "%s". Aborting.',
+                    $this->diskSpaceWarningThreshold,
+                    $this->planPath
+                )
+            );
+        }
+    }
+
+    private function clearPlanPath(): void
+    {
+        $this->logger->info('Clearing plan path.');
+        $command = 'find ' . escapeshellarg($this->planPath) . ' -mindepth 1 -maxdepth 1 -exec rm -rf {} \;';
+        $this->shellAdapter->runShellCommand($command);
+    }
+
+    private function runStep(string $name, array $step, array $conditions, array $stepArguments): void
     {
         // If array, run commands in parallel
         if (!empty($step['steps'])) {
             foreach ($step['steps'] as $parallelName => $parallelStep) {
                 Loop::delay(
                     0,
-                    function () use ($parallelName, $parallelStep, $options) {
-                        $this->runStep($parallelName, $parallelStep, $options);
+                    function () use ($parallelName, $parallelStep, $conditions, $stepArguments) {
+                        $this->runStep($parallelName, $parallelStep, $conditions, $stepArguments);
                     }
                 );
             }
@@ -79,24 +342,51 @@ class PlanRunner implements LoggerAwareInterface
             return;
         }
 
-        $this->logger->info("Running Step \"$name\".");
+        if (!empty($step['conditions'])) {
+            if (!array_intersect($conditions, $step['conditions'])) {
+                $this->logger->debug(sprintf(
+                    'Step: %s - skipped because run %s [%s] not met.',
+                    $name,
+                    (1 == count($step['conditions'])) ? 'condition' : 'conditions',
+                    implode(', ', $step['conditions'])
+                ));
+                return;
+            }
+        }
+
+        $this->logger->info("Step: $name");
+        if (!empty($step['comment'])) {
+            $this->logger->debug($step['comment']);
+        }
+        $commandWorkingDirectory = !empty($step['run_in_code_root'])
+            ? $this->applicationConfig->getCodePath()
+            : $this->planPath;
         if (!empty($step['command'])) {
             $environmentVariables = array_replace(
                 getenv(),
-                $options,
+                $stepArguments,
                 $step['environment_variables'] ?? []
             );
 
-            $this->shellAdapter->runShellCommand(
+            $stringEnvironmentVariables = [];
+            foreach ($environmentVariables as $key => $value) {
+                if (is_string($value)) {
+                    $stringEnvironmentVariables[$key] = $value;
+                }
+            }
+
+            $output = $this->shellAdapter->runShellCommand(
                 $step['command'],
-                $step['working_directory'] ?? $this->applicationConfig->getCodePath(),
-                $environmentVariables,
+                $commandWorkingDirectory,
+                $stringEnvironmentVariables,
                 $step['run_priority'] ?? ShellAdapterInterface::PRIORITY_NORMAL,
                 $step['options'] ?? null
             );
         } elseif (!empty($step['callable'])) {
-            call_user_func_array($step['callable'], $step['arguments'] ?? []);
+            chdir($commandWorkingDirectory);
+            $output = call_user_func_array($step['callable'], $step['arguments'] ?? []);
         } else {
+            chdir($commandWorkingDirectory);
             $stepObject = new $step['class']();
             if ($stepObject instanceof LoggerAwareInterface) {
                 $stepObject->setLogger($this->logger);
@@ -114,128 +404,60 @@ class PlanRunner implements LoggerAwareInterface
                 $stepObject->setMountManager($this->mountManager);
             }
 
-            call_user_func_array(
+            if ($stepObject instanceof MaintenanceStrategyAwareInterface) {
+                $stepObject->setMaintenanceStrategy($this->maintenanceStrategy);
+            }
+
+            if ($stepObject instanceof FileLayoutHelperAwareInterface) {
+                $stepObject->setFileLayoutHelper($this->fileLayoutHelper);
+            }
+
+            if ($stepObject instanceof DatabaseAdapterManagerAwareInterface) {
+                $stepObject->setDatabaseAdapterManager($this->databaseAdapterManager);
+            }
+
+            if ($stepObject instanceof DatabaseImportExportAdapterManagerAwareInterface) {
+                $stepObject->setDatabaseImportExportAdapterManager($this->databaseImportExportAdapterManager);
+            }
+
+            if ($stepObject instanceof ApplicationSkeletonDeployerAwareInterface) {
+                $stepObject->setApplicationSkeletonDeployer($this->applicationSkeletonDeployer);
+            }
+
+            if ($stepObject instanceof ApplicationCodeDeployerAwareInterface) {
+                $stepObject->setApplicationCodeDeployer($this->applicationCodeInstaller);
+            }
+
+            if ($stepObject instanceof ApplicationAssetDeployerAwareInterface) {
+                $stepObject->setApplicationAssetDeployer($this->applicationAssetDeployer);
+            }
+
+            if ($stepObject instanceof ApplicationDatabaseDeployerAwareInterface) {
+                $stepObject->setApplicationDatabaseDeployer($this->applicationDatabaseDeployer);
+            }
+
+            $output = call_user_func_array(
                 [$stepObject, 'run'],
-                array_merge($options, ['options' => $step['options'] ?? []])
+                array_merge($stepArguments, ['options' => $step['options'] ?? []])
             );
+        }
+
+        if (!empty($output)) {
+            $output = trim($output);
+            // If output is multi-line, start the output on a new line
+            if (false !== strpos($output, "\n")) {
+                $output = "\n$output";
+            }
+            $this->logger->debug('Step "' . $name . '" output: ' . $output);
         }
     }
 
     /**
-     * @param array $plan
-     *
-     * @return array
-     *
+     * @param string $planPath
      */
-    public function validateAndNormalizePlan(array $plan): array
+    public function setPlanPath(string $planPath)
     {
-        $normalizedPlan = [];
-        foreach ($plan as $name => $step) {
-            [$name, $step] = $this->validateAndNormalizeStep($name, $step);
-            if (!is_null($name)) {
-                $normalizedPlan[$name] = $step;
-            } else {
-                $normalizedPlan[] = $step;
-            }
-        }
-
-        return $normalizedPlan;
-    }
-
-    /**
-     * @param string $name
-     * @param        $step
-     *
-     * @return array
-     */
-    private function validateAndNormalizeStep(string $name, $step): array
-    {
-        static $depth = 0;
-        if (!is_array($step)) {
-            if (is_string($step) && class_exists($step)) {
-                $step = [
-                    'class' => $step,
-                ];
-            } elseif (is_callable($step)) {
-                $step = [
-                    'callable' => $step,
-                ];
-            } else {
-                $step = [
-                    'command' => $step,
-                ];
-            }
-        } else {
-            $numMatchedStepTypes = count(array_intersect(['class', 'command', 'callable', 'steps'], array_keys($step)));
-            if (0 == $numMatchedStepTypes) {
-                if (0 == $depth) {
-                    $depth++;
-                    // Assume this is an array of commands to be run in parallel
-                    $parallelSteps = [];
-                    foreach ($step as $parallelName => $parallelStep) {
-                        [$parallelName, $parallelStep] = $this->validateAndNormalizeStep(
-                            $parallelName,
-                            $parallelStep
-                        );
-                        if (!is_null($parallelName)) {
-                            $parallelSteps[$parallelName] = $parallelStep;
-                        } else {
-                            $parallelSteps[] = $parallelStep;
-                        }
-                    }
-                    $step = [
-                        'steps' => $parallelSteps,
-                    ];
-                    $depth--;
-                } else {
-                    // Do not allow multiple levels of steps
-                    throw new Exception\RuntimeException(
-                        'Step "' . $name . '" must include one of the keys "class", "callable", or "command".'
-                    );
-                }
-            } elseif ($numMatchedStepTypes > 1) {
-                throw new Exception\RuntimeException(
-                    'Step "' . $name
-                    . '" may only include one of the keys "class", "callable", "command", or "steps".'
-                );
-            }
-        }
-
-        // @todo Maybe remove this if we move to Yaml config
-        if (!empty($step['callable']) && !is_string($step['callable'])) {
-            throw new Exception\RuntimeException(
-                'Step "' . $name . '" may not be defined as a closure since it cannot be cached. Create a '
-                . 'class with a static method instead and define this step as MyClass::myMethod'
-            );
-        }
-
-        if (!empty($step['class']) && !in_array($this->expectedClassInterface, class_implements($step['class']))) {
-            throw new Exception\RuntimeException(
-                'Step "' . $name . '" class must implement ' . $this->expectedClassInterface . '.'
-            );
-        }
-
-
-        // @todo Should we force a name to be set instead?
-        if (empty($name) || is_numeric($name)) {
-            // @todo Need unique ID for steps without a name or does null work?
-            $name = $step['class'] ?? $step['command'] ?? $step['callable'] ?? null;
-        }
-
-        return [$name, $step];
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function setLogger(LoggerInterface $logger): void
-    {
-        $this->logger = $logger;
-    }
-
-    public function setExpectedClassInterface(string $className): void
-    {
-        $this->expectedClassInterface = $className;
+        $this->planPath = $planPath;
     }
 
 }

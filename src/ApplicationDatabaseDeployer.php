@@ -16,11 +16,11 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 /**
- * Class ApplicationDatabaseInstaller
+ * Class ApplicationDatabaseDeployer
  *
  * @package ConductorAppOrchestration
  */
-class ApplicationDatabaseInstaller
+class ApplicationDatabaseDeployer
 {
     /**
      * @var ApplicationConfig
@@ -79,113 +79,85 @@ class ApplicationDatabaseInstaller
     }
 
     /**
-     * @param string $sourceFilesystemPrefix
+     * @param string $snapshotPath
      * @param string $snapshotName
+     * @param array $databases
+     * @param string|null $branch
      *
      * @throws Exception\RuntimeException if app skeleton has not yet been installed
      */
-    public function installDatabases(
-        string $sourceFilesystemPrefix,
+    public function deployDatabases(
+        string $snapshotPath,
         string $snapshotName,
-        string $branch = null,
-        bool $replace = false
+        array $databases,
+        string $branch = null
     ): void {
         $application = $this->applicationConfig;
-        $databaseConfig = $this->applicationConfig->getDatabaseConfig();
 
-        if ($databaseConfig->getPreInstallCommands()) {
-            $this->logger->info('Running database pre-installation commands.');
-            $this->runCommands($databaseConfig->getPreInstallCommands());
+        if (!$databases) {
+            throw new Exception\RuntimeException('No database given for deployment.');
         }
 
-        if ($databaseConfig->getDatabases()) {
-            $this->logger->info('Installing databases');
-            foreach ($databaseConfig->getDatabases() as $databaseName => $database) {
+        $this->logger->info('Installing databases');
+        foreach ($databases as $databaseName => $database) {
 
-                // @todo Only run if actually replacing the db or db doesn't exist
-                if (!empty($database['pre_install_commands'])) {
-                    $this->logger->info("Running database \"$databaseName\" pre-installation commands.");
-                    $this->runCommands($database['pre_install_commands']);
+            $adapterName = $database['adapter'] ?? $application->getDefaultDatabaseAdapter();
+            $databaseAdapter = $this->databaseAdapterManager->getAdapter($adapterName);
+            $adapterName = $database['importexport_adapter'] ??
+                $application->getDefaultDatabaseImportExportAdapter();
+            $databaseImportExportAdapter = $this->databaseImportAdapterManager->getAdapter($adapterName);
+
+            $filename = "$databaseName." . $databaseImportExportAdapter::getFileExtension();
+            if ('branch' == $application->getFileLayout()) {
+                $databaseName .= '_' . $this->sanitizeDatabaseName($branch);
+            }
+
+            if ($databaseAdapter->databaseExists($databaseName)) {
+                if (!$databaseAdapter->databaseIsEmpty($databaseName)) {
+                    $this->logger->notice("Database \"$databaseName\" exists and is not empty. Skipped.");
+                    continue;
+                }
+            } else {
+                $this->logger->debug("Created database \"$databaseName\".");
+                $databaseAdapter->createDatabase($databaseName);
+            }
+
+            $workingDir = getcwd() . '/' . DatabaseImportExportAdapterInterface::DEFAULT_WORKING_DIR;
+            $this->logger->debug("Downloading database script \"$filename\".");
+            $this->mountManager->sync(
+                "$snapshotPath/$snapshotName/databases/$filename",
+                "local://$workingDir/$filename"
+            );
+
+            $databaseImportExportAdapter->importFromFile(
+                "$workingDir/$filename",
+                $databaseName,
+                [] // This command does not yet support any options
+            );
+
+            // @todo Deal with running environment scripts
+            if (!empty($database['post_import_scripts'])) {
+                $branchUrl = $branchDatabase = '';
+                if (FileLayout::FILE_LAYOUT_BRANCH == $application->getFileLayout()) {
+                    $branchUrl = $this->sanitizeBranchForUrl($branch);
+                    $branchDatabase = $this->sanitizeBranchForDatabase($branch);
                 }
 
-                $adapterName = $database['adapter'] ?? $application->getDefaultDatabaseAdapter();
-                $databaseAdapter = $this->databaseAdapterManager->getAdapter($adapterName);
-                $adapterName = $database['importexport_adapter'] ??
-                    $application->getDefaultDatabaseImportExportAdapter();
-                $databaseImportExportAdapter = $this->databaseImportAdapterManager->getAdapter($adapterName);
+                foreach ($database['post_import_scripts'] as $scriptFilename) {
+                    $scriptFilename = $this->findScript($scriptFilename);
+                    $scriptFilename = $this->applyStringReplacements(
+                        $branchUrl,
+                        $branchDatabase,
+                        $scriptFilename
+                    );
 
-                $filename = "$databaseName." . $databaseImportExportAdapter::getFileExtension();
-                if ('branch' == $application->getFileLayout()) {
-                    $databaseName .= '_' . $this->sanitizeDatabaseName($branch);
-                }
-
-                if ($databaseAdapter->databaseExists($databaseName)) {
-                    if (!$databaseAdapter->databaseIsEmpty($databaseName)) {
-                        if (!$replace) {
-                            $this->logger->debug("Database \"$databaseName\" exists and is not empty. Skipping.");
-                            continue;
-                        }
-                        $this->logger->debug("Dropped and re-created database \"$databaseName\".");
-                        $databaseAdapter->dropDatabase($databaseName);
-                        $databaseAdapter->createDatabase($databaseName);
-                    } else {
-                        $this->logger->debug("Using existing empty database \"$databaseName\".");
-                    }
-                } else {
-                    $this->logger->debug("Created database \"$databaseName\".");
-                    $databaseAdapter->createDatabase($databaseName);
-                }
-
-                $workingDir = getcwd() . '/' . DatabaseImportExportAdapterInterface::DEFAULT_WORKING_DIR;
-                $this->logger->debug("Downloading database script \"$filename\".");
-                $this->mountManager->sync(
-                    "$sourceFilesystemPrefix://snapshots/$snapshotName/databases/$filename",
-                    "local://$workingDir/$filename"
-                );
-
-                $databaseImportExportAdapter->importFromFile(
-                    "$workingDir/$filename",
-                    $databaseName,
-                    [] // This command does not yet support any options
-                );
-
-                // @todo Deal with running environment scripts
-                if (!empty($database['post_import_scripts'])) {
-                    $branchUrl = $branchDatabase = '';
-                    if (FileLayout::FILE_LAYOUT_BRANCH == $application->getFileLayout()) {
-                        $branchUrl = $this->sanitizeBranchForUrl($branch);
-                        $branchDatabase = $this->sanitizeBranchForDatabase($branch);
-                    }
-
-                    foreach ($database['post_import_scripts'] as $scriptFilename) {
-                        $scriptFilename = $this->applyStringReplacements(
-                            $branchUrl,
-                            $branchDatabase,
-                            $scriptFilename
-                        );
-
-                        $databaseAdapter->run(
-                            file_get_contents($scriptFilename),
-                            $databaseName
-                        );
-                    }
-                }
-
-                if (!empty($database['post_install_commands'])) {
-                    $this->logger->info("Running database \"$databaseName\" post-installation commands.");
-                    $this->runCommands($database['post_install_commands']);
+                    $databaseAdapter->run(
+                        file_get_contents($scriptFilename),
+                        $databaseName
+                    );
                 }
             }
-        } else {
-            $this->logger->info('No databases specified in configuration.');
         }
-
-        if ($databaseConfig->getPostInstallCommands()) {
-            $this->logger->info('Running database post-installation commands.');
-            $this->runCommands($databaseConfig->getPostInstallCommands());
-        }
-
-        // @todo Remove working directory contents after finishing?
     }
 
     /**
@@ -286,5 +258,29 @@ class ApplicationDatabaseInstaller
             }
             $this->logger->debug('Command output: ' . $output);
         }
+    }
+
+    /**
+     * @param string $scriptFilename
+     *
+     * @return string
+     */
+    private function findScript(string $scriptFilename): string
+    {
+        $conductorRoot = realpath(__DIR__ . '/../../../..');
+        $configRoot = "$conductorRoot/config/autoload";
+        $environment = $this->applicationConfig->getCurrentEnvironment();
+
+        $environmentPath = "$configRoot/environments/$environment/files";
+        if (file_exists("$environmentPath/$scriptFilename")) {
+            return "$environmentPath/$scriptFilename";
+        }
+
+        $globalPath = "$configRoot/files";
+        if (file_exists("$globalPath/$scriptFilename")) {
+            return "$globalPath/$scriptFilename";
+        }
+
+        throw new Exception\RuntimeException("Script \"$scriptFilename\" not found in \"$environmentPath\" or \"$globalPath\".");
     }
 }

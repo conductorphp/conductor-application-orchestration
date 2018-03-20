@@ -105,10 +105,10 @@ class AppSnapshotCommand extends Command
                 100
             )
             ->addOption(
-                'append',
+                'replace',
                 null,
                 InputOption::VALUE_NONE,
-                'Append to snapshot, if exists.'
+                'Replace snapshot, if exists.'
             );
     }
 
@@ -131,7 +131,7 @@ class AppSnapshotCommand extends Command
         $assetSyncConfig = [
             'batch_size' => $input->getOption('asset-batch-size'),
         ];
-        $append = $input->getOption('append');
+        $replace = $input->getOption('replace');
 
         $this->logger->info(
             "Creating snapshot \"$snapshotName\" and saving to \"$snapshotPath/$snapshotName\"."
@@ -143,7 +143,7 @@ class AppSnapshotCommand extends Command
             $branch,
             $includeDatabases,
             $includeAssets,
-            $append,
+            $replace,
             $assetSyncConfig
         );
         $this->logger->info("<info>Application \"$appName\" snapshot completed!</info>");

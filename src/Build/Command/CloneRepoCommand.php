@@ -41,7 +41,7 @@ class CloneRepoCommand
     /**
      * @inheritdoc
      */
-    public function run(string $repoReference, string $buildId, string $savePath, array $options = null): void
+    public function run(string $branch, string $buildId, string $savePath, array $options = null): ?string
     {
         if (!isset($this->applicationConfig)) {
             throw new Exception\RuntimeException('$this->applicationConfig must be set.');
@@ -55,14 +55,14 @@ class CloneRepoCommand
             sprintf(
                 'Cloning "%s:%s".',
                 $this->applicationConfig->getRepoUrl(),
-                $repoReference
+                $branch
             )
         );
 
         $command = 'git clone ' . escapeshellarg($this->applicationConfig->getRepoUrl()) . ' ./ --branch '
-            . escapeshellarg($repoReference)
+            . escapeshellarg($branch)
             . ' --depth 1 --single-branch -v';
-        $this->shellAdapter->runShellCommand($command);
+        return $this->shellAdapter->runShellCommand($command);
     }
 
     /**

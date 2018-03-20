@@ -42,7 +42,7 @@ class PackageBuildCommand
     /**
      * @inheritdoc
      */
-    public function run(string $repoReference, string $buildId, string $savePath, array $options = null): void
+    public function run(string $branch, string $buildId, string $savePath, array $options = null): ?string
     {
         if (!isset($this->applicationConfig)) {
             throw new Exception\RuntimeException('$this->applicationConfig must be set.');
@@ -71,7 +71,7 @@ class PackageBuildCommand
             }
         }
 
-        $this->shellAdapter->runShellCommand($command);
+        return $this->shellAdapter->runShellCommand($command);
     }
 
     /**
