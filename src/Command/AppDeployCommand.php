@@ -64,7 +64,7 @@ class AppDeployCommand extends Command
             ->setDescription('Deploy application build and/or snapshot or just run a deploy plan.')
             ->setHelp("This command deploys an application build and/or snapshot or just runs a deploy plan.")
             ->addOption(
-                'deploy-plan',
+                'plan',
                 null,
                 InputOption::VALUE_REQUIRED,
                 'Deploy plan to run.',
@@ -135,7 +135,7 @@ class AppDeployCommand extends Command
                 . 'backup databases.'
             )
             ->addOption(
-                'skeleton-only',
+                'skeleton',
                 null,
                 InputOption::VALUE_NONE,
                 'Deploy the skeleton only.'
@@ -200,15 +200,15 @@ class AppDeployCommand extends Command
 
         $this->logger->info($message);
 
-        if ($input->getOption('skeleton-only')) {
+        if ($input->getOption('skeleton')) {
             $this->applicationDeployer->deploySkeleton(
-                $input->getOption('deploy-plan'),
+                $input->getOption('plan'),
                 $input->getOption('clean')
             );
         } else {
             $this->applicationDeployer->deploy(
-                $input->getOption('deploy-plan'),
-                $input->getOption('skeleton-only'),
+                $input->getOption('plan'),
+                $input->getOption('skeleton'),
                 $input->getOption('build-id'),
                 $input->getOption('build-path'),
                 $input->getOption('repo-reference'),
@@ -231,7 +231,7 @@ class AppDeployCommand extends Command
      */
     protected function validateInput(InputInterface $input): void
     {
-        if ($input->getOption('skeleton-only')
+        if ($input->getOption('skeleton')
             && ($input->getOption('build-id') || $input->getOption('repo-reference')
                 || $input->getOption('snapshot'))) {
             throw new Exception\RuntimeException(
@@ -262,7 +262,7 @@ class AppDeployCommand extends Command
      */
     protected function getDeploymentDescription(InputInterface $input, $includeAssets, $includeDatabases): string
     {
-        if ($input->getOption('skeleton-only')) {
+        if ($input->getOption('skeleton')) {
             $message = 'Deploying skeleton only.';
         } else {
             $message = 'Deploying ';

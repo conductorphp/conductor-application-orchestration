@@ -72,7 +72,7 @@ class AppSnapshotCommand extends Command
                 $this->applicationConfig->getCurrentEnvironment()
             )
             ->addOption(
-                'snapshot-plan',
+                'plan',
                 null,
                 InputOption::VALUE_REQUIRED,
                 'Snapshot plan to run.',
@@ -120,7 +120,7 @@ class AppSnapshotCommand extends Command
 
         $appName = $this->applicationConfig->getAppName();
         $snapshotName = $input->getArgument('snapshot-name') ?? $this->applicationConfig->getCurrentEnvironment();
-        $snapshotPlan = $input->getOption('snapshot-plan') ?? $this->applicationConfig->getDefaultSnapshotPlan();
+        $snapshotPlan = $input->getOption('plan') ?? $this->applicationConfig->getDefaultSnapshotPlan();
         $snapshotPath = $input->getOption('snapshot-path');
         $branch = $input->getOption('branch');
         $includeDatabases = $input->getOption('databases');

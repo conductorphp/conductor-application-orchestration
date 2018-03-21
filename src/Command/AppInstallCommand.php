@@ -122,7 +122,7 @@ class AppInstallCommand extends Command
                 InputOption::VALUE_REQUIRED,
                 'Batch size for asset sync.'
             )
-            ->addOption('build-plan', null, InputOption::VALUE_REQUIRED, 'Build plan to run', 'development');
+            ->addOption('plan', null, InputOption::VALUE_REQUIRED, 'Build plan to run', 'development');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
@@ -142,7 +142,7 @@ class AppInstallCommand extends Command
         $installAssets = !$input->getOption('no-assets');
         $installDatabases = !$input->getOption('no-databases');
         $runBuild = !$input->getOption('no-build');
-        $buildPlan = $input->getOption('build-plan');
+        $buildPlan = $input->getOption('plan');
         $replace = $input->getOption('replace');
 
         $buildTriggers = [];

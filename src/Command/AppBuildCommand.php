@@ -74,7 +74,7 @@ class AppBuildCommand extends Command
                 . 'id is written to stdout.'
             )
             ->addOption(
-                'build-plan',
+                'plan',
                 null,
                 InputOption::VALUE_OPTIONAL,
                 'Build plan to run.',
@@ -97,7 +97,7 @@ class AppBuildCommand extends Command
         $this->applicationConfig->validate();
         $this->injectOutputIntoLogger($output, $this->logger);
         $this->applicationBuilder->setLogger($this->logger);
-        $buildPlan = $input->getOption('build-plan');
+        $buildPlan = $input->getOption('plan');
         $branch = $input->getArgument('repo-reference');
         $buildId = $input->getArgument('build-id') ?? $branch . '-' . $buildPlan . '-' . time();
         $buildPath = $input->getOption('build-path');
