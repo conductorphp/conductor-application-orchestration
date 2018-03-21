@@ -13,6 +13,8 @@ use ConductorCore\Database\DatabaseImportExportAdapterManager;
 use ConductorCore\Database\DatabaseImportExportAdapterManagerAwareInterface;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\Filesystem\MountManager\MountManagerAwareInterface;
+use ConductorCore\Repository\RepositoryAdapterAwareInterface;
+use ConductorCore\Repository\RepositoryAdapterInterface;
 use ConductorCore\Shell\Adapter\ShellAdapterAwareInterface;
 use ConductorCore\Shell\Adapter\ShellAdapterInterface;
 use FilesystemIterator;
@@ -26,6 +28,10 @@ class PlanRunner implements LoggerAwareInterface
      * @var ApplicationConfig
      */
     private $applicationConfig;
+    /**
+     * @var RepositoryAdapterInterface
+     */
+    private $repositoryAdapter;
     /**
      * @var ShellAdapterInterface
      */
@@ -93,6 +99,7 @@ class PlanRunner implements LoggerAwareInterface
 
     public function __construct(
         ApplicationConfig $applicationConfig,
+        RepositoryAdapterInterface $repositoryAdapter,
         ShellAdapterInterface $shellAdapter,
         MountManager $mountManager,
         MaintenanceStrategyInterface $maintenanceStrategy,
@@ -108,6 +115,7 @@ class PlanRunner implements LoggerAwareInterface
         LoggerInterface $logger
     ) {
         $this->applicationConfig = $applicationConfig;
+        $this->repositoryAdapter = $repositoryAdapter;
         $this->shellAdapter = $shellAdapter;
         $this->mountManager = $mountManager;
         $this->maintenanceStrategy = $maintenanceStrategy;
@@ -394,6 +402,10 @@ class PlanRunner implements LoggerAwareInterface
 
             if ($stepObject instanceof ApplicationConfigAwareInterface) {
                 $stepObject->setApplicationConfig($this->applicationConfig);
+            }
+
+            if ($stepObject instanceof RepositoryAdapterAwareInterface) {
+                $stepObject->setRepositoryAdapter($this->repositoryAdapter);
             }
 
             if ($stepObject instanceof ShellAdapterAwareInterface) {

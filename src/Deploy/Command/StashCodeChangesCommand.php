@@ -2,7 +2,8 @@
 
 namespace ConductorAppOrchestration\Deploy\Command;
 
-use ConductorAppOrchestration\GitElephant\Repository;
+use ConductorCore\Repository\RepositoryAdapterAwareInterface;
+use ConductorCore\Repository\RepositoryAdapterInterface;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -13,8 +14,12 @@ use Psr\Log\NullLogger;
  * @package ConductorAppOrchestration\Deploy\Command
  */
 class StashCodeChangesCommand
-    implements DeployCommandInterface, LoggerAwareInterface
+    implements DeployCommandInterface, RepositoryAdapterAwareInterface, LoggerAwareInterface
 {
+    /**
+     * @var RepositoryAdapterInterface
+     */
+    private $repositoryAdapter;
     /**
      * @var LoggerInterface
      */
@@ -47,11 +52,10 @@ class StashCodeChangesCommand
             return null;
         }
 
-        // @todo Use RepositoryInterface here to allow for different VCS
-        $repo = new Repository($codeRoot);
-        if ($repo->isDirty()) {
+        $this->repositoryAdapter->setPath($codeRoot);
+        if (!$this->repositoryAdapter->isClean()) {
             $this->logger->info('Stashing code changes.');
-            $repo->stash('Conductor stash', true);
+            $this->repositoryAdapter->stash('Conductor stash');
         }
 
         return null;
@@ -63,5 +67,10 @@ class StashCodeChangesCommand
     public function setLogger(LoggerInterface $logger): void
     {
         $this->logger = $logger;
+    }
+
+    public function setRepositoryAdapter(RepositoryAdapterInterface $repositoryAdapter): void
+    {
+        $this->repositoryAdapter = $repositoryAdapter;
     }
 }

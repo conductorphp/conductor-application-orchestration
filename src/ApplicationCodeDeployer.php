@@ -6,8 +6,8 @@
 namespace ConductorAppOrchestration;
 
 use ConductorAppOrchestration\Config\ApplicationConfig;
-use ConductorAppOrchestration\GitElephant\Repository;
 use ConductorCore\Filesystem\MountManager\MountManager;
+use ConductorCore\Repository\RepositoryAdapterInterface;
 use ConductorCore\Shell\Adapter\ShellAdapterInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -24,6 +24,10 @@ class ApplicationCodeDeployer
      */
     private $applicationConfig;
     /**
+     * @var RepositoryAdapterInterface
+     */
+    private $repositoryAdapter;
+    /**
      * @var ShellAdapterInterface
      */
     private $shellAdapter;
@@ -38,13 +42,15 @@ class ApplicationCodeDeployer
 
     public function __construct(
         ApplicationConfig $applicationConfig,
-        MountManager $mountManager,
+        RepositoryAdapterInterface $repositoryAdapter,
         ShellAdapterInterface $shellAdapter,
+        MountManager $mountManager,
         LoggerInterface $logger = null
     ) {
         $this->applicationConfig = $applicationConfig;
-        $this->mountManager = $mountManager;
+        $this->repositoryAdapter = $repositoryAdapter;
         $this->shellAdapter = $shellAdapter;
+        $this->mountManager = $mountManager;
         if (is_null($logger)) {
             $logger = new NullLogger();
         }
@@ -82,22 +88,11 @@ class ApplicationCodeDeployer
         $codePath = $this->applicationConfig->getCodePath();
         $repoUrl = $this->applicationConfig->getRepoUrl();
 
-        if (!file_exists("{$codePath}/.git")) {
-            $this->logger->debug("Cloning repository \"$repoUrl:$repoReference\" to \"{$codePath}\".");
-            $repo = new Repository($codePath);
-            $repo->cloneFrom($repoUrl, $codePath);
-            $repo->checkout($repoReference);
-        } else {
-            $repo = new Repository($codePath);
-            if ($repo->isDirty()) {
-                throw new Exception\RuntimeException(
-                    'Code path "' . $codePath . '" is dirty. Clean path before deploying code from repo.'
-                );
-            }
-            $this->logger->debug("Pulling the latest code from \"$repoUrl:$repoReference\" to \"{$codePath}\".");
-            $repo->checkout($repoReference);
-            $repo->pull('origin', $repoReference, false);
-        }
+        $this->logger->debug("Checking out \"$repoUrl:$repoReference\" to \"{$codePath}\".");
+        $this->repositoryAdapter->setRepoUrl($repoUrl);
+        $this->repositoryAdapter->setPath($codePath);
+        $this->repositoryAdapter->checkout($repoReference);
+        $this->repositoryAdapter->pull();
     }
 
     /**
