@@ -280,7 +280,7 @@ class PlanRunner implements LoggerAwareInterface
             return;
         }
 
-        $this->logger->info('Preparing path.');
+        $this->logger->info('Preparing path "' . $this->planPath . '".');
         if (!file_exists($this->planPath)) {
             mkdir($this->planPath, 0777, true);
         }
