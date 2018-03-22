@@ -19,6 +19,12 @@ class AppConfigShowCommand extends Command
      */
     private $applicationConfig;
 
+    /**
+     * AppConfigShowCommand constructor.
+     *
+     * @param ApplicationConfig $applicationConfig
+     * @param null              $name
+     */
     public function __construct(ApplicationConfig $applicationConfig, $name = null)
     {
         $this->applicationConfig = $applicationConfig;

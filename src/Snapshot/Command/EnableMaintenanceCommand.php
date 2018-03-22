@@ -38,22 +38,6 @@ class EnableMaintenanceCommand
     /**
      * @inheritdoc
      */
-    public function setMaintenanceStrategy(MaintenanceStrategyInterface $maintenanceStrategy): void
-    {
-        $this->maintenanceStrategy = $maintenanceStrategy;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function setLogger(LoggerInterface $logger): void
-    {
-        $this->logger = $logger;
-    }
-
-    /**
-     * @inheritdoc
-     */
     public function run(
         string $snapshotName,
         string $snapshotPath,
@@ -70,5 +54,21 @@ class EnableMaintenanceCommand
         $this->logger->info('Enabling maintenance mode.');
         $this->maintenanceStrategy->enable($branch);
         return null;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function setMaintenanceStrategy(MaintenanceStrategyInterface $maintenanceStrategy): void
+    {
+        $this->maintenanceStrategy = $maintenanceStrategy;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function setLogger(LoggerInterface $logger): void
+    {
+        $this->logger = $logger;
     }
 }

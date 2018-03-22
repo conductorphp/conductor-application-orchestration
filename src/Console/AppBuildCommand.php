@@ -38,7 +38,15 @@ class AppBuildCommand extends Command
      */
     private $logger;
 
-
+    /**
+     * AppBuildCommand constructor.
+     *
+     * @param ApplicationConfig    $applicationConfig
+     * @param ApplicationBuilder   $applicationDeployer
+     * @param MountManager         $mountManager
+     * @param LoggerInterface|null $logger
+     * @param string|null          $name
+     */
     public function __construct(
         ApplicationConfig $applicationConfig,
         ApplicationBuilder $applicationDeployer,

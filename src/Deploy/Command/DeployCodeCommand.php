@@ -65,6 +65,9 @@ class DeployCodeCommand
         return null;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function setApplicationCodeDeployer(ApplicationCodeDeployer $applicationCodeDeployer): void
     {
         $this->applicationCodeDeployer = $applicationCodeDeployer;

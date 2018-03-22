@@ -7,5 +7,8 @@ namespace ConductorAppOrchestration\Config;
 
 interface ApplicationConfigAwareInterface
 {
+    /**
+     * @param ApplicationConfig $applicationConfig
+     */
     public function setApplicationConfig(ApplicationConfig $applicationConfig): void;
 }

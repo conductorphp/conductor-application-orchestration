@@ -39,7 +39,15 @@ class AppDeployCommand extends Command
      */
     private $logger;
 
-
+    /**
+     * AppDeployCommand constructor.
+     *
+     * @param ApplicationConfig    $applicationConfig
+     * @param ApplicationDeployer  $applicationDeployer
+     * @param MountManager         $mountManager
+     * @param LoggerInterface|null $logger
+     * @param string|null          $name
+     */
     public function __construct(
         ApplicationConfig $applicationConfig,
         ApplicationDeployer $applicationDeployer,

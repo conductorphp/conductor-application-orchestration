@@ -9,6 +9,7 @@ use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorCore\Database\DatabaseAdapterInterface;
 use ConductorCore\Database\DatabaseAdapterManager;
 use Exception;
+use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -17,7 +18,7 @@ use Psr\Log\NullLogger;
  *
  * @package App
  */
-class ApplicationDestroyer
+class ApplicationDestroyer implements LoggerAwareInterface
 {
     /**
      * @var ApplicationConfig
@@ -46,17 +47,7 @@ class ApplicationDestroyer
     }
 
     /**
-     * @param LoggerInterface $logger
-     *
-     * @return void
-     */
-    public function setLogger(LoggerInterface $logger): void
-    {
-        $this->logger = $logger;
-    }
-
-    /**
-     * @throws Exception
+     * @param string|null $branch
      */
     public function destroy(string $branch = null): void
     {
@@ -171,5 +162,13 @@ class ApplicationDestroyer
                 }
             }
         }
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function setLogger(LoggerInterface $logger): void
+    {
+        $this->logger = $logger;
     }
 }

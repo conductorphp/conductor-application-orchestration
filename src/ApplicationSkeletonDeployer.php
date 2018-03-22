@@ -7,6 +7,7 @@ namespace ConductorAppOrchestration;
 
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorCore\Shell\Adapter\LocalShellAdapter;
+use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Twig\Environment as TwigEnvironment;
@@ -17,7 +18,7 @@ use Twig\Loader\ArrayLoader as TwigArrayLoader;
  *
  * @package ConductorAppOrchestration
  */
-class ApplicationSkeletonDeployer
+class ApplicationSkeletonDeployer implements LoggerAwareInterface
 {
     /**
      * @var ApplicationConfig
@@ -59,15 +60,8 @@ class ApplicationSkeletonDeployer
     }
 
     /**
-     * @param LoggerInterface $logger
-     *
-     * @return void
+     * @param string|null $branch
      */
-    public function setLogger(LoggerInterface $logger): void
-    {
-        $this->logger = $logger;
-    }
-
     public function deploySkeleton(
         string $branch = null
     ): void {
@@ -408,7 +402,6 @@ class ApplicationSkeletonDeployer
         return $content;
     }
 
-
     /**
      * @param string $resolvedFilename
      * @param string $resolvedTargetFilename
@@ -439,6 +432,7 @@ class ApplicationSkeletonDeployer
             $this->logger->debug("Created symlink \"$resolvedFilename\" pointed to \"$resolvedTargetFilename\".");
         }
     }
+
 
     /**
      * @param string $name
@@ -471,6 +465,14 @@ class ApplicationSkeletonDeployer
             }
             mkdir($path, $this->applicationConfig->getDefaultDirMode(), true);
         }
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function setLogger(LoggerInterface $logger): void
+    {
+        $this->logger = $logger;
     }
 
 }

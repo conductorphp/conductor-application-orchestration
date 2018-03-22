@@ -33,7 +33,14 @@ class AppMaintenanceCommand extends Command
      */
     private $logger;
 
-
+    /**
+     * AppMaintenanceCommand constructor.
+     *
+     * @param ApplicationConfig            $applicationConfig
+     * @param MaintenanceStrategyInterface $maintenanceStrategy
+     * @param LoggerInterface|null         $logger
+     * @param string|null                  $name
+     */
     public function __construct(
         ApplicationConfig $applicationConfig,
         MaintenanceStrategyInterface $maintenanceStrategy,

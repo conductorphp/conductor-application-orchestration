@@ -12,6 +12,7 @@ use ConductorCore\Database\DatabaseImportExportAdapterManager;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\Shell\Adapter\LocalShellAdapter;
 use ConductorCore\Shell\Adapter\ShellAdapterInterface;
+use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -20,7 +21,7 @@ use Psr\Log\NullLogger;
  *
  * @package ConductorAppOrchestration
  */
-class ApplicationDatabaseDeployer
+class ApplicationDatabaseDeployer implements LoggerAwareInterface
 {
     /**
      * @var ApplicationConfig
@@ -63,18 +64,6 @@ class ApplicationDatabaseDeployer
         if (is_null($logger)) {
             $logger = new NullLogger();
         }
-        $this->logger = $logger;
-    }
-
-    /**
-     * @param LoggerInterface $logger
-     *
-     * @return void
-     */
-    public function setLogger(LoggerInterface $logger): void
-    {
-        $this->mountManager->setLogger($logger);
-        $this->databaseImportAdapterManager->setLogger($logger);
         $this->logger = $logger;
     }
 
@@ -222,45 +211,6 @@ class ApplicationDatabaseDeployer
     }
 
     /**
-     * @param array $commands
-     */
-    private function runCommands(array $commands): void
-    {
-        // Sort by priority
-        uasort($commands, function ($a, $b) {
-            $priorityA = $a['priority'] ?? 0;
-            $priorityB = $b['priority'] ?? 0;
-            return ($priorityA > $priorityB) ? -1 : 1;
-        });
-
-        foreach ($commands as $name => $command) {
-            $this->logger->debug("Running command \"$name\".");
-            if (is_string($command)) {
-                $command = [
-                    'command' => $command,
-                ];
-            }
-
-            if (is_callable($command['command'])) {
-                call_user_func_array($command['command'], $command['arguments'] ?? []);
-                continue;
-            }
-
-            $output = $this->localShellAdapter->runShellCommand(
-                $command['command'],
-                $command['working_directory'] ?? $this->applicationConfig->getCodePath(),
-                $command['environment_variables'] ?? null,
-                $command['run_priority'] ?? ShellAdapterInterface::PRIORITY_NORMAL,
-                $command['options'] ?? null
-            );
-            if (false !== strpos(trim($output), "\n")) {
-                $output = "\n$output";
-            }
-            $this->logger->debug('Command output: ' . $output);
-        }
-    }
-
-    /**
      * @param string $scriptFilename
      *
      * @return string
@@ -282,5 +232,15 @@ class ApplicationDatabaseDeployer
         }
 
         throw new Exception\RuntimeException("Script \"$scriptFilename\" not found in \"$environmentPath\" or \"$globalPath\".");
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function setLogger(LoggerInterface $logger): void
+    {
+        $this->mountManager->setLogger($logger);
+        $this->databaseImportAdapterManager->setLogger($logger);
+        $this->logger = $logger;
     }
 }

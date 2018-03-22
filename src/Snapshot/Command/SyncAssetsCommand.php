@@ -7,12 +7,8 @@ use ConductorAppOrchestration\Config\ApplicationConfigAwareInterface;
 use ConductorAppOrchestration\Exception;
 use ConductorAppOrchestration\FileLayoutHelper;
 use ConductorAppOrchestration\FileLayoutHelperAwareInterface;
-use ConductorAppOrchestration\MaintenanceStrategy\MaintenanceStrategyAwareInterface;
-use ConductorAppOrchestration\MaintenanceStrategy\MaintenanceStrategyInterface;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\Filesystem\MountManager\MountManagerAwareInterface;
-use ConductorCore\Shell\Adapter\ShellAdapterAwareInterface;
-use ConductorCore\Shell\Adapter\ShellAdapterInterface;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -23,7 +19,8 @@ use Psr\Log\NullLogger;
  * @package ConductorAppOrchestration\Snapshot\Command
  */
 class SyncAssetsCommand
-    implements SnapshotCommandInterface, ApplicationConfigAwareInterface, MountManagerAwareInterface, FileLayoutHelperAwareInterface, LoggerAwareInterface
+    implements SnapshotCommandInterface, ApplicationConfigAwareInterface, MountManagerAwareInterface,
+               FileLayoutHelperAwareInterface, LoggerAwareInterface
 {
     /**
      * @var ApplicationConfig
@@ -67,7 +64,8 @@ class SyncAssetsCommand
         bool $includeAssets = true,
         array $assetSyncConfig = [],
         array $options = null
-    ): ?string {
+    ): ?string
+    {
         if (!$includeAssets) {
             return null;
         }
@@ -168,18 +166,24 @@ class SyncAssetsCommand
         return $similarNames;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function setApplicationConfig(ApplicationConfig $applicationConfig): void
     {
         $this->applicationConfig = $applicationConfig;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function setMountManager(MountManager $mountManager): void
     {
         $this->mountManager = $mountManager;
     }
 
     /**
-     * @param FileLayoutHelper $fileLayoutHelper
+     * @inheritdoc
      */
     public function setFileLayoutHelper(FileLayoutHelper $fileLayoutHelper): void
     {

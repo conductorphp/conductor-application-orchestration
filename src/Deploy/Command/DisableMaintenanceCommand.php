@@ -34,19 +34,6 @@ class DisableMaintenanceCommand
     /**
      * @inheritdoc
      */
-    public function setMaintenanceStrategy(MaintenanceStrategyInterface $maintenanceStrategy): void
-    {
-        $this->maintenanceStrategy = $maintenanceStrategy;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function setLogger(LoggerInterface $logger): void
-    {
-        $this->logger = $logger;
-    }
-
     public function run(
         string $codeRoot,
         string $buildId = null,
@@ -67,5 +54,21 @@ class DisableMaintenanceCommand
         $this->logger->info('Enabling maintenance mode.');
         $this->maintenanceStrategy->disable($branch);
         return null;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function setMaintenanceStrategy(MaintenanceStrategyInterface $maintenanceStrategy): void
+    {
+        $this->maintenanceStrategy = $maintenanceStrategy;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function setLogger(LoggerInterface $logger): void
+    {
+        $this->logger = $logger;
     }
 }

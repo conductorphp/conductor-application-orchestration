@@ -40,6 +40,15 @@ class ApplicationCodeDeployer
      */
     protected $logger;
 
+    /**
+     * ApplicationCodeDeployer constructor.
+     *
+     * @param ApplicationConfig          $applicationConfig
+     * @param RepositoryAdapterInterface $repositoryAdapter
+     * @param ShellAdapterInterface      $shellAdapter
+     * @param MountManager               $mountManager
+     * @param LoggerInterface|null       $logger
+     */
     public function __construct(
         ApplicationConfig $applicationConfig,
         RepositoryAdapterInterface $repositoryAdapter,
@@ -120,9 +129,7 @@ class ApplicationCodeDeployer
     }
 
     /**
-     * @param LoggerInterface $logger
-     *
-     * @return void
+     * @inheritdoc
      */
     public function setLogger(LoggerInterface $logger): void
     {

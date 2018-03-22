@@ -30,6 +30,9 @@ class StashCodeChangesCommand
         $this->logger = new NullLogger();
     }
 
+    /**
+     * @inheritdoc
+     */
     public function run(
         string $codeRoot,
         string $buildId = null,
@@ -69,6 +72,9 @@ class StashCodeChangesCommand
         $this->logger = $logger;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function setRepositoryAdapter(RepositoryAdapterInterface $repositoryAdapter): void
     {
         $this->repositoryAdapter = $repositoryAdapter;

@@ -33,6 +33,9 @@ class DeploySkeletonCommand
         $this->logger = new NullLogger();
     }
 
+    /**
+     * @inheritdoc
+     */
     public function run(
         string $codeRoot,
         string $buildId = null,
@@ -55,6 +58,9 @@ class DeploySkeletonCommand
         return null;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function setApplicationSkeletonDeployer(ApplicationSkeletonDeployer $applicationSkeletonDeployer): void
     {
         $this->applicationSkeletonDeployer = $applicationSkeletonDeployer;

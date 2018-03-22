@@ -39,6 +39,9 @@ class DropDatabasesCommand
         $this->logger = new NullLogger();
     }
 
+    /**
+     * @inheritdoc
+     */
     public function run(
         string $codeRoot,
         string $buildId = null,

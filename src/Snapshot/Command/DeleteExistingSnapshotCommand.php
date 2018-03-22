@@ -34,19 +34,6 @@ class DeleteExistingSnapshotCommand
     /**
      * @inheritdoc
      */
-    public function setMountManager(MountManager $mountManager): void
-    {
-        $this->mountManager = $mountManager;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function setLogger(LoggerInterface $logger): void
-    {
-        $this->logger = $logger;
-    }
-
     public function run(
         string $snapshotName,
         string $snapshotPath,
@@ -70,5 +57,21 @@ class DeleteExistingSnapshotCommand
         }
         $this->mountManager->deleteDir($path);
         return null;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function setMountManager(MountManager $mountManager): void
+    {
+        $this->mountManager = $mountManager;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function setLogger(LoggerInterface $logger): void
+    {
+        $this->logger = $logger;
     }
 }

@@ -16,7 +16,7 @@ use Psr\Log\NullLogger;
 /**
  * Class ApplicationBuilder
  *
- * @package ConductorAppOrchestration
+ * @package ConductorAppOrchestration\Build
  */
 class ApplicationBuilder
 {
@@ -96,9 +96,7 @@ class ApplicationBuilder
     }
 
     /**
-     * @param LoggerInterface $logger
-     *
-     * @return void
+     * @inheritdoc
      */
     public function setLogger(LoggerInterface $logger): void
     {
@@ -106,7 +104,10 @@ class ApplicationBuilder
         $this->planRunner->setLogger($logger);
     }
 
-    public function setPlanPath(string $planPath)
+    /**
+     * @param string $planPath
+     */
+    public function setPlanPath(string $planPath): void
     {
         $this->planPath = $planPath;
     }

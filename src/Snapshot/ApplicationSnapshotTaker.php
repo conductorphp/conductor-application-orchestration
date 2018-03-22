@@ -55,6 +55,18 @@ class ApplicationSnapshotTaker
      */
     protected $logger;
 
+    /**
+     * ApplicationSnapshotTaker constructor.
+     *
+     * @param ApplicationConfig                  $applicationConfig
+     * @param DatabaseImportExportAdapterManager $databaseImportExportAdapterManager
+     * @param MountManager                       $mountManager
+     * @param ShellAdapterInterface              $localShellAdapter
+     * @param FileLayoutHelper                   $fileLayoutHelper
+     * @param PlanRunner                         $planRunner
+     * @param string                             $planPath
+     * @param LoggerInterface|null               $logger
+     */
     public function __construct(
         ApplicationConfig $applicationConfig,
         DatabaseImportExportAdapterManager $databaseImportExportAdapterManager,
@@ -78,6 +90,16 @@ class ApplicationSnapshotTaker
         $this->logger = $logger;
     }
 
+    /**
+     * @param string      $snapshotPlan
+     * @param string      $snapshotName
+     * @param string      $snapshotPath
+     * @param string|null $branch
+     * @param bool        $includeDatabases
+     * @param bool        $includeAssets
+     * @param bool        $replace
+     * @param array       $assetSyncConfig
+     */
     public function takeSnapshot(
         string $snapshotPlan,
         string $snapshotName,

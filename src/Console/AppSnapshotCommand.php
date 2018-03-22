@@ -38,7 +38,15 @@ class AppSnapshotCommand extends Command
      */
     private $logger;
 
-
+    /**
+     * AppSnapshotCommand constructor.
+     *
+     * @param ApplicationConfig        $applicationConfig
+     * @param ApplicationSnapshotTaker $applicationSnapshotTaker
+     * @param MountManager             $mountManager
+     * @param LoggerInterface|null     $logger
+     * @param string|null              $name
+     */
     public function __construct(
         ApplicationConfig $applicationConfig,
         ApplicationSnapshotTaker $applicationSnapshotTaker,

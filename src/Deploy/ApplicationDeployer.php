@@ -46,6 +46,16 @@ class ApplicationDeployer
      */
     private $planPath;
 
+    /**
+     * ApplicationDeployer constructor.
+     *
+     * @param ApplicationConfig     $applicationConfig
+     * @param PlanRunner            $planRunner
+     * @param ShellAdapterInterface $shellAdapter
+     * @param MountManager          $mountManager
+     * @param string                $planPath
+     * @param LoggerInterface|null  $logger
+     */
     public function __construct(
         ApplicationConfig $applicationConfig,
         PlanRunner $planRunner,
@@ -65,6 +75,10 @@ class ApplicationDeployer
         $this->logger = $logger;
     }
 
+    /**
+     * @param string $deployPlan
+     * @param bool   $clean
+     */
     public function deploySkeleton(
         string $deployPlan,
         bool $clean = false
@@ -96,7 +110,21 @@ class ApplicationDeployer
         );
     }
 
-
+    /**
+     * @param string      $deployPlan
+     * @param bool        $skeletonOnly
+     * @param string|null $buildId
+     * @param string|null $buildPath
+     * @param string|null $branch
+     * @param string|null $snapshotName
+     * @param string|null $snapshotPath
+     * @param bool        $includeAssets
+     * @param array       $assetSyncConfig
+     * @param bool        $includeDatabases
+     * @param bool        $allowFullRollback
+     * @param bool        $clean
+     * @param bool        $rollback
+     */
     public function deploy(
         string $deployPlan,
         $skeletonOnly = false,
@@ -177,7 +205,10 @@ class ApplicationDeployer
         $this->planRunner->setLogger($logger);
     }
 
-    public function setPlanPath(string $planPath)
+    /**
+     * @param string $planPath
+     */
+    public function setPlanPath(string $planPath): void
     {
         $this->planPath = $planPath;
     }

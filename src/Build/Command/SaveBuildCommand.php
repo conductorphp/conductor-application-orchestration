@@ -50,6 +50,9 @@ class SaveBuildCommand
         $this->logger = $logger;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function setMountManager(MountManager $mountManager): void
     {
         $this->mountManager = $mountManager;

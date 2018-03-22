@@ -68,6 +68,9 @@ class DeployDatabasesCommand
         return null;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function setApplicationDatabaseDeployer(ApplicationDatabaseDeployer $applicationDatabaseDeployer): void
     {
         $this->applicationDatabaseDeployer = $applicationDatabaseDeployer;

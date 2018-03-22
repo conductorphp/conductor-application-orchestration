@@ -55,14 +55,6 @@ class UploadDatabasesCommand
     /**
      * @inheritdoc
      */
-    public function setLogger(LoggerInterface $logger): void
-    {
-        $this->logger = $logger;
-    }
-
-    /**
-     * @inheritdoc
-     */
     public function run(
         string $snapshotName,
         string $snapshotPath,
@@ -188,27 +180,44 @@ class UploadDatabasesCommand
         return $similarNames;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function setApplicationConfig(ApplicationConfig $applicationConfig): void
     {
         $this->applicationConfig = $applicationConfig;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function setMountManager(MountManager $mountManager): void
     {
         $this->mountManager = $mountManager;
     }
 
     /**
-     * @param FileLayoutHelper $fileLayoutHelper
+     * @inheritdoc
      */
     public function setFileLayoutHelper(FileLayoutHelper $fileLayoutHelper): void
     {
         $this->fileLayoutHelper = $fileLayoutHelper;
     }
 
+    /**
+     * @inheritdoc
+     */
     public function setDatabaseImportExportAdapterManager(
         DatabaseImportExportAdapterManager $databaseImportExportAdapterManager
     ) {
         $this->databaseImportExportAdapterManager = $databaseImportExportAdapterManager;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function setLogger(LoggerInterface $logger): void
+    {
+        $this->logger = $logger;
     }
 }

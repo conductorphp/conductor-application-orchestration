@@ -40,6 +40,15 @@ class ApplicationAssetDeployer
      */
     protected $logger;
 
+    /**
+     * ApplicationAssetDeployer constructor.
+     *
+     * @param ApplicationConfig    $applicationConfig
+     * @param LocalShellAdapter    $localShellAdapter
+     * @param FileLayoutHelper     $fileLayoutHelper
+     * @param MountManager         $mountManager
+     * @param LoggerInterface|null $logger
+     */
     public function __construct(
         ApplicationConfig $applicationConfig,
         LocalShellAdapter $localShellAdapter,
