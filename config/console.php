@@ -1,6 +1,6 @@
 <?php
 
-namespace ConductorAppOrchestration\Command;
+namespace ConductorAppOrchestration\Console;
 
 return [
     'commands' => [

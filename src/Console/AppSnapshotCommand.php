@@ -3,7 +3,7 @@
  * @author Kirk Madera <kmadera@robofirm.com>
  */
 
-namespace ConductorAppOrchestration\Command;
+namespace ConductorAppOrchestration\Console;
 
 use ConductorAppOrchestration\Snapshot\ApplicationSnapshotTaker;
 use ConductorAppOrchestration\Config\ApplicationConfig;
