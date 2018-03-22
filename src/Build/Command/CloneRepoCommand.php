@@ -5,8 +5,8 @@ namespace ConductorAppOrchestration\Build\Command;
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\Config\ApplicationConfigAwareInterface;
 use ConductorAppOrchestration\Exception;
-use ConductorCore\Shell\Adapter\ShellAdapterAwareInterface;
-use ConductorCore\Shell\Adapter\ShellAdapterInterface;
+use ConductorCore\Repository\RepositoryAdapterAwareInterface;
+use ConductorCore\Repository\RepositoryAdapterInterface;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -14,11 +14,11 @@ use Psr\Log\NullLogger;
 /**
  * Class CloneRepoCommand
  *
- * @todo    Remove git assumption and handle via RepositoryInterface
  * @package ConductorAppOrchestration\Build\Command
  */
 class CloneRepoCommand
-    implements BuildCommandInterface, ApplicationConfigAwareInterface, ShellAdapterAwareInterface, LoggerAwareInterface
+    implements BuildCommandInterface, ApplicationConfigAwareInterface, RepositoryAdapterAwareInterface,
+               LoggerAwareInterface
 {
     /**
      * @var LoggerInterface
@@ -29,9 +29,9 @@ class CloneRepoCommand
      */
     private $applicationConfig;
     /**
-     * @var ShellAdapterInterface
+     * @var RepositoryAdapterInterface
      */
-    private $shellAdapter;
+    private $repositoryAdapter;
 
     public function __construct()
     {
@@ -47,8 +47,8 @@ class CloneRepoCommand
             throw new Exception\RuntimeException('$this->applicationConfig must be set.');
         }
 
-        if (!isset($this->shellAdapter)) {
-            throw new Exception\RuntimeException('$this->shellAdapter must be set.');
+        if (!isset($this->repositoryAdapter)) {
+            throw new Exception\RuntimeException('$this->repositoryAdapter must be set.');
         }
 
         $this->logger->info(
@@ -59,10 +59,12 @@ class CloneRepoCommand
             )
         );
 
-        $command = 'git clone ' . escapeshellarg($this->applicationConfig->getRepoUrl()) . ' ./ --branch '
-            . escapeshellarg($branch)
-            . ' --depth 1 --single-branch -v';
-        return $this->shellAdapter->runShellCommand($command);
+        $this->repositoryAdapter->setPath(getcwd());
+        $this->repositoryAdapter->setRepoUrl($this->applicationConfig->getRepoUrl());
+        // @todo Add support for doing a limited clone of only the files needed; like git's --depth 1 and
+        //       --single-branch options
+        $this->repositoryAdapter->checkout($branch);
+        return null;
     }
 
     /**
@@ -76,9 +78,9 @@ class CloneRepoCommand
     /**
      * @inheritdoc
      */
-    public function setShellAdapter(ShellAdapterInterface $shellAdapter): void
+    public function setRepositoryAdapter(RepositoryAdapterInterface $repositoryAdapter): void
     {
-        $this->shellAdapter = $shellAdapter;
+        $this->repositoryAdapter = $repositoryAdapter;
     }
 
     /**
@@ -88,5 +90,4 @@ class CloneRepoCommand
     {
         $this->logger = $logger;
     }
-
 }
