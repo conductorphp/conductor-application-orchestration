@@ -37,6 +37,13 @@ class Plan
      */
     private $rollbackSteps;
 
+    /**
+     * Plan constructor.
+     *
+     * @param string $name
+     * @param array  $plan
+     * @param string $stepInterface
+     */
     public function __construct(string $name, array $plan, string $stepInterface)
     {
         $this->name = $name;
@@ -106,6 +113,11 @@ class Plan
         return $this->rollbackSteps;
     }
 
+    /**
+     * @param array $plan
+     *
+     * @return array
+     */
     private function validateAndNormalize(array $plan): array
     {
         if (empty($plan['steps'])) {

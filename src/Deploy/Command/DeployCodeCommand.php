@@ -2,8 +2,8 @@
 
 namespace ConductorAppOrchestration\Deploy\Command;
 
-use ConductorAppOrchestration\ApplicationCodeDeployerAwareInterface;
 use ConductorAppOrchestration\ApplicationCodeDeployer;
+use ConductorAppOrchestration\ApplicationCodeDeployerAwareInterface;
 use ConductorAppOrchestration\Exception;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
@@ -51,7 +51,7 @@ class DeployCodeCommand
         if (!$buildId && !$branch) {
             $this->logger->notice(
                 'Add condition "code" to this step in your deployment plan. This step can only be run when deploying '
-                .'code. Skipped.'
+                . 'code. Skipped.'
             );
             return null;
         }

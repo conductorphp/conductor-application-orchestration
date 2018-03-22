@@ -46,7 +46,8 @@ class DisableMaintenanceCommand
         bool $includeDatabases = true,
         bool $allowFullRollback = false,
         array $options = null
-    ): ?string {
+    ): ?string
+    {
         if (!isset($this->maintenanceStrategy)) {
             throw new Exception\RuntimeException('$this->maintenanceStrategy must be set.');
         }

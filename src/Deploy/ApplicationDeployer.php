@@ -17,7 +17,7 @@ use Psr\Log\NullLogger;
 /**
  * Class ApplicationDeployer
  *
- * @package ConductorAppOrchestration
+ * @package ConductorAppOrchestration\Deploy
  */
 class ApplicationDeployer
 {

@@ -190,14 +190,6 @@ class ApplicationConfig
     }
 
     /**
-     * @return array
-     */
-    public function getDatabases(): array
-    {
-        return $this->config['databases'] ?? [];
-    }
-
-    /**
      * @return string
      */
     public function getDefaultDatabaseAdapter(): string

@@ -295,11 +295,11 @@ class AppDeployCommand extends Command
                     if ($includeAssets) {
                         $message .= ' assets';
                         if ($includeDatabases) {
-                            $message .= ' and ';
+                            $message .= ' and';
                         }
                     }
                     if ($includeDatabases) {
-                        $message .= 'databases';
+                        $message .= ' databases';
                     }
                 }
                 $message .= '.';

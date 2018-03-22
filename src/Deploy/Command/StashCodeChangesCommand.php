@@ -50,7 +50,7 @@ class StashCodeChangesCommand
         if (!$branch) {
             $this->logger->notice(
                 'Add condition "code-repo" to this step in your deployment plan. This step can only be run when '
-                .'deploying code from a repo. Skipped.'
+                . 'deploying code from a repo. Skipped.'
             );
             return null;
         }

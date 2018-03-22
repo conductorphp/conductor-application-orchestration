@@ -5,6 +5,7 @@ namespace ConductorAppOrchestration;
 use Amp\Loop;
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\Config\ApplicationConfigAwareInterface;
+use ConductorAppOrchestration\Deploy\DeploymentState;
 use ConductorAppOrchestration\MaintenanceStrategy\MaintenanceStrategyAwareInterface;
 use ConductorAppOrchestration\MaintenanceStrategy\MaintenanceStrategyInterface;
 use ConductorCore\Database\DatabaseAdapterManager;
@@ -73,6 +74,10 @@ class PlanRunner implements LoggerAwareInterface
      */
     private $applicationDatabaseDeployer;
     /**
+     * @var DeploymentState
+     */
+    private $deploymentState;
+    /**
      * @var int
      */
     private $diskSpaceErrorThreshold;
@@ -97,6 +102,25 @@ class PlanRunner implements LoggerAwareInterface
      */
     private $planPath;
 
+    /**
+     * PlanRunner constructor.
+     *
+     * @param ApplicationConfig                  $applicationConfig
+     * @param RepositoryAdapterInterface         $repositoryAdapter
+     * @param ShellAdapterInterface              $shellAdapter
+     * @param MountManager                       $mountManager
+     * @param MaintenanceStrategyInterface       $maintenanceStrategy
+     * @param FileLayoutHelper                   $fileLayoutHelper
+     * @param DatabaseAdapterManager             $databaseAdapterManager
+     * @param DatabaseImportExportAdapterManager $databaseImportExportAdapterManager
+     * @param ApplicationSkeletonDeployer        $applicationSkeletonDeployer
+     * @param ApplicationCodeDeployer            $applicationCodeInstaller
+     * @param ApplicationAssetDeployer           $applicationAssetDeployer
+     * @param ApplicationDatabaseDeployer        $applicationDatabaseDeployer
+     * @param int                                $diskSpaceErrorThreshold
+     * @param int                                $diskSpaceWarningThreshold
+     * @param LoggerInterface                    $logger
+     */
     public function __construct(
         ApplicationConfig $applicationConfig,
         RepositoryAdapterInterface $repositoryAdapter,
@@ -110,6 +134,7 @@ class PlanRunner implements LoggerAwareInterface
         ApplicationCodeDeployer $applicationCodeInstaller,
         ApplicationAssetDeployer $applicationAssetDeployer,
         ApplicationDatabaseDeployer $applicationDatabaseDeployer,
+        DeploymentState $deploymentState,
         int $diskSpaceErrorThreshold = 52428800,
         int $diskSpaceWarningThreshold = 104857600,
         LoggerInterface $logger
@@ -126,20 +151,13 @@ class PlanRunner implements LoggerAwareInterface
         $this->applicationCodeInstaller = $applicationCodeInstaller;
         $this->applicationAssetDeployer = $applicationAssetDeployer;
         $this->applicationDatabaseDeployer = $applicationDatabaseDeployer;
+        $this->deploymentState = $deploymentState;
         $this->diskSpaceErrorThreshold = $diskSpaceErrorThreshold;
         $this->diskSpaceWarningThreshold = $diskSpaceWarningThreshold;
         if (is_null($logger)) {
             $logger = new NullLogger();
         }
         $this->logger = $logger;
-    }
-
-    /**
-     * @param array $plans
-     */
-    public function setPlans(array $plans): void
-    {
-        $this->plans = $plans;
     }
 
     /**
@@ -166,6 +184,19 @@ class PlanRunner implements LoggerAwareInterface
             $this->planPath = getcwd();
         }
 
+        $metDependencies = [];
+        if (!empty($conditions['assets']) || $this->deploymentState->assetsDeployed()) {
+            $metDependencies[] = 'assets';
+        }
+
+        if (!empty($conditions['code']) || $this->deploymentState->codeDeployed()) {
+            $metDependencies[] = 'code';
+        }
+
+        if (!empty($conditions['databases']) || $this->deploymentState->databasesDeployed()) {
+            $metDependencies[] = 'databases';
+        }
+
         try {
             $plan = $this->getPlan($planName);
             $this->preparePlanPath($plan);
@@ -183,13 +214,13 @@ class PlanRunner implements LoggerAwareInterface
                 if ($rollbackPreflightSteps) {
                     $this->logger->info(sprintf('Plan: %s (rollback_preflight)', $planName));
                     foreach ($rollbackPreflightSteps as $name => $step) {
-                        $this->runStep($name, $step, $conditions, $stepArguments);
+                        $this->runStep($name, $step, $conditions, $metDependencies, $stepArguments);
                     }
                 }
 
                 $this->logger->info(sprintf('Plan: %s (rollback)', $planName));
                 foreach ($rollbackSteps as $name => $step) {
-                    $this->runStep($name, $step, $conditions, $stepArguments);
+                    $this->runStep($name, $step, $conditions, $metDependencies, $stepArguments);
                 }
             } else {
                 $preflightSteps = $plan->getPreflightSteps();
@@ -203,7 +234,7 @@ class PlanRunner implements LoggerAwareInterface
                 if ($preflightSteps) {
                     $this->logger->info(sprintf('Plan: %s (preflight)', $planName));
                     foreach ($preflightSteps as $name => $step) {
-                        $this->runStep($name, $step, $conditions, $stepArguments);
+                        $this->runStep($name, $step, $conditions, $metDependencies, $stepArguments);
                     }
                 }
 
@@ -211,13 +242,13 @@ class PlanRunner implements LoggerAwareInterface
                 if ($clean && !empty($cleanSteps)) {
                     $this->logger->info(sprintf('Plan: %s (cleanup)', $planName));
                     foreach ($cleanSteps as $name => $step) {
-                        $this->runStep($name, $step, $conditions, $stepArguments);
+                        $this->runStep($name, $step, $conditions, $metDependencies, $stepArguments);
                     }
                 }
 
                 $this->logger->info(sprintf('Plan: %s', $planName));
                 foreach ($plan->getSteps() as $name => $step) {
-                    $this->runStep($name, $step, $conditions, $stepArguments);
+                    $this->runStep($name, $step, $conditions, $metDependencies, $stepArguments);
                 }
             }
 
@@ -236,11 +267,11 @@ class PlanRunner implements LoggerAwareInterface
     }
 
     /**
-     * @inheritdoc
+     * @param array $plans
      */
-    public function setLogger(LoggerInterface $logger): void
+    public function setPlans(array $plans): void
     {
-        $this->logger = $logger;
+        $this->plans = $plans;
     }
 
     /**
@@ -333,15 +364,22 @@ class PlanRunner implements LoggerAwareInterface
         $this->shellAdapter->runShellCommand($command);
     }
 
-    private function runStep(string $name, array $step, array $conditions, array $stepArguments): void
+    /**
+     * @param string $name
+     * @param array  $step
+     * @param array  $conditions
+     * @param array  $metDependencies
+     * @param array  $stepArguments
+     */
+    private function runStep(string $name, array $step, array $conditions, array $metDependencies, array $stepArguments): void
     {
         // If array, run commands in parallel
         if (!empty($step['steps'])) {
             foreach ($step['steps'] as $parallelName => $parallelStep) {
                 Loop::delay(
                     0,
-                    function () use ($parallelName, $parallelStep, $conditions, $stepArguments) {
-                        $this->runStep($parallelName, $parallelStep, $conditions, $stepArguments);
+                    function () use ($parallelName, $parallelStep, $conditions, $metDependencies, $stepArguments) {
+                        $this->runStep($parallelName, $parallelStep, $conditions, $metDependencies, $stepArguments);
                     }
                 );
             }
@@ -352,12 +390,28 @@ class PlanRunner implements LoggerAwareInterface
 
         if (!empty($step['conditions'])) {
             if (!array_intersect($conditions, $step['conditions'])) {
-                $this->logger->debug(sprintf(
-                    'Step: %s - skipped because run %s [%s] not met.',
-                    $name,
-                    (1 == count($step['conditions'])) ? 'condition' : 'conditions',
-                    implode(', ', $step['conditions'])
-                ));
+                $this->logger->debug(
+                    sprintf(
+                        'Step: %s - skipped because run %s [%s] not met.',
+                        $name,
+                        (1 == count($step['conditions'])) ? 'condition' : 'conditions',
+                        implode(', ', $step['conditions'])
+                    )
+                );
+                return;
+            }
+        }
+
+        if (!empty($step['depends'])) {
+            if (!array_intersect($metDependencies, $step['depends'])) {
+                $this->logger->debug(
+                    sprintf(
+                        'Step: %s - skipped because %s [%s] not deployed.',
+                        $name,
+                        (1 == count($step['depends'])) ? 'dependency' : 'dependencies',
+                        implode(', ', $step['depends'])
+                    )
+                );
                 return;
             }
         }
@@ -470,6 +524,14 @@ class PlanRunner implements LoggerAwareInterface
     public function setPlanPath(string $planPath)
     {
         $this->planPath = $planPath;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function setLogger(LoggerInterface $logger): void
+    {
+        $this->logger = $logger;
     }
 
 }

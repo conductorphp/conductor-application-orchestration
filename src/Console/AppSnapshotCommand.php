@@ -5,8 +5,8 @@
 
 namespace ConductorAppOrchestration\Console;
 
-use ConductorAppOrchestration\Snapshot\ApplicationSnapshotTaker;
 use ConductorAppOrchestration\Config\ApplicationConfig;
+use ConductorAppOrchestration\Snapshot\ApplicationSnapshotTaker;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\MonologConsoleHandlerAwareTrait;
 use Psr\Log\LoggerInterface;
@@ -41,11 +41,11 @@ class AppSnapshotCommand extends Command
     /**
      * AppSnapshotCommand constructor.
      *
-     * @param ApplicationConfig        $applicationConfig
+     * @param ApplicationConfig $applicationConfig
      * @param ApplicationSnapshotTaker $applicationSnapshotTaker
-     * @param MountManager             $mountManager
-     * @param LoggerInterface|null     $logger
-     * @param string|null              $name
+     * @param MountManager $mountManager
+     * @param LoggerInterface|null $logger
+     * @param string|null $name
      */
     public function __construct(
         ApplicationConfig $applicationConfig,
@@ -103,8 +103,18 @@ class AppSnapshotCommand extends Command
                 'Branch to snapshot db from. Only relevant with branch file layout.'
             )
             // @todo Allow for more granular setting of which databases/assets should be in the snapshot?
-            ->addOption('databases', null, InputOption::VALUE_NONE, 'Include databases in snapshot. True if neither databases or assets specified.')
-            ->addOption('assets', null, InputOption::VALUE_NONE, 'Include assets in snapshot. True if neither databases or assets specified.')
+            ->addOption(
+                'databases',
+                null,
+                InputOption::VALUE_NONE,
+                'Include databases in snapshot. True if neither databases or assets specified.'
+            )
+            ->addOption(
+                'assets',
+                null,
+                InputOption::VALUE_NONE,
+                'Include assets in snapshot. True if neither databases or assets specified.'
+            )
             ->addOption(
                 'asset-batch-size',
                 null,

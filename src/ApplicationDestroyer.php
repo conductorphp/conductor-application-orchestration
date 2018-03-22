@@ -8,7 +8,6 @@ namespace ConductorAppOrchestration;
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorCore\Database\DatabaseAdapterInterface;
 use ConductorCore\Database\DatabaseAdapterManager;
-use Exception;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -83,11 +82,11 @@ class ApplicationDestroyer implements LoggerAwareInterface
             $this->logger->debug("Removed symlink \"$appRoot/" . ApplicationConfig::PATH_CURRENT_RELEASE . "\".");
         }
 
-        $databaseConfig = $this->applicationConfig->getDatabaseConfig();
-        if ($databaseConfig->getDatabases()) {
+        $databases = $this->applicationConfig->getSnapshotConfig()->getDatabases();
+        if ($databases) {
             $this->logger->debug("Destroying databases.");
             $databasesToDestroy = [];
-            foreach ($databaseConfig->getDatabases() as $database => $databaseInfo) {
+            foreach ($databases as $database => $databaseInfo) {
                 if ('branch' == $application->getFileLayout()) {
                     if ($branch) {
                         $database .= '_' . $this->sanitizeDatabaseName($branch);

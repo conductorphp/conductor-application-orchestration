@@ -63,7 +63,8 @@ class UploadDatabasesCommand
         bool $includeAssets = true,
         array $assetSyncConfig = [],
         array $options = null
-    ): ?string {
+    ): ?string
+    {
         if (!$includeDatabases) {
             return null;
         }
@@ -81,6 +82,7 @@ class UploadDatabasesCommand
         }
 
         if (!empty($options['databases'])) {
+            $snapshotConfig = $this->applicationConfig->getSnapshotConfig();
             foreach ($options['databases'] as $databaseName => $database) {
                 $adapterName = $database['importexport_adapter'] ??
                     $this->applicationConfig->getDefaultDatabaseImportExportAdapter();
@@ -99,7 +101,7 @@ class UploadDatabasesCommand
                 // @todo Add ability to alter database in more ways than excluding data, E.g. Remove all but two stores.
                 $exportOptions = [];
                 if (!empty($database['excludes'])) {
-                    $exportOptions['ignore_tables'] = $this->expandDatabaseTableGroups($database['excludes']);
+                    $exportOptions['ignore_tables'] = $snapshotConfig->expandDatabaseTableGroups($database['excludes']);
                 }
 
                 $filename = $databaseImportExportAdapter->exportToFile(
@@ -124,60 +126,6 @@ class UploadDatabasesCommand
     private function sanitizeDatabaseName(string $name): string
     {
         return strtolower(preg_replace('/[^a-z0-9]/i', '_', $name));
-    }
-
-    /**
-     * @param array $databaseTableGroups
-     *
-     * @return array
-     * @throws Exception\DomainException if database table group not found in config
-     */
-    private function expandDatabaseTableGroups(array $databaseTableGroups): array
-    {
-        $expandedDatabaseTableGroups = [];
-        foreach ($databaseTableGroups as $databaseTableGroup) {
-            if ('@' == substr($databaseTableGroup, 0, 1)) {
-                $group = substr($databaseTableGroup, 1);
-                $applicationDatabaseTableGroups = $this->applicationConfig->getSnapshotConfig()->getDatabaseTableGroups(
-                );
-                if (!isset($applicationDatabaseTableGroups[$group])) {
-                    $message = "Could not expand database table group \"$group\".";
-                    $similarGroups = $this->findSimilarNames($group, array_keys($applicationDatabaseTableGroups));
-                    if ($similarGroups) {
-                        $message .= "\nDid you mean:\n" . implode("\n", $similarGroups) . "\n";
-                    }
-                    throw new Exception\DomainException($message);
-                }
-
-                $expandedDatabaseTableGroups = array_merge(
-                    $expandedDatabaseTableGroups,
-                    $this->expandDatabaseTableGroups($applicationDatabaseTableGroups[$group])
-                );
-
-            } else {
-                $expandedDatabaseTableGroups[] = $databaseTableGroup;
-            }
-        }
-
-        sort($expandedDatabaseTableGroups);
-        return $expandedDatabaseTableGroups;
-    }
-
-    /**
-     * @param string $searchName
-     * @param array  $names
-     *
-     * @return array
-     */
-    private function findSimilarNames(string $searchName, array $names): array
-    {
-        $similarNames = [];
-        foreach ($names as $name) {
-            if (false !== stripos($name, $searchName)) {
-                $similarNames[] = $name;
-            }
-        }
-        return $similarNames;
     }
 
     /**

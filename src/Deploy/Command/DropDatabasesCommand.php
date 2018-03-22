@@ -2,7 +2,6 @@
 
 namespace ConductorAppOrchestration\Deploy\Command;
 
-use ConductorAppOrchestration\ApplicationDatabaseDeployer;
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\Config\ApplicationConfigAwareInterface;
 use ConductorAppOrchestration\Exception;
@@ -15,7 +14,7 @@ use Psr\Log\NullLogger;
 /**
  * Class DropDatabasesCommand
  *
- * @package ConductorAppOrchestration\Snapshot\Command
+ * @package ConductorAppOrchestration\Deploy\Command
  */
 class DropDatabasesCommand
     implements DeployCommandInterface, ApplicationConfigAwareInterface, DatabaseAdapterManagerAwareInterface,
@@ -64,12 +63,6 @@ class DropDatabasesCommand
             return null;
         }
 
-        $databaseConfig = $this->applicationConfig->getDatabases();
-        $databases = $options['databases'] ?? array_keys($databaseConfig);
-        if (empty($databases)) {
-            throw new Exception\RuntimeException('No databases configured.');
-        }
-
         if (!isset($this->databaseAdapterManager)) {
             throw new Exception\RuntimeException('$this->databaseAdapterManager must be set.');
         }
@@ -78,12 +71,18 @@ class DropDatabasesCommand
             throw new Exception\RuntimeException('$this->applicationConfig must be set.');
         }
 
+        $databaseConfig = $this->applicationConfig->getSnapshotConfig()->getDatabases();
+        $databases = $options['databases'] ?? array_keys($databaseConfig);
+        if (empty($databases)) {
+            throw new Exception\RuntimeException('No databases configured.');
+        }
+
         foreach ($databases as $database) {
             $adapterName = $databaseConfig[$database]['adapter'] ??
                 $this->applicationConfig->getDefaultDatabaseAdapter();
             $adapter = $this->databaseAdapterManager->getAdapter($adapterName);
             if ($adapter->databaseExists($database)) {
-                $this->logger->debug("Dropping database $database.");
+                $this->logger->debug("Dropping database \"$database\" using the \"$adapterName\" database adapter.");
                 $adapter->dropDatabase($database);
             }
         }

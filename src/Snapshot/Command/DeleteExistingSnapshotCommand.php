@@ -42,7 +42,8 @@ class DeleteExistingSnapshotCommand
         bool $includeAssets = true,
         array $assetSyncConfig = [],
         array $options = null
-    ): ?string {
+    ): ?string
+    {
 
         if (!isset($this->mountManager)) {
             throw new Exception\RuntimeException('$this->mountManager must be set.');

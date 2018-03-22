@@ -78,120 +78,49 @@ class ApplicationAssetDeployer
     }
 
     /**
-     * @param string $sourceFilesystemPrefix
-     * @param string $snapshotName
-     * @param array  $syncOptions
-     *
-     * @throws Exception\RuntimeException if app skeleton has not yet been installed
-     * @throws Exception\RuntimeException if there is an asset configuration error
+     * @param string      $snapshotPath
+     * @param string      $snapshotName
+     * @param array       $assets
+     * @param array       $syncOptions
      */
     public function deployAssets(
-        string $sourceFilesystemPrefix,
+        string $snapshotPath,
         string $snapshotName,
+        array $assets,
         array $syncOptions = []
     ): void {
+        if (!$assets) {
+            throw new Exception\RuntimeException('No assets given for deployment.');
+        }
+
         $application = $this->applicationConfig;
-        $fileLayout = new FileLayout(
-            $application->getAppRoot(),
-            $application->getFileLayout(),
-            $application->getRelativeDocumentRoot()
-        );
-        $this->fileLayoutHelper->loadFileLayoutPaths($fileLayout);
-        if (!$this->fileLayoutHelper->isFileLayoutInstalled($fileLayout)) {
-            throw new Exception\RuntimeException(
-                "Application skeleton is not yet installed. Run app:install or app:install:skeleton first."
-            );
-        }
-
-        $assetConfig = $application->getAssetConfig();
-        if ($assetConfig->getPreInstallCommands()) {
-            $this->logger->info('Running asset pre-installation commands.');
-            $this->runCommands($assetConfig->getPreInstallCommands());
-        }
-
-        if ($assetConfig->getAssets()) {
-            $this->logger->info('Installing assets');
-            foreach ($assetConfig->getAssets() as $sourcePath => $asset) {
-                if (empty($asset['ensure']) || empty($asset['location'])) {
-                    throw new Exception\RuntimeException(
-                        "Asset \"$sourcePath\" must have \"ensure\" and \"location\" properties set."
-                    );
-                }
-
-                if (!empty($asset['pre_install_commands'])) {
-                    $this->logger->info("Running asset \"$sourcePath\" pre-installation commands.");
-                    $this->runCommands($asset['pre_install_commands']);
-                }
-
-                if (!empty($asset['local_path'])) {
-                    $destinationPath = $asset['local_path'];
-                } else {
-                    $destinationPath = $sourcePath;
-                }
-
-                $pathPrefix = $this->fileLayoutHelper->resolvePathPrefix($application, $asset['location']);
-                $sourcePath = "snapshots/$snapshotName/assets/{$asset['location']}/$sourcePath";
-                if ($pathPrefix) {
-                    $destinationPath = "$pathPrefix/$destinationPath";
-                };
-                $destinationPath = $application->getAppRoot() . '/' . $destinationPath;
-
-                $this->mountManager->sync(
-                    "$sourceFilesystemPrefix://$sourcePath",
-                    "local://$destinationPath",
-                    $syncOptions
+        $this->logger->info('Installing assets');
+        foreach ($assets as $sourcePath => $asset) {
+            if (empty($asset['ensure']) || empty($asset['location'])) {
+                throw new Exception\RuntimeException(
+                    "Asset \"$sourcePath\" must have \"ensure\" and \"location\" properties set."
                 );
-
-                if (!empty($asset['post_install_commands'])) {
-                    $this->logger->info("Running asset \"$sourcePath\" post-installation commands.");
-                    $this->runCommands($asset['post_install_commands']);
-                }
-            }
-        } else {
-            $this->logger->info('No assets specified in configuration.');
-        }
-
-        if ($assetConfig->getPostInstallCommands()) {
-            $this->logger->info('Running asset post-installation commands.');
-            $this->runCommands($assetConfig->getPostInstallCommands());
-        }
-    }
-
-    /**
-     * @param array             $commands
-     */
-    private function runCommands(array $commands): void
-    {
-        // Sort by priority
-        uasort($commands, function ($a, $b) {
-            $priorityA = $a['priority'] ?? 0;
-            $priorityB = $b['priority'] ?? 0;
-            return ($priorityA > $priorityB) ? -1 : 1;
-        });
-
-        foreach ($commands as $command) {
-            if (is_string($command)) {
-                $command = [
-                    'command' => $command,
-                ];
             }
 
-            if (is_callable($command['command'])) {
-                call_user_func_array($command['command'], $command['arguments'] ?? []);
-                continue;
+            if (!empty($asset['local_path'])) {
+                $destinationPath = $asset['local_path'];
+            } else {
+                $destinationPath = $sourcePath;
             }
 
-            $output = $this->localShellAdapter->runShellCommand(
-                $command['command'],
-                $command['working_directory'] ?? $this->applicationConfig->getCodePath(),
-                $command['environment_variables'] ?? null,
-                $command['run_priority'] ?? ShellAdapterInterface::PRIORITY_NORMAL,
-                $command['options'] ?? null
+            $pathPrefix = $this->fileLayoutHelper->resolvePathPrefix($application, $asset['location']);
+            $sourcePath = "$snapshotPath/$snapshotName/assets/{$asset['location']}/$sourcePath";
+            if ($pathPrefix) {
+                $destinationPath = "$pathPrefix/$destinationPath";
+            };
+            $destinationPath = $application->getAppRoot() . '/' . $destinationPath;
+
+            $this->mountManager->sync(
+                $sourcePath,
+                "local://$destinationPath",
+                $syncOptions
             );
-            if (false !== strpos(trim($output), "\n")) {
-                $output = "\n$output";
-            }
-            $this->logger->debug('Command output: ' . $output);
         }
     }
+
 }

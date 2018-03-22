@@ -11,7 +11,6 @@ use ConductorCore\Database\DatabaseImportExportAdapterInterface;
 use ConductorCore\Database\DatabaseImportExportAdapterManager;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\Shell\Adapter\LocalShellAdapter;
-use ConductorCore\Shell\Adapter\ShellAdapterInterface;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -81,12 +80,12 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
         array $databases,
         string $branch = null
     ): void {
-        $application = $this->applicationConfig;
 
         if (!$databases) {
             throw new Exception\RuntimeException('No database given for deployment.');
         }
 
+        $application = $this->applicationConfig;
         $this->logger->info('Installing databases');
         foreach ($databases as $databaseName => $database) {
 
@@ -231,7 +230,9 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
             return "$globalPath/$scriptFilename";
         }
 
-        throw new Exception\RuntimeException("Script \"$scriptFilename\" not found in \"$environmentPath\" or \"$globalPath\".");
+        throw new Exception\RuntimeException(
+            "Script \"$scriptFilename\" not found in \"$environmentPath\" or \"$globalPath\"."
+        );
     }
 
     /**

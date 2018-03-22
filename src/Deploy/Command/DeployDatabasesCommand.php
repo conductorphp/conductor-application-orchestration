@@ -2,8 +2,8 @@
 
 namespace ConductorAppOrchestration\Deploy\Command;
 
-use ConductorAppOrchestration\ApplicationDatabaseDeployerAwareInterface;
 use ConductorAppOrchestration\ApplicationDatabaseDeployer;
+use ConductorAppOrchestration\ApplicationDatabaseDeployerAwareInterface;
 use ConductorAppOrchestration\Exception;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
@@ -51,7 +51,7 @@ class DeployDatabasesCommand
         if (!$includeDatabases) {
             $this->logger->notice(
                 'Add condition "databases" to this step in your deployment plan. This step can only be run when deploying '
-                .'databases. Skipped.'
+                . 'databases. Skipped.'
             );
             return null;
         }
@@ -64,7 +64,12 @@ class DeployDatabasesCommand
             throw new Exception\RuntimeException('$this->applicationDatabaseDeployer must be set.');
         }
 
-        $this->applicationDatabaseDeployer->deployDatabases($snapshotPath, $snapshotName, $options['databases'], $branch);
+        $this->applicationDatabaseDeployer->deployDatabases(
+            $snapshotPath,
+            $snapshotName,
+            $options['databases'],
+            $branch
+        );
         return null;
     }
 

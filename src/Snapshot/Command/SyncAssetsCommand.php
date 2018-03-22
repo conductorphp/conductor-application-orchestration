@@ -83,6 +83,7 @@ class SyncAssetsCommand
         }
 
         if (!empty($options['assets'])) {
+            $snapshotConfig = $this->applicationConfig->getSnapshotConfig();
             foreach ($options['assets'] as $assetPath => $asset) {
                 $pathPrefix = $this->fileLayoutHelper->resolvePathPrefix($this->applicationConfig, $asset['location']);
                 $sourcePath = $asset['local_path'] ?? $assetPath;
@@ -96,14 +97,14 @@ class SyncAssetsCommand
                 if (!empty($asset['excludes'])) {
                     $syncOptions['excludes'] = array_merge(
                         $syncOptions['excludes'] ?? [],
-                        $this->expandAssetGroups($asset['excludes'])
+                        $snapshotConfig->expandAssetGroups($asset['excludes'])
                     );
                 }
 
                 if (!empty($asset['includes'])) {
                     $syncOptions['includes'] = array_merge(
                         $syncOptions['includes'] ?? [],
-                        $this->expandAssetGroups($asset['includes'])
+                        $snapshotConfig->expandAssetGroups($asset['includes'])
                     );
                 }
 
@@ -114,57 +115,6 @@ class SyncAssetsCommand
         return null;
     }
 
-    /**
-     * @param array $assetGroups
-     *
-     * @return array
-     * @throws Exception\DomainException if asset group not found in config
-     */
-    private function expandAssetGroups(array $assetGroups): array
-    {
-        $expandedAssetGroups = [];
-        foreach ($assetGroups as $assetGroup) {
-            if ('@' == substr($assetGroup, 0, 1)) {
-                $group = substr($assetGroup, 1);
-                $applicationAssetGroups = $this->applicationConfig->getSnapshotConfig()->getAssetGroups();
-                if (!isset($applicationAssetGroups[$group])) {
-                    $message = "Could not expand asset group \"$group\".";
-                    $similarGroups = $this->findSimilarNames($group, array_keys($applicationAssetGroups));
-                    if ($similarGroups) {
-                        $message .= "\nDid you mean:\n" . implode("\n", $similarGroups) . "\n";
-                    }
-                    throw new Exception\DomainException($message);
-                }
-
-                $expandedAssetGroups = array_merge(
-                    $expandedAssetGroups,
-                    $this->expandAssetGroups($applicationAssetGroups[$group])
-                );
-            } else {
-                $expandedAssetGroups[] = $assetGroup;
-            }
-        }
-
-        sort($expandedAssetGroups);
-        return $expandedAssetGroups;
-    }
-
-    /**
-     * @param string $searchName
-     * @param array  $names
-     *
-     * @return array
-     */
-    private function findSimilarNames(string $searchName, array $names): array
-    {
-        $similarNames = [];
-        foreach ($names as $name) {
-            if (false !== stripos($name, $searchName)) {
-                $similarNames[] = $name;
-            }
-        }
-        return $similarNames;
-    }
 
     /**
      * @inheritdoc

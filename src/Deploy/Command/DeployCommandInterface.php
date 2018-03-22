@@ -5,7 +5,7 @@ namespace ConductorAppOrchestration\Deploy\Command;
 interface DeployCommandInterface
 {
     /**
-     * @param string $codeRoot
+     * @param string      $codeRoot
      * @param string|null $buildId
      * @param string|null $buildPath
      * @param string|null $branch

@@ -2,13 +2,9 @@
 
 namespace ConductorAppOrchestration\Snapshot\Command;
 
-use ConductorAppOrchestration\Config\ApplicationConfig;
-use ConductorAppOrchestration\Config\ApplicationConfigAwareInterface;
 use ConductorAppOrchestration\Exception;
 use ConductorAppOrchestration\MaintenanceStrategy\MaintenanceStrategyAwareInterface;
 use ConductorAppOrchestration\MaintenanceStrategy\MaintenanceStrategyInterface;
-use ConductorCore\Shell\Adapter\ShellAdapterAwareInterface;
-use ConductorCore\Shell\Adapter\ShellAdapterInterface;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -46,7 +42,8 @@ class EnableMaintenanceCommand
         bool $includeAssets = true,
         array $assetSyncConfig = [],
         array $options = null
-    ): ?string {
+    ): ?string
+    {
         if (!isset($this->maintenanceStrategy)) {
             throw new Exception\RuntimeException('$this->maintenanceStrategy must be set.');
         }
