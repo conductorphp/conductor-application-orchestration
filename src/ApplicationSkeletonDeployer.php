@@ -331,13 +331,8 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
      */
     private function resolveFilename(string $location, string $filename): string
     {
-        $pathPrefix = $this->applicationConfig->getPath($location);
-        $resolvedFilename = $this->applicationConfig->getAppRoot();
-        if ($pathPrefix) {
-            $resolvedFilename .= "/$pathPrefix";
-        }
-        $resolvedFilename .= "/$filename";
-        return $resolvedFilename;
+        $path = $this->applicationConfig->getPath($location);
+        return "$path/$filename";
     }
 
     /**
