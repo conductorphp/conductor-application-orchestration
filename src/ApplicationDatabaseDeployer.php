@@ -217,7 +217,7 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
     private function findScript(string $scriptFilename): string
     {
         $conductorRoot = realpath(__DIR__ . '/../../../..');
-        $configRoot = "$conductorRoot/config/autoload";
+        $configRoot = "$conductorRoot/config/app";
         $environment = $this->applicationConfig->getCurrentEnvironment();
 
         $environmentPath = "$configRoot/environments/$environment/files";
