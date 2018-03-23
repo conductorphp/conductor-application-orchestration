@@ -67,9 +67,9 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
     }
 
     /**
-     * @param string $snapshotPath
-     * @param string $snapshotName
-     * @param array $databases
+     * @param string      $snapshotPath
+     * @param string      $snapshotName
+     * @param array       $databases
      * @param string|null $branch
      *
      * @throws Exception\RuntimeException if app skeleton has not yet been installed
@@ -96,7 +96,7 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
             $databaseImportExportAdapter = $this->databaseImportAdapterManager->getAdapter($adapterName);
 
             $filename = "$databaseName." . $databaseImportExportAdapter::getFileExtension();
-            if ('branch' == $application->getFileLayout()) {
+            if ('branch' == $application->getFileLayoutStrategy()) {
                 $databaseName .= '_' . $this->sanitizeDatabaseName($branch);
             }
 
@@ -126,7 +126,7 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
             // @todo Deal with running environment scripts
             if (!empty($database['post_import_scripts'])) {
                 $branchUrl = $branchDatabase = '';
-                if (FileLayout::FILE_LAYOUT_BRANCH == $application->getFileLayout()) {
+                if (FileLayoutInterface::STRATEGY_BRANCH == $application->getFileLayoutStrategy()) {
                     $branchUrl = $this->sanitizeBranchForUrl($branch);
                     $branchDatabase = $this->sanitizeBranchForDatabase($branch);
                 }
@@ -191,7 +191,7 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
         $filename
     ): string {
         $stringReplacements = [];
-        if (FileLayout::FILE_LAYOUT_BRANCH == $this->applicationConfig->getFileLayout()) {
+        if (FileLayoutInterface::STRATEGY_BRANCH == $this->applicationConfig->getFileLayoutStrategy()) {
             $stringReplacements['{{branch}}'] = $branchUrl;
             $stringReplacements['{{branch_database}}'] = $branchDatabase;
         }

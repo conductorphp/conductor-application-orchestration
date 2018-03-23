@@ -72,14 +72,14 @@ class ApplicationDestroyer implements LoggerAwareInterface
             $this->logger->debug("Removed directory \"$sharedPath\" contents.");
         }
 
-        $fileLayout = $application->getFileLayout();
+        $fileLayout = $application->getFileLayoutStrategy();
         $appRoot = $application->getAppRoot();
-        if (ApplicationConfig::FILE_LAYOUT_BLUE_GREEN == $fileLayout
+        if (FileLayoutInterface::STRATEGY_BLUE_GREEN == $fileLayout
             && file_exists(
-                "$appRoot/" . ApplicationConfig::PATH_CURRENT_RELEASE
+                "$appRoot/" . FileLayoutInterface::PATH_CURRENT_RELEASE
             )) {
-            unlink("$appRoot/" . ApplicationConfig::PATH_CURRENT_RELEASE);
-            $this->logger->debug("Removed symlink \"$appRoot/" . ApplicationConfig::PATH_CURRENT_RELEASE . "\".");
+            unlink("$appRoot/" . FileLayoutInterface::PATH_CURRENT_RELEASE);
+            $this->logger->debug("Removed symlink \"$appRoot/" . FileLayoutInterface::PATH_CURRENT_RELEASE . "\".");
         }
 
         $databases = $this->applicationConfig->getSnapshotConfig()->getDatabases();
@@ -87,7 +87,7 @@ class ApplicationDestroyer implements LoggerAwareInterface
             $this->logger->debug("Destroying databases.");
             $databasesToDestroy = [];
             foreach ($databases as $database => $databaseInfo) {
-                if ('branch' == $application->getFileLayout()) {
+                if ('branch' == $application->getFileLayoutStrategy()) {
                     if ($branch) {
                         $database .= '_' . $this->sanitizeDatabaseName($branch);
                         $databasesToDestroy[] = $database;

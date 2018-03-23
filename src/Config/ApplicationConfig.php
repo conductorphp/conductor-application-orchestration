@@ -6,21 +6,10 @@
 namespace ConductorAppOrchestration\Config;
 
 use ConductorAppOrchestration\Exception;
-use ConductorAppOrchestration\FileLayoutAwareInterface;
+use ConductorAppOrchestration\FileLayoutInterface;
 
 class ApplicationConfig
 {
-    const FILE_LAYOUT_BLUE_GREEN = 'blue_green';
-    const FILE_LAYOUT_BRANCH = 'branch';
-    const FILE_LAYOUT_DEFAULT = 'default';
-
-    const PATH_CURRENT_RELEASE = 'current_release';
-    const PATH_RELEASES = 'releases';
-    const PATH_BRANCHES = 'branches';
-    const PATH_CODE = 'code';
-    const PATH_LOCAL = 'local';
-    const PATH_SHARED = 'shared';
-
     /**
      * @var array
      */
@@ -111,9 +100,9 @@ class ApplicationConfig
         if (!in_array(
             $this->config['file_layout'],
             [
-                FileLayoutAwareInterface::FILE_LAYOUT_BLUE_GREEN,
-                FileLayoutAwareInterface::FILE_LAYOUT_BRANCH,
-                FileLayoutAwareInterface::FILE_LAYOUT_DEFAULT
+                FileLayoutInterface::STRATEGY_BLUE_GREEN,
+                FileLayoutInterface::STRATEGY_BRANCH,
+                FileLayoutInterface::STRATEGY_DEFAULT
             ]
         )) {
             throw new Exception\DomainException("Invalid file layout \"{$this->config['file_layout']}\".");
@@ -232,7 +221,7 @@ class ApplicationConfig
     /**
      * @return string
      */
-    public function getFileLayout(): string
+    public function getFileLayoutStrategy(): string
     {
         return $this->config['file_layout'];
     }
@@ -400,14 +389,14 @@ class ApplicationConfig
             $branch = $this->sanitizeBranchForFilepath($branch);
         }
         $appRoot = $this->getAppRoot();
-        switch ($this->getFileLayout()) {
-            case FileLayoutAwareInterface::FILE_LAYOUT_BLUE_GREEN:
-                return "$appRoot/" . FileLayoutAwareInterface::PATH_RELEASES . "/$branch";
+        switch ($this->getFileLayoutStrategy()) {
+            case FileLayoutInterface::STRATEGY_BLUE_GREEN:
+                return "$appRoot/" . FileLayoutInterface::PATH_RELEASES . "/$branch";
 
-            case FileLayoutAwareInterface::FILE_LAYOUT_BRANCH:
-                return "$appRoot/" . FileLayoutAwareInterface::PATH_BRANCHES . "/$branch";
+            case FileLayoutInterface::STRATEGY_BRANCH:
+                return "$appRoot/" . FileLayoutInterface::PATH_BRANCHES . "/$branch";
 
-            case FileLayoutAwareInterface::FILE_LAYOUT_DEFAULT:
+            case FileLayoutInterface::STRATEGY_DEFAULT:
             default:
                 return $appRoot;
         }
@@ -424,14 +413,14 @@ class ApplicationConfig
             $branch = $this->sanitizeBranchForFilepath($branch);
         }
         $appRoot = $this->getAppRoot();
-        switch ($this->getFileLayout()) {
-            case FileLayoutAwareInterface::FILE_LAYOUT_BLUE_GREEN:
-                return "$appRoot/" . FileLayoutAwareInterface::PATH_SHARED;
+        switch ($this->getFileLayoutStrategy()) {
+            case FileLayoutInterface::STRATEGY_BLUE_GREEN:
+                return "$appRoot/" . FileLayoutInterface::PATH_SHARED;
 
-            case FileLayoutAwareInterface::FILE_LAYOUT_BRANCH:
-                return "$appRoot/" . FileLayoutAwareInterface::PATH_BRANCHES . "/$branch";
+            case FileLayoutInterface::STRATEGY_BRANCH:
+                return "$appRoot/" . FileLayoutInterface::PATH_BRANCHES . "/$branch";
 
-            case FileLayoutAwareInterface::FILE_LAYOUT_DEFAULT:
+            case FileLayoutInterface::STRATEGY_DEFAULT:
             default:
                 return $appRoot;
         }
@@ -443,16 +432,36 @@ class ApplicationConfig
     public function getSharedPath(): string
     {
         $appRoot = $this->getAppRoot();
-        switch ($this->getFileLayout()) {
-            case FileLayoutAwareInterface::FILE_LAYOUT_BLUE_GREEN:
-                return "$appRoot/" . FileLayoutAwareInterface::PATH_SHARED;
+        switch ($this->getFileLayoutStrategy()) {
+            case FileLayoutInterface::STRATEGY_BLUE_GREEN:
+                return "$appRoot/" . FileLayoutInterface::PATH_SHARED;
 
-            case FileLayoutAwareInterface::FILE_LAYOUT_BRANCH:
-                return "$appRoot/" . FileLayoutAwareInterface::PATH_SHARED;
+            case FileLayoutInterface::STRATEGY_BRANCH:
+                return "$appRoot/" . FileLayoutInterface::PATH_SHARED;
 
-            case FileLayoutAwareInterface::FILE_LAYOUT_DEFAULT:
+            case FileLayoutInterface::STRATEGY_DEFAULT:
             default:
                 return $appRoot;
+        }
+    }
+
+    /**
+     * @param string      $type
+     * @param string|null $branch
+     *
+     * @return string
+     */
+    public function getPath(string $type, string $branch = null): string
+    {
+        switch ($type) {
+            case FileLayoutInterface::PATH_CODE:
+                return $this->getCodePath($branch);
+            case FileLayoutInterface::PATH_LOCAL:
+                return $this->getLocalPath($branch);
+            case FileLayoutInterface::PATH_SHARED:
+                return $this->getSharedPath();
+            default:
+                throw new Exception\RuntimeException('Invalid path type "' . $type . '" given.');
         }
     }
 }

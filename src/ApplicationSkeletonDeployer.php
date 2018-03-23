@@ -29,10 +29,6 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
      */
     private $localShellAdapter;
     /**
-     * @var FileLayoutHelper
-     */
-    private $fileLayoutHelper;
-    /**
      * @var LoggerInterface
      */
     protected $logger;
@@ -40,19 +36,17 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
     /**
      * ApplicationSkeletonDeployer constructor.
      *
+     * @param ApplicationConfig    $applicationConfig
      * @param LocalShellAdapter    $localShellAdapter
-     * @param FileLayoutHelper     $fileLayoutHelper
      * @param LoggerInterface|null $logger
      */
     public function __construct(
         ApplicationConfig $applicationConfig,
         LocalShellAdapter $localShellAdapter,
-        FileLayoutHelper $fileLayoutHelper,
         LoggerInterface $logger = null
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->localShellAdapter = $localShellAdapter;
-        $this->fileLayoutHelper = $fileLayoutHelper;
         if (is_null($logger)) {
             $logger = new NullLogger();
         }
@@ -65,7 +59,7 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
     public function deploySkeleton(
         string $branch = null
     ): void {
-        if ('branch' == $this->applicationConfig->getFileLayout() && !$branch) {
+        if ('branch' == $this->applicationConfig->getFileLayoutStrategy() && !$branch) {
             throw new Exception\RuntimeException(
                 '$branch must be set for this environment because it is running the '
                 . '"branch" file layout.'
@@ -141,7 +135,7 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
 
     private function prepareCurrentReleasePath(): void
     {
-        if (FileLayoutAwareInterface::FILE_LAYOUT_BLUE_GREEN == $this->applicationConfig->getFileLayout()) {
+        if (FileLayoutInterface::STRATEGY_BLUE_GREEN == $this->applicationConfig->getFileLayoutStrategy()) {
             $appRoot = $this->applicationConfig->getAppRoot();
             $relativeCodePath = substr($this->applicationConfig->getCodePath(), strlen($appRoot) + 1);
             if (!file_exists("$appRoot/current_release")) {
@@ -337,7 +331,7 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
      */
     private function resolveFilename(string $location, string $filename): string
     {
-        $pathPrefix = $this->fileLayoutHelper->resolvePathPrefix($this->applicationConfig, $location);
+        $pathPrefix = $this->applicationConfig->getPath($location);
         $resolvedFilename = $this->applicationConfig->getAppRoot();
         if ($pathPrefix) {
             $resolvedFilename .= "/$pathPrefix";
@@ -375,7 +369,7 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
 
         // Special use case to replace branch name in any configuration files in which it is needed with the branch
         // specific database name.
-        if ('branch' == $this->applicationConfig->getFileLayout()) {
+        if ('branch' == $this->applicationConfig->getFileLayoutStrategy()) {
             $databaseSanitizedBranchName = $this->sanitizeDatabaseName($branch);
             $urlSanitizedBranchName = $this->sanitizeUrl($branch);
             foreach ($templateVars as &$templateVar) {

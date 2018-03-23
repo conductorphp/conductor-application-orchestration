@@ -5,9 +5,7 @@ namespace ConductorAppOrchestration\Snapshot\Command;
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\Config\ApplicationConfigAwareInterface;
 use ConductorAppOrchestration\Exception;
-use ConductorAppOrchestration\FileLayoutAwareInterface;
-use ConductorAppOrchestration\FileLayoutHelper;
-use ConductorAppOrchestration\FileLayoutHelperAwareInterface;
+use ConductorAppOrchestration\FileLayoutInterface;
 use ConductorCore\Database\DatabaseImportExportAdapterManager;
 use ConductorCore\Database\DatabaseImportExportAdapterManagerAwareInterface;
 use ConductorCore\Filesystem\MountManager\MountManager;
@@ -23,7 +21,7 @@ use Psr\Log\NullLogger;
  */
 class UploadDatabasesCommand
     implements SnapshotCommandInterface, ApplicationConfigAwareInterface, MountManagerAwareInterface,
-               FileLayoutHelperAwareInterface, DatabaseImportExportAdapterManagerAwareInterface, LoggerAwareInterface
+               DatabaseImportExportAdapterManagerAwareInterface, LoggerAwareInterface
 {
     /**
      * @var ApplicationConfig
@@ -33,10 +31,6 @@ class UploadDatabasesCommand
      * @var MountManager
      */
     private $mountManager;
-    /**
-     * @var FileLayoutHelper
-     */
-    private $fileLayoutHelper;
     /**
      * @var DatabaseImportExportAdapterManager
      */
@@ -91,7 +85,7 @@ class UploadDatabasesCommand
                 if (isset($databaseInfo['local_database_name'])) {
                     $localDatabaseName = $database['local_database_name'];
                 } else {
-                    if (FileLayoutAwareInterface::FILE_LAYOUT_BRANCH == $this->applicationConfig->getFileLayout()) {
+                    if (FileLayoutInterface::STRATEGY_BRANCH == $this->applicationConfig->getFileLayoutStrategy()) {
                         $localDatabaseName = $databaseName . '_' . $this->sanitizeDatabaseName($branch);
                     } else {
                         $localDatabaseName = $databaseName;
@@ -142,14 +136,6 @@ class UploadDatabasesCommand
     public function setMountManager(MountManager $mountManager): void
     {
         $this->mountManager = $mountManager;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function setFileLayoutHelper(FileLayoutHelper $fileLayoutHelper): void
-    {
-        $this->fileLayoutHelper = $fileLayoutHelper;
     }
 
     /**

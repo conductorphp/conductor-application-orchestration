@@ -5,8 +5,6 @@ namespace ConductorAppOrchestration\Snapshot\Command;
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\Config\ApplicationConfigAwareInterface;
 use ConductorAppOrchestration\Exception;
-use ConductorAppOrchestration\FileLayoutHelper;
-use ConductorAppOrchestration\FileLayoutHelperAwareInterface;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\Filesystem\MountManager\MountManagerAwareInterface;
 use Psr\Log\LoggerAwareInterface;
@@ -20,7 +18,7 @@ use Psr\Log\NullLogger;
  */
 class SyncAssetsCommand
     implements SnapshotCommandInterface, ApplicationConfigAwareInterface, MountManagerAwareInterface,
-               FileLayoutHelperAwareInterface, LoggerAwareInterface
+               LoggerAwareInterface
 {
     /**
      * @var ApplicationConfig
@@ -30,10 +28,6 @@ class SyncAssetsCommand
      * @var MountManager
      */
     private $mountManager;
-    /**
-     * @var FileLayoutHelper
-     */
-    private $fileLayoutHelper;
 
     /**
      * @var LoggerInterface
@@ -78,14 +72,10 @@ class SyncAssetsCommand
             throw new Exception\RuntimeException('$this->mountManager must be set.');
         }
 
-        if (!isset($this->fileLayoutHelper)) {
-            throw new Exception\RuntimeException('$this->fileLayoutHelper must be set.');
-        }
-
         if (!empty($options['assets'])) {
             $snapshotConfig = $this->applicationConfig->getSnapshotConfig();
             foreach ($options['assets'] as $assetPath => $asset) {
-                $pathPrefix = $this->fileLayoutHelper->resolvePathPrefix($this->applicationConfig, $asset['location']);
+                $pathPrefix = $this->applicationConfig->getPath($asset['location']);
                 $sourcePath = $asset['local_path'] ?? $assetPath;
                 if ($pathPrefix) {
                     $sourcePath = "$pathPrefix/$sourcePath";
@@ -132,11 +122,4 @@ class SyncAssetsCommand
         $this->mountManager = $mountManager;
     }
 
-    /**
-     * @inheritdoc
-     */
-    public function setFileLayoutHelper(FileLayoutHelper $fileLayoutHelper): void
-    {
-        $this->fileLayoutHelper = $fileLayoutHelper;
-    }
 }

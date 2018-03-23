@@ -6,6 +6,7 @@ use Amp\Loop;
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\Config\ApplicationConfigAwareInterface;
 use ConductorAppOrchestration\Deploy\DeploymentState;
+use ConductorAppOrchestration\Exception\PlanPathNotEmptyException;
 use ConductorAppOrchestration\MaintenanceStrategy\MaintenanceStrategyAwareInterface;
 use ConductorAppOrchestration\MaintenanceStrategy\MaintenanceStrategyInterface;
 use ConductorCore\Database\DatabaseAdapterManager;
@@ -45,10 +46,6 @@ class PlanRunner implements LoggerAwareInterface
      * @var MaintenanceStrategyInterface
      */
     private $maintenanceStrategy;
-    /**
-     * @var FileLayoutHelperAwareInterface
-     */
-    private $fileLayoutHelper;
     /**
      * @var DatabaseAdapterManager
      */
@@ -110,7 +107,6 @@ class PlanRunner implements LoggerAwareInterface
      * @param ShellAdapterInterface              $shellAdapter
      * @param MountManager                       $mountManager
      * @param MaintenanceStrategyInterface       $maintenanceStrategy
-     * @param FileLayoutHelper                   $fileLayoutHelper
      * @param DatabaseAdapterManager             $databaseAdapterManager
      * @param DatabaseImportExportAdapterManager $databaseImportExportAdapterManager
      * @param ApplicationSkeletonDeployer        $applicationSkeletonDeployer
@@ -127,7 +123,6 @@ class PlanRunner implements LoggerAwareInterface
         ShellAdapterInterface $shellAdapter,
         MountManager $mountManager,
         MaintenanceStrategyInterface $maintenanceStrategy,
-        FileLayoutHelper $fileLayoutHelper,
         DatabaseAdapterManager $databaseAdapterManager,
         DatabaseImportExportAdapterManager $databaseImportExportAdapterManager,
         ApplicationSkeletonDeployer $applicationSkeletonDeployer,
@@ -144,7 +139,6 @@ class PlanRunner implements LoggerAwareInterface
         $this->shellAdapter = $shellAdapter;
         $this->mountManager = $mountManager;
         $this->maintenanceStrategy = $maintenanceStrategy;
-        $this->fileLayoutHelper = $fileLayoutHelper;
         $this->databaseAdapterManager = $databaseAdapterManager;
         $this->databaseImportExportAdapterManager = $databaseImportExportAdapterManager;
         $this->applicationSkeletonDeployer = $applicationSkeletonDeployer;
@@ -258,7 +252,7 @@ class PlanRunner implements LoggerAwareInterface
             }
         } catch (\Exception $e) {
             $this->logger->error('An error occurred running plan "' . $planName . '".');
-            if (!(isset($plan) && $plan->runInAppRoot())) {
+            if (!$e instanceof PlanPathNotEmptyException && !(isset($plan) && $plan->runInAppRoot())) {
                 $this->clearPlanPath();
             }
             chdir($origWorkingDirectory);
@@ -327,7 +321,7 @@ class PlanRunner implements LoggerAwareInterface
 
         $isEmpty = !(new FilesystemIterator($this->planPath))->valid();
         if (!$isEmpty) {
-            throw new Exception\RuntimeException(
+            throw new Exception\PlanPathNotEmptyException(
                 sprintf(
                     'Path "%s" is not empty. Ensure path is empty, then run this command again.',
                     $this->planPath
@@ -371,8 +365,13 @@ class PlanRunner implements LoggerAwareInterface
      * @param array  $metDependencies
      * @param array  $stepArguments
      */
-    private function runStep(string $name, array $step, array $conditions, array $metDependencies, array $stepArguments): void
-    {
+    private function runStep(
+        string $name,
+        array $step,
+        array $conditions,
+        array $metDependencies,
+        array $stepArguments
+    ): void {
         // If array, run commands in parallel
         if (!empty($step['steps'])) {
             foreach ($step['steps'] as $parallelName => $parallelStep) {
@@ -472,10 +471,6 @@ class PlanRunner implements LoggerAwareInterface
 
             if ($stepObject instanceof MaintenanceStrategyAwareInterface) {
                 $stepObject->setMaintenanceStrategy($this->maintenanceStrategy);
-            }
-
-            if ($stepObject instanceof FileLayoutHelperAwareInterface) {
-                $stepObject->setFileLayoutHelper($this->fileLayoutHelper);
             }
 
             if ($stepObject instanceof DatabaseAdapterManagerAwareInterface) {

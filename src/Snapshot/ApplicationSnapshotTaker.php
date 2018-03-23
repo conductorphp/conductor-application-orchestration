@@ -6,7 +6,6 @@
 namespace ConductorAppOrchestration\Snapshot;
 
 use ConductorAppOrchestration\Config\ApplicationConfig;
-use ConductorAppOrchestration\FileLayoutHelper;
 use ConductorAppOrchestration\PlanRunner;
 use ConductorAppOrchestration\Snapshot\Command\SnapshotCommandInterface;
 use ConductorCore\Database\DatabaseImportExportAdapterManager;
@@ -39,10 +38,6 @@ class ApplicationSnapshotTaker
      */
     private $localShellAdapter;
     /**
-     * @var FileLayoutHelper
-     */
-    private $fileLayoutHelper;
-    /**
      * @var PlanRunner
      */
     private $planRunner;
@@ -62,7 +57,6 @@ class ApplicationSnapshotTaker
      * @param DatabaseImportExportAdapterManager $databaseImportExportAdapterManager
      * @param MountManager                       $mountManager
      * @param ShellAdapterInterface              $localShellAdapter
-     * @param FileLayoutHelper                   $fileLayoutHelper
      * @param PlanRunner                         $planRunner
      * @param string                             $planPath
      * @param LoggerInterface|null               $logger
@@ -72,7 +66,6 @@ class ApplicationSnapshotTaker
         DatabaseImportExportAdapterManager $databaseImportExportAdapterManager,
         MountManager $mountManager,
         ShellAdapterInterface $localShellAdapter,
-        FileLayoutHelper $fileLayoutHelper,
         PlanRunner $planRunner,
         string $planPath = '/tmp/.conductor/snapshot',
         LoggerInterface $logger = null
@@ -81,7 +74,6 @@ class ApplicationSnapshotTaker
         $this->databaseImportExportAdapterManager = $databaseImportExportAdapterManager;
         $this->mountManager = $mountManager;
         $this->localShellAdapter = $localShellAdapter;
-        $this->fileLayoutHelper = $fileLayoutHelper;
         $this->planRunner = $planRunner;
         $this->planPath = $planPath;
         if (is_null($logger)) {

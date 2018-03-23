@@ -8,7 +8,6 @@ namespace ConductorAppOrchestration;
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\Shell\Adapter\LocalShellAdapter;
-use ConductorCore\Shell\Adapter\ShellAdapterInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -28,10 +27,6 @@ class ApplicationAssetDeployer
      */
     private $localShellAdapter;
     /**
-     * @var FileLayoutHelper
-     */
-    private $fileLayoutHelper;
-    /**
      * @var MountManager
      */
     protected $mountManager;
@@ -45,20 +40,17 @@ class ApplicationAssetDeployer
      *
      * @param ApplicationConfig    $applicationConfig
      * @param LocalShellAdapter    $localShellAdapter
-     * @param FileLayoutHelper     $fileLayoutHelper
      * @param MountManager         $mountManager
      * @param LoggerInterface|null $logger
      */
     public function __construct(
         ApplicationConfig $applicationConfig,
         LocalShellAdapter $localShellAdapter,
-        FileLayoutHelper $fileLayoutHelper,
         MountManager $mountManager,
         LoggerInterface $logger = null
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->localShellAdapter = $localShellAdapter;
-        $this->fileLayoutHelper = $fileLayoutHelper;
         $this->mountManager = $mountManager;
         if (is_null($logger)) {
             $logger = new NullLogger();
@@ -78,10 +70,10 @@ class ApplicationAssetDeployer
     }
 
     /**
-     * @param string      $snapshotPath
-     * @param string      $snapshotName
-     * @param array       $assets
-     * @param array       $syncOptions
+     * @param string $snapshotPath
+     * @param string $snapshotName
+     * @param array  $assets
+     * @param array  $syncOptions
      */
     public function deployAssets(
         string $snapshotPath,
@@ -108,7 +100,7 @@ class ApplicationAssetDeployer
                 $destinationPath = $sourcePath;
             }
 
-            $pathPrefix = $this->fileLayoutHelper->resolvePathPrefix($application, $asset['location']);
+            $pathPrefix = $this->applicationConfig->getPath($asset['location']);
             $sourcePath = "$snapshotPath/$snapshotName/assets/{$asset['location']}/$sourcePath";
             if ($pathPrefix) {
                 $destinationPath = "$pathPrefix/$destinationPath";
