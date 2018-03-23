@@ -50,7 +50,7 @@ class AppConfigShowCommand extends Command
         $outputTable = new Table($output);
         $outputTable
             ->setHeaders(['Key', 'Value']);
-        $this->expandToOutputRows(null, $this->applicationConfig->getArrayCopy(), $outputTable, $filter);
+        $this->expandToOutputRows(null, $this->applicationConfig->toArray(), $outputTable, $filter);
         $outputTable->render();
         return 0;
     }

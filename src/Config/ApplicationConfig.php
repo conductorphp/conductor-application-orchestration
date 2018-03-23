@@ -291,14 +291,6 @@ class ApplicationConfig
     }
 
     /**
-     * @return array
-     */
-    public function getArrayCopy(): array
-    {
-        return $this->config;
-    }
-
-    /**
      * @return string
      */
     public function getCurrentEnvironment(): string
