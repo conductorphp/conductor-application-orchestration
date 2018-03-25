@@ -15,7 +15,7 @@ class Plan
     /**
      * @var bool
      */
-    private $runInAppRoot;
+    private $runInCodeRoot;
     /**
      * @var array
      */
@@ -49,7 +49,7 @@ class Plan
         $this->name = $name;
         $this->stepInterface = $stepInterface;
         $plan = $this->validateAndNormalize($plan);
-        $this->runInAppRoot = !empty($plan['run_in_app_root']);
+        $this->runInCodeRoot = !empty($plan['run_in_code_root']);
         $this->preflightSteps = $plan['preflight_steps'];
         $this->cleanSteps = $plan['clean_steps'];
         $this->steps = $plan['steps'];
@@ -68,9 +68,9 @@ class Plan
     /**
      * @return bool
      */
-    public function runInAppRoot(): bool
+    public function runInCodeRoot(): bool
     {
-        return $this->runInAppRoot;
+        return $this->runInCodeRoot;
     }
 
     /**

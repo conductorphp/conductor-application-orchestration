@@ -246,13 +246,13 @@ class PlanRunner implements LoggerAwareInterface
                 }
             }
 
-            if (!$plan->runInAppRoot()) {
+            if (!$plan->runInCodeRoot()) {
                 $this->clearPlanPath();
                 chdir($origWorkingDirectory);
             }
         } catch (\Exception $e) {
             $this->logger->error('An error occurred running plan "' . $planName . '".');
-            if (!$e instanceof PlanPathNotEmptyException && !(isset($plan) && $plan->runInAppRoot())) {
+            if (!$e instanceof PlanPathNotEmptyException && !(isset($plan) && $plan->runInCodeRoot())) {
                 $this->clearPlanPath();
             }
             chdir($origWorkingDirectory);
@@ -300,7 +300,7 @@ class PlanRunner implements LoggerAwareInterface
      */
     private function preparePlanPath(Plan $plan): void
     {
-        if ($plan->runInAppRoot()) {
+        if ($plan->runInCodeRoot()) {
             $this->planPath = $this->applicationConfig->getAppRoot();
             return;
         }
