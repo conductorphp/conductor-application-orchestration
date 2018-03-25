@@ -1,6 +1,6 @@
 <?php
 
-namespace ConductorAppOrchestration\MaintenanceStrategy;
+namespace ConductorAppOrchestration\Maintenance;
 
 interface MaintenanceStrategyInterface
 {

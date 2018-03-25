@@ -1,10 +1,8 @@
 <?php
 
-namespace ConductorAppOrchestration;
+namespace ConductorAppOrchestration\Maintenance;
 
-use ConductorAppOrchestration\MaintenanceStrategy\MaintenanceStrategyInterface;
-
-class AppMaintenance
+class ApplicationMaintenanceManager
 {
     /**
      * @var MaintenanceStrategyInterface

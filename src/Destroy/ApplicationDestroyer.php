@@ -3,9 +3,10 @@
  * @author Kirk Madera <kmadera@robofirm.com>
  */
 
-namespace ConductorAppOrchestration;
+namespace ConductorAppOrchestration\Destroy;
 
 use ConductorAppOrchestration\Config\ApplicationConfig;
+use ConductorAppOrchestration\FileLayoutInterface;
 use ConductorCore\Database\DatabaseAdapterInterface;
 use ConductorCore\Database\DatabaseAdapterManager;
 use Psr\Log\LoggerAwareInterface;

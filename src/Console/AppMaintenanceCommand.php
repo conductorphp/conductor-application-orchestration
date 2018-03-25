@@ -6,7 +6,7 @@
 namespace ConductorAppOrchestration\Console;
 
 use ConductorAppOrchestration\Config\ApplicationConfig;
-use ConductorAppOrchestration\MaintenanceStrategy\MaintenanceStrategyInterface;
+use ConductorAppOrchestration\Maintenance\MaintenanceStrategyInterface;
 use ConductorCore\MonologConsoleHandlerAwareTrait;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;

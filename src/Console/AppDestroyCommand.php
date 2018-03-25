@@ -5,7 +5,7 @@
 
 namespace ConductorAppOrchestration\Console;
 
-use ConductorAppOrchestration\ApplicationDestroyer;
+use ConductorAppOrchestration\Destroy\ApplicationDestroyer;
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorCore\MonologConsoleHandlerAwareTrait;
 use Psr\Log\LoggerInterface;

@@ -3,8 +3,8 @@
 namespace ConductorAppOrchestration\Snapshot\Command;
 
 use ConductorAppOrchestration\Exception;
-use ConductorAppOrchestration\MaintenanceStrategy\MaintenanceStrategyAwareInterface;
-use ConductorAppOrchestration\MaintenanceStrategy\MaintenanceStrategyInterface;
+use ConductorAppOrchestration\Maintenance\MaintenanceStrategyAwareInterface;
+use ConductorAppOrchestration\Maintenance\MaintenanceStrategyInterface;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
