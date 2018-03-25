@@ -84,7 +84,7 @@ class AppSnapshotCommand extends Command
                 null,
                 InputOption::VALUE_REQUIRED,
                 'Snapshot plan to run.',
-                $this->applicationConfig->getDefaultSnapshotPlan()
+                $this->applicationConfig->getSnapshotConfig()->getDefaultPlan()
             )
             ->addOption(
                 'snapshot-path',

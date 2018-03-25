@@ -213,14 +213,6 @@ class ApplicationConfig
     /**
      * @return string
      */
-    public function getDefaultSnapshotPlan(): string
-    {
-        return $this->config['snapshot']['default_plan'] ?? 'default';
-    }
-
-    /**
-     * @return string
-     */
     public function getFileLayoutStrategy(): string
     {
         return $this->config['file_layout'];

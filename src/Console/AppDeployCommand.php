@@ -76,7 +76,7 @@ class AppDeployCommand extends Command
                 null,
                 InputOption::VALUE_REQUIRED,
                 'Deploy plan to run.',
-                'default'
+                $this->applicationConfig->getDeployConfig()->getDefaultPlan()
             )
             ->addOption(
                 'build-id',
