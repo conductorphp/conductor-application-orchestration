@@ -2,8 +2,8 @@
 
 namespace ConductorAppOrchestration\Deploy\Command;
 
-use ConductorAppOrchestration\ApplicationAssetDeployer;
-use ConductorAppOrchestration\ApplicationAssetDeployerAwareInterface;
+use ConductorAppOrchestration\Deploy\ApplicationAssetDeployer;
+use ConductorAppOrchestration\Deploy\ApplicationAssetDeployerAwareInterface;
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\Config\ApplicationConfigAwareInterface;
 use ConductorAppOrchestration\Exception;

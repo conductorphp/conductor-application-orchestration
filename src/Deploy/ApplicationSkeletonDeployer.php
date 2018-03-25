@@ -3,9 +3,11 @@
  * @author Kirk Madera <kmadera@robofirm.com>
  */
 
-namespace ConductorAppOrchestration;
+namespace ConductorAppOrchestration\Deploy;
 
+use ConductorAppOrchestration\Exception;
 use ConductorAppOrchestration\Config\ApplicationConfig;
+use ConductorAppOrchestration\FileLayoutInterface;
 use ConductorCore\Shell\Adapter\LocalShellAdapter;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;

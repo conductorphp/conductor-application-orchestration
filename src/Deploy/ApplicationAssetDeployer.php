@@ -3,8 +3,9 @@
  * @author Kirk Madera <kmadera@robofirm.com>
  */
 
-namespace ConductorAppOrchestration;
+namespace ConductorAppOrchestration\Deploy;
 
+use ConductorAppOrchestration\Exception;
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\Shell\Adapter\LocalShellAdapter;

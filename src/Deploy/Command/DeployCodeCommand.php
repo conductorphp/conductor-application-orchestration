@@ -2,8 +2,8 @@
 
 namespace ConductorAppOrchestration\Deploy\Command;
 
-use ConductorAppOrchestration\ApplicationCodeDeployer;
-use ConductorAppOrchestration\ApplicationCodeDeployerAwareInterface;
+use ConductorAppOrchestration\Deploy\ApplicationCodeDeployer;
+use ConductorAppOrchestration\Deploy\ApplicationCodeDeployerAwareInterface;
 use ConductorAppOrchestration\Exception;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;

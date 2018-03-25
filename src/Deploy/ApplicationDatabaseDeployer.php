@@ -3,9 +3,11 @@
  * @author Kirk Madera <kmadera@robofirm.com>
  */
 
-namespace ConductorAppOrchestration;
+namespace ConductorAppOrchestration\Deploy;
 
+use ConductorAppOrchestration\Exception;
 use ConductorAppOrchestration\Config\ApplicationConfig;
+use ConductorAppOrchestration\FileLayoutInterface;
 use ConductorCore\Database\DatabaseAdapterManager;
 use ConductorCore\Database\DatabaseImportExportAdapterInterface;
 use ConductorCore\Database\DatabaseImportExportAdapterManager;
@@ -216,7 +218,7 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
      */
     private function findScript(string $scriptFilename): string
     {
-        $conductorRoot = realpath(__DIR__ . '/../../../..');
+        $conductorRoot = realpath(__DIR__ . '/../../../conductor');
         $configRoot = "$conductorRoot/config/app";
         $environment = $this->applicationConfig->getCurrentEnvironment();
 

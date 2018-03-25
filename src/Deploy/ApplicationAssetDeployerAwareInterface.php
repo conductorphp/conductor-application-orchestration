@@ -1,6 +1,6 @@
 <?php
 
-namespace ConductorAppOrchestration;
+namespace ConductorAppOrchestration\Deploy;
 
 interface ApplicationAssetDeployerAwareInterface
 {
