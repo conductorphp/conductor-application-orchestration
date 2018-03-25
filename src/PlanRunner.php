@@ -61,7 +61,7 @@ class PlanRunner implements LoggerAwareInterface
     /**
      * @var ApplicationCodeDeployer
      */
-    private $applicationCodeInstaller;
+    private $applicationCodeDeployer;
     /**
      * @var ApplicationAssetDeployer
      */
@@ -142,7 +142,7 @@ class PlanRunner implements LoggerAwareInterface
         $this->databaseAdapterManager = $databaseAdapterManager;
         $this->databaseImportExportAdapterManager = $databaseImportExportAdapterManager;
         $this->applicationSkeletonDeployer = $applicationSkeletonDeployer;
-        $this->applicationCodeInstaller = $applicationCodeInstaller;
+        $this->applicationCodeDeployer = $applicationCodeInstaller;
         $this->applicationAssetDeployer = $applicationAssetDeployer;
         $this->applicationDatabaseDeployer = $applicationDatabaseDeployer;
         $this->deploymentState = $deploymentState;
@@ -486,7 +486,7 @@ class PlanRunner implements LoggerAwareInterface
             }
 
             if ($stepObject instanceof ApplicationCodeDeployerAwareInterface) {
-                $stepObject->setApplicationCodeDeployer($this->applicationCodeInstaller);
+                $stepObject->setApplicationCodeDeployer($this->applicationCodeDeployer);
             }
 
             if ($stepObject instanceof ApplicationAssetDeployerAwareInterface) {
