@@ -27,7 +27,7 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
     /**
      * @var LocalShellAdapter
      */
-    private $localShellAdapter;
+    private $shellAdapter;
     /**
      * @var LoggerInterface
      */
@@ -46,7 +46,7 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         LoggerInterface $logger = null
     ) {
         $this->applicationConfig = $applicationConfig;
-        $this->localShellAdapter = $localShellAdapter;
+        $this->shellAdapter = $localShellAdapter;
         if (is_null($logger)) {
             $logger = new NullLogger();
         }
@@ -286,7 +286,7 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
             if (!is_file($resolvedFilename) || is_link($resolvedFilename)) {
                 if (is_dir($resolvedFilename)) {
                     $command = 'rm -rf ' . escapeshellarg($resolvedFilename);
-                    $this->localShellAdapter->runShellCommand($command);
+                    $this->shellAdapter->runShellCommand($command);
                 } else {
                     unlink($resolvedFilename);
                 }
@@ -412,7 +412,7 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
                 unlink($resolvedFilename);
             } else {
                 $command = 'rm -rf ' . escapeshellarg($resolvedFilename);
-                $this->localShellAdapter->runShellCommand($command);
+                $this->shellAdapter->runShellCommand($command);
             }
             symlink($resolvedTargetFilename, $resolvedFilename);
             $this->logger->debug("Ensured \"$resolvedFilename\" is a symlink pointed to \"$resolvedTargetFilename\".");
@@ -461,6 +461,9 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
      */
     public function setLogger(LoggerInterface $logger): void
     {
+        if ($this->shellAdapter instanceof LoggerAwareInterface) {
+            $this->shellAdapter->setLogger($logger);
+        }
         $this->logger = $logger;
     }
 

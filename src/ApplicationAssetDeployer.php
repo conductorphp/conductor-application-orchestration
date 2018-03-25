@@ -8,6 +8,7 @@ namespace ConductorAppOrchestration;
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\Shell\Adapter\LocalShellAdapter;
+use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -25,7 +26,7 @@ class ApplicationAssetDeployer
     /**
      * @var LocalShellAdapter
      */
-    private $localShellAdapter;
+    private $shellAdapter;
     /**
      * @var MountManager
      */
@@ -50,22 +51,11 @@ class ApplicationAssetDeployer
         LoggerInterface $logger = null
     ) {
         $this->applicationConfig = $applicationConfig;
-        $this->localShellAdapter = $localShellAdapter;
+        $this->shellAdapter = $localShellAdapter;
         $this->mountManager = $mountManager;
         if (is_null($logger)) {
             $logger = new NullLogger();
         }
-        $this->logger = $logger;
-    }
-
-    /**
-     * @param LoggerInterface $logger
-     *
-     * @return void
-     */
-    public function setLogger(LoggerInterface $logger): void
-    {
-        $this->mountManager->setLogger($logger);
         $this->logger = $logger;
     }
 
@@ -113,6 +103,20 @@ class ApplicationAssetDeployer
                 $syncOptions
             );
         }
+    }
+
+    /**
+     * @param LoggerInterface $logger
+     *
+     * @return void
+     */
+    public function setLogger(LoggerInterface $logger): void
+    {
+        if ($this->shellAdapter instanceof LoggerAwareInterface) {
+            $this->shellAdapter->setLogger($logger);
+        }
+        $this->mountManager->setLogger($logger);
+        $this->logger = $logger;
     }
 
 }

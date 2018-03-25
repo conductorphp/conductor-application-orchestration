@@ -41,7 +41,7 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
     /**
      * @var LocalShellAdapter
      */
-    private $localShellAdapter;
+    private $shellAdapter;
     /**
      * @var LoggerInterface
      */
@@ -59,7 +59,7 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
         $this->mountManager = $mountManager;
         $this->databaseImportAdapterManager = $databaseImportAdapterManager;
         $this->databaseAdapterManager = $databaseAdapterManager;
-        $this->localShellAdapter = $localShellAdapter;
+        $this->shellAdapter = $localShellAdapter;
         if (is_null($logger)) {
             $logger = new NullLogger();
         }
@@ -242,6 +242,10 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
     {
         $this->mountManager->setLogger($logger);
         $this->databaseImportAdapterManager->setLogger($logger);
+        $this->databaseAdapterManager->setLogger($logger);
+        if ($this->shellAdapter instanceof LoggerAwareInterface) {
+            $this->shellAdapter->setLogger($logger);
+        }
         $this->logger = $logger;
     }
 }

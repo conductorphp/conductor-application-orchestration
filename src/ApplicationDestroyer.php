@@ -168,6 +168,7 @@ class ApplicationDestroyer implements LoggerAwareInterface
      */
     public function setLogger(LoggerInterface $logger): void
     {
+        $this->databaseAdapterManager->setLogger($logger);
         $this->logger = $logger;
     }
 }

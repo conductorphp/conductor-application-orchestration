@@ -9,6 +9,7 @@ use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\Repository\RepositoryAdapterInterface;
 use ConductorCore\Shell\Adapter\ShellAdapterInterface;
+use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -133,6 +134,15 @@ class ApplicationCodeDeployer
      */
     public function setLogger(LoggerInterface $logger): void
     {
+        $this->mountManager->setLogger($logger);
+        if ($this->repositoryAdapter instanceof LoggerAwareInterface) {
+            $this->repositoryAdapter->setLogger($logger);
+        }
+
+        if ($this->shellAdapter instanceof LoggerAwareInterface) {
+            $this->shellAdapter->setLogger($logger);
+        }
+
         $this->logger = $logger;
     }
 }

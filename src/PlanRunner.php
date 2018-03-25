@@ -527,6 +527,28 @@ class PlanRunner implements LoggerAwareInterface
     public function setLogger(LoggerInterface $logger): void
     {
         $this->logger = $logger;
+        if ($this->shellAdapter instanceof LoggerAwareInterface) {
+            $this->shellAdapter->setLogger($logger);
+        }
+
+        if ($this->repositoryAdapter instanceof LoggerAwareInterface) {
+            $this->repositoryAdapter->setLogger($logger);
+        }
+
+        if ($this->mountManager instanceof LoggerAwareInterface) {
+            $this->mountManager->setLogger($logger);
+        }
+
+        if ($this->maintenanceStrategy instanceof LoggerAwareInterface) {
+            $this->maintenanceStrategy->setLogger($logger);
+        }
+
+        $this->applicationCodeDeployer->setLogger($logger);
+        $this->applicationDatabaseDeployer->setLogger($logger);
+        $this->applicationAssetDeployer->setLogger($logger);
+        $this->applicationSkeletonDeployer->setLogger($logger);
+        $this->databaseAdapterManager->setLogger($logger);
+        $this->databaseImportExportAdapterManager->setLogger($logger);
     }
 
 }
