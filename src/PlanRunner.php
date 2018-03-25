@@ -178,16 +178,17 @@ class PlanRunner implements LoggerAwareInterface
             $this->planPath = getcwd();
         }
 
+        $this->logger->debug('Determining current deployment state.');
         $metDependencies = [];
-        if (!empty($conditions['assets']) || $this->deploymentState->assetsDeployed()) {
+        if (in_array('assets', $conditions) || $this->deploymentState->assetsDeployed()) {
             $metDependencies[] = 'assets';
         }
 
-        if (!empty($conditions['code']) || $this->deploymentState->codeDeployed()) {
+        if (in_array('code', $conditions) || $this->deploymentState->codeDeployed()) {
             $metDependencies[] = 'code';
         }
 
-        if (!empty($conditions['databases']) || $this->deploymentState->databasesDeployed()) {
+        if (in_array('databases', $conditions) || $this->deploymentState->databasesDeployed()) {
             $metDependencies[] = 'databases';
         }
 
