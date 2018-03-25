@@ -75,7 +75,6 @@ class ApplicationAssetDeployer
             throw new Exception\RuntimeException('No assets given for deployment.');
         }
 
-        $application = $this->applicationConfig;
         $this->logger->info('Installing assets');
         foreach ($assets as $sourcePath => $asset) {
             if (empty($asset['ensure']) || empty($asset['location'])) {

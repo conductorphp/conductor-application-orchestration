@@ -2,8 +2,8 @@
 
 namespace ConductorAppOrchestration\Deploy\Command;
 
-use ConductorAppOrchestration\ApplicationDatabaseDeployer;
-use ConductorAppOrchestration\ApplicationDatabaseDeployerAwareInterface;
+use ConductorAppOrchestration\ApplicationAssetDeployer;
+use ConductorAppOrchestration\ApplicationAssetDeployerAwareInterface;
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\Config\ApplicationConfigAwareInterface;
 use ConductorAppOrchestration\Exception;
@@ -12,17 +12,17 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 /**
- * Class DeployDatabasesCommand
+ * Class DeployAssetsCommand
  *
  * @package ConductorAppOrchestration\Snapshot\Command
  */
-class DeployDatabasesCommand
-    implements DeployCommandInterface, ApplicationDatabaseDeployerAwareInterface, LoggerAwareInterface, ApplicationConfigAwareInterface
+class DeployAssetsCommand
+    implements DeployCommandInterface, ApplicationAssetDeployerAwareInterface, LoggerAwareInterface, ApplicationConfigAwareInterface
 {
     /**
-     * @var ApplicationDatabaseDeployer
+     * @var ApplicationAssetDeployer
      */
-    private $applicationDatabaseDeployer;
+    private $applicationAssetDeployer;
     /**
      * @var ApplicationConfig
      */
@@ -54,32 +54,32 @@ class DeployDatabasesCommand
         array $options = null
     ): ?string
     {
-        if (!$includeDatabases) {
+        if (!$includeAssets) {
             $this->logger->notice(
-                'Add condition "databases" to this step in your deployment plan. This step can only be run when deploying '
-                . 'databases. Skipped.'
+                'Add condition "assets" to this step in your deployment plan. This step can only be run when deploying '
+                . 'assets. Skipped.'
             );
             return null;
         }
 
-        if (!isset($this->applicationDatabaseDeployer)) {
-            throw new Exception\RuntimeException('$this->applicationDatabaseDeployer must be set.');
+        if (!isset($this->applicationAssetDeployer)) {
+            throw new Exception\RuntimeException('$this->applicationAssetDeployer must be set.');
         }
 
         if (!isset($this->applicationConfig)) {
             throw new Exception\RuntimeException('$this->applicationConfig must be set.');
         }
 
-        $databases = $this->applicationConfig->getSnapshotConfig()->getDatabases();
-        if (!empty($options['databases'])) {
-            $databases = array_replace_recursive($databases, $options['databases']);
+        $assets = $this->applicationConfig->getSnapshotConfig()->getAssets();
+        if (!empty($options['assets'])) {
+            $assets = array_replace_recursive($assets, $options['assets']);
         }
 
-        $this->applicationDatabaseDeployer->deployDatabases(
+        $this->applicationAssetDeployer->deployAssets(
             $snapshotPath,
             $snapshotName,
-            $databases,
-            $branch
+            $assets,
+            [] // @todo add sync options
         );
         return null;
     }
@@ -87,9 +87,9 @@ class DeployDatabasesCommand
     /**
      * @inheritdoc
      */
-    public function setApplicationDatabaseDeployer(ApplicationDatabaseDeployer $applicationDatabaseDeployer): void
+    public function setApplicationAssetDeployer(ApplicationAssetDeployer $applicationAssetDeployer): void
     {
-        $this->applicationDatabaseDeployer = $applicationDatabaseDeployer;
+        $this->applicationAssetDeployer = $applicationAssetDeployer;
     }
 
     /**
