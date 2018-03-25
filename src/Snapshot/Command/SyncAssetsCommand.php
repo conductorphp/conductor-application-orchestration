@@ -75,12 +75,8 @@ class SyncAssetsCommand
         if (!empty($options['assets'])) {
             $snapshotConfig = $this->applicationConfig->getSnapshotConfig();
             foreach ($options['assets'] as $assetPath => $asset) {
-                $pathPrefix = $this->applicationConfig->getPath($asset['location']);
-                $sourcePath = $asset['local_path'] ?? $assetPath;
-                if ($pathPrefix) {
-                    $sourcePath = "$pathPrefix/$sourcePath";
-                }
-                $sourcePath = $this->applicationConfig->getAppRoot() . '/' . $sourcePath;
+                $path = $this->applicationConfig->getPath($asset['location']);
+                $sourcePath = "$path/$assetPath";
                 $targetPath = "$snapshotPath/$snapshotName/assets/{$asset['location']}/$assetPath";
                 $this->logger->debug("Syncing asset \"$sourcePath\" to \"$targetPath\".");
 

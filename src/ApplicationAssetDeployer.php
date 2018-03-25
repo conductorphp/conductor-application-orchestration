@@ -89,13 +89,10 @@ class ApplicationAssetDeployer
             } else {
                 $destinationPath = $sourcePath;
             }
+            $path = $this->applicationConfig->getPath($asset['location']);
+            $destinationPath = "$path/$destinationPath";
 
-            $pathPrefix = $this->applicationConfig->getPath($asset['location']);
             $sourcePath = "$snapshotPath/$snapshotName/assets/{$asset['location']}/$sourcePath";
-            if ($pathPrefix) {
-                $destinationPath = "$pathPrefix/$destinationPath";
-            };
-            $destinationPath = $application->getAppRoot() . '/' . $destinationPath;
 
             $this->mountManager->sync(
                 $sourcePath,
