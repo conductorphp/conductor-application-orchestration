@@ -5,6 +5,7 @@ namespace ConductorAppOrchestration;
 use Amp\Loop;
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\Config\ApplicationConfigAwareInterface;
+use ConductorAppOrchestration\Deploy\ApplicationAssetDeployer;
 use ConductorAppOrchestration\Deploy\ApplicationAssetDeployerAwareInterface;
 use ConductorAppOrchestration\Deploy\ApplicationCodeDeployer;
 use ConductorAppOrchestration\Deploy\ApplicationCodeDeployerAwareInterface;
@@ -13,7 +14,6 @@ use ConductorAppOrchestration\Deploy\ApplicationDatabaseDeployerAwareInterface;
 use ConductorAppOrchestration\Deploy\ApplicationSkeletonDeployer;
 use ConductorAppOrchestration\Deploy\ApplicationSkeletonDeployerAwareInterface;
 use ConductorAppOrchestration\Deploy\DeploymentState;
-use ConductorAppOrchestration\Deploy\ApplicationAssetDeployer;
 use ConductorAppOrchestration\Exception\PlanPathNotEmptyException;
 use ConductorAppOrchestration\Maintenance\MaintenanceStrategyAwareInterface;
 use ConductorAppOrchestration\Maintenance\MaintenanceStrategyInterface;
@@ -363,7 +363,8 @@ class PlanRunner implements LoggerAwareInterface
     private function clearPlanPath(): void
     {
         $this->logger->info('Clearing plan path.');
-        $command = 'find ' . escapeshellarg($this->planPath) . ' -mindepth 1 -maxdepth 1 -exec rm -rf {} \;';
+        $command = 'if [[ -d ' . escapeshellarg($this->planPath) . ' ]]; then '
+            . 'find ' . escapeshellarg($this->planPath) . ' -mindepth 1 -maxdepth 1 -exec rm -rf {} \;; fi';
         $this->shellAdapter->runShellCommand($command);
     }
 
