@@ -63,7 +63,7 @@ class AppDestroyCommand extends Command
     {
         $this->setName('app:destroy')
             ->setDescription('Destroy application.')
-            ->setHelp("This command destroys an application based on configuration in a given application setup repo.")
+            ->setHelp("This command destroys the local deployment of the application.")
             ->addOption(
                 'branch',
                 null,

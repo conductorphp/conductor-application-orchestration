@@ -35,7 +35,7 @@ class AppConfigShowCommand extends Command
     {
         $this->setName('app:config:show')
             ->setDescription('Output application configuration.')
-            ->setHelp("This command outputs application configuration built from the application setup repo.")
+            ->setHelp("This command outputs application configuration matching a given search filter.")
             ->addArgument(
                 'filter',
                 InputArgument::OPTIONAL,

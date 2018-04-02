@@ -61,7 +61,7 @@ class AppMaintenanceCommand extends Command
         $this->setName('app:maintenance')
             ->setDescription('Manage maintenance mode.')
             ->setHelp(
-                "This command can check if maintenance mode is enabled or enable/disable maintenance mode for an application."
+                "This command manages maintenance mode for the application."
             )
             ->addArgument('action', InputArgument::OPTIONAL, 'Action to take. May use: status, enable, or disable')
             ->addOption(
