@@ -412,7 +412,8 @@ class PlanRunner implements LoggerAwareInterface
         }
 
         if (!empty($step['depends'])) {
-            if (!array_intersect($metDependencies, $step['depends'])) {
+            $allDependenciesMet = count(array_intersect($metDependencies, $step['depends'])) == count($step['depends']);
+            if (!$allDependenciesMet) {
                 $this->logger->debug(
                     sprintf(
                         'Step: %s - skipped because %s [%s] not deployed.',
