@@ -214,7 +214,8 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
             //       issue here
             $tempFile = tmpfile();
             fwrite($tempFile, $contents);
-            $filename = (new \SplFileInfo($tempFile))->getPathname();
+            $metaData = stream_get_meta_data($tempFile);
+            $filename = $metaData["uri"];
         }
         return $filename;
     }
