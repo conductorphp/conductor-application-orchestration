@@ -218,7 +218,8 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
      */
     private function findScript(string $scriptFilename): string
     {
-        $conductorRoot = realpath(__DIR__ . '/../../../conductor');
+        // @todo Make this a setting in config instead. This module shouldn't make assumptions on where it's installed
+        $conductorRoot = realpath(__DIR__ . '/../../../../..');
         $configRoot = "$conductorRoot/config/app";
         $environment = $this->applicationConfig->getCurrentEnvironment();
 
