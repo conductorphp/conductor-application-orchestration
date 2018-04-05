@@ -77,10 +77,10 @@ class ApplicationDestroyer implements LoggerAwareInterface
         $appRoot = $application->getAppRoot();
         if (FileLayoutInterface::STRATEGY_BLUE_GREEN == $fileLayout
             && file_exists(
-                "$appRoot/" . FileLayoutInterface::PATH_CURRENT_RELEASE
+                "$appRoot/" . FileLayoutInterface::PATH_CURRENT
             )) {
-            unlink("$appRoot/" . FileLayoutInterface::PATH_CURRENT_RELEASE);
-            $this->logger->debug("Removed symlink \"$appRoot/" . FileLayoutInterface::PATH_CURRENT_RELEASE . "\".");
+            unlink("$appRoot/" . FileLayoutInterface::PATH_CURRENT);
+            $this->logger->debug("Removed symlink \"$appRoot/" . FileLayoutInterface::PATH_CURRENT . "\".");
         }
 
         $databases = $this->applicationConfig->getSnapshotConfig()->getDatabases();

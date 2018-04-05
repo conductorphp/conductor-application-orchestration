@@ -16,7 +16,8 @@ interface FileLayoutInterface
     const STRATEGY_BRANCH = 'branch';
     const STRATEGY_DEFAULT = 'default';
 
-    const PATH_CURRENT_RELEASE = 'current_release';
+    const PATH_PREVIOUS = 'previous';
+    const PATH_CURRENT = 'current';
     const PATH_RELEASES = 'releases';
     const PATH_BRANCHES = 'branches';
     const PATH_CODE = 'code';

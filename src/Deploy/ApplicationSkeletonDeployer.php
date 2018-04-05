@@ -5,8 +5,8 @@
 
 namespace ConductorAppOrchestration\Deploy;
 
-use ConductorAppOrchestration\Exception;
 use ConductorAppOrchestration\Config\ApplicationConfig;
+use ConductorAppOrchestration\Exception;
 use ConductorAppOrchestration\FileLayoutInterface;
 use ConductorCore\Shell\Adapter\LocalShellAdapter;
 use Psr\Log\LoggerAwareInterface;
@@ -147,12 +147,16 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         if (FileLayoutInterface::STRATEGY_BLUE_GREEN == $this->applicationConfig->getFileLayoutStrategy()) {
             $appRoot = $this->applicationConfig->getAppRoot();
             $relativeCodePath = substr($this->applicationConfig->getCodePath($branch), strlen($appRoot) + 1);
-            if (!file_exists("$appRoot/current_release")) {
-                $this->logger->debug("Created symlink \"$appRoot/current_release\" -> \"$relativeCodePath\".");
-                symlink($relativeCodePath, "$appRoot/current_release");
+            if (!file_exists("$appRoot/" . FileLayoutInterface::PATH_CURRENT)) {
+                $this->logger->debug(
+                    "Created symlink \"$appRoot/" . FileLayoutInterface::PATH_CURRENT
+                    . "\" -> \"$relativeCodePath\"."
+                );
+                symlink($relativeCodePath, "$appRoot/" . FileLayoutInterface::PATH_CURRENT);
             } else {
                 $this->logger->debug(
-                    "Skipped creating symlink \"$appRoot/current_release\" -> \"$relativeCodePath\". Already exists."
+                    "Skipped creating symlink \"$appRoot/" . FileLayoutInterface::PATH_CURRENT
+                    . "\" -> \"$relativeCodePath\". Already exists."
                 );
             }
         }
@@ -193,9 +197,9 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
     }
 
     /**
-     * @param string $resolvedFilename
-     * @param string $filename
-     * @param array  $fileInfo
+     * @param string      $resolvedFilename
+     * @param string      $filename
+     * @param array       $fileInfo
      * @param string|null $branch
      */
     private function installDirectory(
