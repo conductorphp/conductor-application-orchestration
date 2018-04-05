@@ -70,7 +70,7 @@ class DeleteAssetsCommand
         }
 
         foreach ($assets as $asset) {
-            $assetPath = $this->getAssetPath($asset);
+            $assetPath = $this->getAssetPath($asset, $branch);
             $this->logger->debug("Deleting asset \"$asset\" from \"$assetPath\".");
             $this->removePath($assetPath);
         }
@@ -95,34 +95,16 @@ class DeleteAssetsCommand
     }
 
     /**
-     * @param string $asset
+     * @param string      $asset
+     * @param string|null $branch
      *
      * @return string
      */
-    protected function getAssetPath(string $asset): string
+    protected function getAssetPath(string $asset, string $branch = null): string
     {
         $assetConfig = $this->applicationConfig->getSnapshotConfig()->getAssets();
         $location = $assetConfig[$asset]['location'] ?? 'code';
-        switch ($location) {
-            case 'code':
-                $path = $this->applicationConfig->getCodePath();
-                break;
-            case 'local':
-                $path = $this->applicationConfig->getLocalPath();
-                break;
-            case 'shared':
-                $path = $this->applicationConfig->getSharedPath();
-                break;
-
-            default:
-                throw new Exception\RuntimeException(sprintf(
-                    'Invalid location "%s" for asset "". Must be one of "code", "local", or "shared".',
-                    $location,
-                    $asset
-                ));
-                break;
-        }
-
+        $path = $this->applicationConfig->getPath($location, $branch);
         return "$path/$asset";
     }
 

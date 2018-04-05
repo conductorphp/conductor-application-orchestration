@@ -387,22 +387,17 @@ class ApplicationConfig
     }
 
     /**
-     * @param string|null $branch
-     *
      * @return string
      */
-    public function getLocalPath(string $branch = null): string
+    public function getLocalPath(): string
     {
-        if ($branch) {
-            $branch = $this->sanitizeBranchForFilepath($branch);
-        }
         $appRoot = $this->getAppRoot();
         switch ($this->getFileLayoutStrategy()) {
             case FileLayoutInterface::STRATEGY_BLUE_GREEN:
-                return "$appRoot/" . FileLayoutInterface::PATH_SHARED;
+                return "$appRoot/" . FileLayoutInterface::PATH_LOCAL;
 
             case FileLayoutInterface::STRATEGY_BRANCH:
-                return "$appRoot/" . FileLayoutInterface::PATH_BRANCHES . "/$branch";
+                return "$appRoot/" . FileLayoutInterface::PATH_LOCAL;
 
             case FileLayoutInterface::STRATEGY_DEFAULT:
             default:
@@ -441,7 +436,7 @@ class ApplicationConfig
             case FileLayoutInterface::PATH_CODE:
                 return $this->getCodePath($branch);
             case FileLayoutInterface::PATH_LOCAL:
-                return $this->getLocalPath($branch);
+                return $this->getLocalPath();
             case FileLayoutInterface::PATH_SHARED:
                 return $this->getSharedPath();
             default:

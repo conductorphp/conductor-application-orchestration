@@ -7,6 +7,7 @@ namespace ConductorAppOrchestration\Deploy;
 
 use ConductorAppOrchestration\Exception;
 use ConductorAppOrchestration\Config\ApplicationConfig;
+use ConductorAppOrchestration\FileLayoutInterface;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\Repository\RepositoryAdapterInterface;
 use ConductorCore\Shell\Adapter\ShellAdapterInterface;
@@ -84,8 +85,15 @@ class ApplicationCodeDeployer
             throw new Exception\BadMethodCallException('$buildId or $branch must be set.');
         }
 
+        if (FileLayoutInterface::STRATEGY_BRANCH == $this->applicationConfig->getFileLayoutStrategy() && !$branch) {
+            throw new Exception\RuntimeException(
+                '$branch must be set because the current environment is running the '
+                . '"' . FileLayoutInterface::STRATEGY_BRANCH . '" file layout.'
+            );
+        }
+
         if ($buildId) {
-            $this->deployFromBuild($buildId, $buildPath);
+            $this->deployFromBuild($buildId, $buildPath, $branch);
         } else {
             $this->deployFromRepo($branch);
         }
@@ -96,7 +104,7 @@ class ApplicationCodeDeployer
      */
     private function deployFromRepo(string $repoReference): void
     {
-        $codePath = $this->applicationConfig->getCodePath();
+        $codePath = $this->applicationConfig->getCodePath($repoReference);
         $repoUrl = $this->applicationConfig->getRepoUrl();
 
         $this->logger->debug("Checking out \"$repoUrl:$repoReference\" to \"{$codePath}\".");
@@ -107,16 +115,17 @@ class ApplicationCodeDeployer
     }
 
     /**
-     * @param string $buildId
-     * @param string $buildPath
+     * @param string      $buildId
+     * @param string      $buildPath
+     * @param string|null $branch
      */
-    private function deployFromBuild(string $buildId, string $buildPath): void
+    private function deployFromBuild(string $buildId, string $buildPath, string $branch = null): void
     {
         if (!$buildPath) {
             throw new Exception\BadMethodCallException('$buildPath must be set if $buildId is set.');
         }
 
-        $codePath = $this->applicationConfig->getCodePath();
+        $codePath = $this->applicationConfig->getCodePath($branch);
         $cwd = getcwd();
         $this->logger->debug(
             "Downloading build file from \"$buildPath/$buildId.tgz\" to \"local://$cwd/$buildId.tgz\"."

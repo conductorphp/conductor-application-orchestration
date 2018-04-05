@@ -8,6 +8,7 @@ namespace ConductorAppOrchestration\Console;
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\Deploy\ApplicationDeployer;
 use ConductorAppOrchestration\Exception;
+use ConductorAppOrchestration\FileLayoutInterface;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\MonologConsoleHandlerAwareTrait;
 use Psr\Log\LoggerInterface;
@@ -211,6 +212,7 @@ class AppDeployCommand extends Command
         if ($input->getOption('skeleton')) {
             $this->applicationDeployer->deploySkeleton(
                 $input->getOption('plan'),
+                $input->getOption('repo-reference'),
                 $input->getOption('clean')
             );
         } else {
@@ -239,15 +241,17 @@ class AppDeployCommand extends Command
      */
     protected function validateInput(InputInterface $input): void
     {
+        $isBranchFileStrategy = FileLayoutInterface::STRATEGY_BRANCH == $this->applicationConfig->getFileLayoutStrategy(
+            );
         if ($input->getOption('skeleton')
-            && ($input->getOption('build-id') || $input->getOption('repo-reference')
+            && ($input->getOption('build-id') || (!$isBranchFileStrategy && $input->getOption('repo-reference'))
                 || $input->getOption('snapshot'))) {
             throw new Exception\RuntimeException(
                 'Options --build-id, --repo-reference, and --snapshot may not be specified with --skeleton.'
             );
         }
 
-        if ($input->getOption('build-id') && $input->getOption('repo-reference')) {
+        if ($input->getOption('build-id') && (!$isBranchFileStrategy && $input->getOption('repo-reference'))) {
             throw new Exception\RuntimeException(
                 'Options --build-id and --repo-reference may not both be specified.'
             );
@@ -257,6 +261,13 @@ class AppDeployCommand extends Command
             && ($input->getOption('assets') || $input->getOption('databases'))) {
             throw new Exception\RuntimeException(
                 'Options --assets and --databases may only be specified with --snapshot.'
+            );
+        }
+
+        if ($isBranchFileStrategy && !$input->getOption('repo-reference')) {
+            throw new Exception\RuntimeException(
+                'Option --repo-reference must be set because this environment is using the "'
+                . FileLayoutInterface::STRATEGY_BRANCH . '" file layout strategy.'
             );
         }
     }

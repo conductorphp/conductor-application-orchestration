@@ -53,7 +53,7 @@ class ApplicationDestroyer implements LoggerAwareInterface
     {
         $application = $this->applicationConfig;
         $codePath = $application->getCodePath($branch);
-        $localPath = $application->getLocalPath($branch);
+        $localPath = $application->getLocalPath();
         $sharedPath = $application->getSharedPath();
 
         if (file_exists($codePath)) {
@@ -88,12 +88,14 @@ class ApplicationDestroyer implements LoggerAwareInterface
             $this->logger->debug("Destroying databases.");
             $databasesToDestroy = [];
             foreach ($databases as $database => $databaseInfo) {
-                if ('branch' == $application->getFileLayoutStrategy()) {
+                if (FileLayoutInterface::STRATEGY_BRANCH == $application->getFileLayoutStrategy()) {
                     if ($branch) {
                         $database .= '_' . $this->sanitizeDatabaseName($branch);
                         $databasesToDestroy[] = $database;
                     } else {
-                        $allDatabases = $this->databaseAdapterManager->getDatabases();
+                        $adapterName = $databaseInfo['adapter'] ?? $this->applicationConfig->getDefaultDatabaseAdapter();
+                        $databaseAdapter = $this->databaseAdapterManager->getAdapter($adapterName);
+                        $allDatabases = $databaseAdapter->getDatabases();
                         $appDatabases = preg_grep('%^' . $database . '_%', $allDatabases);
                         $databasesToDestroy += $appDatabases;
                     }
@@ -102,14 +104,13 @@ class ApplicationDestroyer implements LoggerAwareInterface
                 }
             }
 
-            // @todo Add ability to use different database adapters per database. For example, one app may use a MySQL db
-            //       and a Mongo db
-            $databaseAdapterName = $application->getDefaultDatabaseAdapter();
-            $databaseAdapter = $this->databaseAdapterManager->getAdapter($databaseAdapterName);
-
-            foreach ($databasesToDestroy as $database) {
-                $this->logger->debug("Dropping database \"$database\".");
-                $databaseAdapter->dropDatabaseIfExists($database);
+            if ($databasesToDestroy) {
+                foreach ($databasesToDestroy as $database) {
+                    $this->logger->debug("Dropping database \"$database\".");
+                    $adapterName = $databaseInfo['adapter'] ?? $this->applicationConfig->getDefaultDatabaseAdapter();
+                    $databaseAdapter = $this->databaseAdapterManager->getAdapter($adapterName);
+                    $databaseAdapter->dropDatabaseIfExists($database);
+                }
             }
         } else {
             $this->logger->debug("No databases to destroy.");

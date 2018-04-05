@@ -53,7 +53,7 @@ class PrepareFileLayoutCommand
         }
 
         $this->logger->info('Preparing file layout.');
-        $this->applicationSkeletonDeployer->prepareFileLayout();
+        $this->applicationSkeletonDeployer->prepareFileLayout($branch);
         return null;
     }
 

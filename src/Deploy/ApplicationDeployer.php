@@ -76,11 +76,13 @@ class ApplicationDeployer
     }
 
     /**
-     * @param string $deployPlan
-     * @param bool   $clean
+     * @param string      $deployPlan
+     * @param string|null $branch
+     * @param bool        $clean
      */
     public function deploySkeleton(
         string $deployPlan,
+        string $branch = null,
         bool $clean = false
     ): void {
         $deployPlans = $this->applicationConfig->getDeployConfig()->getPlans();
@@ -94,10 +96,10 @@ class ApplicationDeployer
             $deployPlan,
             $conditions,
             [
-                'codeRoot'          => $this->applicationConfig->getCodePath(),
+                'codeRoot'          => $this->applicationConfig->getCodePath($branch),
                 'buildId'           => null,
                 'buildPath'         => null,
-                'branch'            => null,
+                'branch'            => $branch,
                 'snapshotName'      => null,
                 'snapshotPath'      => null,
                 'includeAssets'     => true,
@@ -106,7 +108,8 @@ class ApplicationDeployer
                 'allowFullRollback' => false,
             ],
             $clean,
-            false
+            false,
+            $branch
         );
     }
 
@@ -178,7 +181,7 @@ class ApplicationDeployer
             $deployPlan,
             $conditions,
             [
-                'codeRoot'          => $this->applicationConfig->getCodePath(),
+                'codeRoot'          => $this->applicationConfig->getCodePath($branch),
                 'buildId'           => $buildId,
                 'buildPath'         => $buildPath,
                 'branch'            => $branch,
@@ -190,7 +193,8 @@ class ApplicationDeployer
                 'allowFullRollback' => $allowFullRollback,
             ],
             $clean,
-            $rollback
+            $rollback,
+            $branch
         );
     }
 

@@ -13,7 +13,9 @@ namespace ConductorAppOrchestration\Deploy;
 interface CodeDeploymentStateInterface
 {
     /**
+     * @param string|null $branch
+     *
      * @return bool
      */
-    public function codeDeployed(): bool;
+    public function codeDeployed(string $branch = null): bool;
 }

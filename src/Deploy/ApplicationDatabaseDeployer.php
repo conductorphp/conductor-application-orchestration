@@ -87,6 +87,13 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
             throw new Exception\RuntimeException('No database given for deployment.');
         }
 
+        if (FileLayoutInterface::STRATEGY_BRANCH == $this->applicationConfig->getFileLayoutStrategy() && !$branch) {
+            throw new Exception\RuntimeException(
+                '$branch must be set because the current environment is running the '
+                . '"' . FileLayoutInterface::STRATEGY_BRANCH . '" file layout.'
+            );
+        }
+
         $application = $this->applicationConfig;
         $this->logger->info('Installing databases');
         foreach ($databases as $databaseName => $database) {
@@ -98,18 +105,19 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
             $databaseImportExportAdapter = $this->databaseImportAdapterManager->getAdapter($adapterName);
 
             $filename = "$databaseName." . $databaseImportExportAdapter::getFileExtension();
+            $localDatabaseName = $databaseName;
             if ('branch' == $application->getFileLayoutStrategy()) {
-                $databaseName .= '_' . $this->sanitizeDatabaseName($branch);
+                $localDatabaseName .= '_' . $this->sanitizeDatabaseName($branch);
             }
 
-            if ($databaseAdapter->databaseExists($databaseName)) {
-                if (!$databaseAdapter->databaseIsEmpty($databaseName)) {
-                    $this->logger->notice("Database \"$databaseName\" exists and is not empty. Skipped.");
+            if ($databaseAdapter->databaseExists($localDatabaseName)) {
+                if (!$databaseAdapter->databaseIsEmpty($localDatabaseName)) {
+                    $this->logger->notice("Database \"$localDatabaseName\" exists and is not empty. Skipped.");
                     continue;
                 }
             } else {
-                $this->logger->debug("Created database \"$databaseName\".");
-                $databaseAdapter->createDatabase($databaseName);
+                $this->logger->debug("Created database \"$localDatabaseName\".");
+                $databaseAdapter->createDatabase($localDatabaseName);
             }
 
             $workingDir = getcwd() . '/' . DatabaseImportExportAdapterInterface::DEFAULT_WORKING_DIR;
@@ -121,7 +129,7 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
 
             $databaseImportExportAdapter->importFromFile(
                 "$workingDir/$filename",
-                $databaseName,
+                $localDatabaseName,
                 [] // This command does not yet support any options
             );
 
@@ -143,7 +151,7 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
 
                     $databaseAdapter->run(
                         file_get_contents($scriptFilename),
-                        $databaseName
+                        $localDatabaseName
                     );
                 }
             }

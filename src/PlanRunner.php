@@ -166,20 +166,20 @@ class PlanRunner implements LoggerAwareInterface
      * @todo Deal with user ctrl+c input and clear working directory before exiting
      * @see  http://php.net/manual/en/function.pcntl-signal.php
      *
-     * @param string $planName
-     * @param array  $conditions
-     * @param array  $stepArguments
-     * @param bool   $clean
-     * @param bool   $rollback
-     *
-     * @throws \Exception
+     * @param string      $planName
+     * @param array       $conditions
+     * @param array       $stepArguments
+     * @param bool        $clean
+     * @param bool        $rollback
+     * @param string|null $branch
      */
     public function runPlan(
         string $planName,
         array $conditions,
         array $stepArguments,
         $clean = false,
-        $rollback = false
+        $rollback = false,
+        string $branch = null
     ): void {
         $origWorkingDirectory = getcwd();
         if (is_null($this->planPath)) {
@@ -192,11 +192,11 @@ class PlanRunner implements LoggerAwareInterface
             $metDependencies[] = 'assets';
         }
 
-        if (in_array('code', $conditions) || $this->deploymentState->codeDeployed()) {
+        if (in_array('code', $conditions) || $this->deploymentState->codeDeployed($branch)) {
             $metDependencies[] = 'code';
         }
 
-        if (in_array('databases', $conditions) || $this->deploymentState->databasesDeployed()) {
+        if (in_array('databases', $conditions) || $this->deploymentState->databasesDeployed($branch)) {
             $metDependencies[] = 'databases';
         }
 
@@ -217,13 +217,13 @@ class PlanRunner implements LoggerAwareInterface
                 if ($rollbackPreflightSteps) {
                     $this->logger->info(sprintf('Plan: %s (rollback_preflight)', $planName));
                     foreach ($rollbackPreflightSteps as $name => $step) {
-                        $this->runStep($name, $step, $conditions, $metDependencies, $stepArguments);
+                        $this->runStep($name, $step, $conditions, $metDependencies, $stepArguments, $branch);
                     }
                 }
 
                 $this->logger->info(sprintf('Plan: %s (rollback)', $planName));
                 foreach ($rollbackSteps as $name => $step) {
-                    $this->runStep($name, $step, $conditions, $metDependencies, $stepArguments);
+                    $this->runStep($name, $step, $conditions, $metDependencies, $stepArguments, $branch);
                 }
             } else {
                 $preflightSteps = $plan->getPreflightSteps();
@@ -237,7 +237,7 @@ class PlanRunner implements LoggerAwareInterface
                 if ($preflightSteps) {
                     $this->logger->info(sprintf('Plan: %s (preflight)', $planName));
                     foreach ($preflightSteps as $name => $step) {
-                        $this->runStep($name, $step, $conditions, $metDependencies, $stepArguments);
+                        $this->runStep($name, $step, $conditions, $metDependencies, $stepArguments, $branch);
                     }
                 }
 
@@ -245,13 +245,13 @@ class PlanRunner implements LoggerAwareInterface
                 if ($clean && !empty($cleanSteps)) {
                     $this->logger->info(sprintf('Plan: %s (cleanup)', $planName));
                     foreach ($cleanSteps as $name => $step) {
-                        $this->runStep($name, $step, $conditions, $metDependencies, $stepArguments);
+                        $this->runStep($name, $step, $conditions, $metDependencies, $stepArguments, $branch);
                     }
                 }
 
                 $this->logger->info(sprintf('Plan: %s', $planName));
                 foreach ($plan->getSteps() as $name => $step) {
-                    $this->runStep($name, $step, $conditions, $metDependencies, $stepArguments);
+                    $this->runStep($name, $step, $conditions, $metDependencies, $stepArguments, $branch);
                 }
             }
 
@@ -369,18 +369,20 @@ class PlanRunner implements LoggerAwareInterface
     }
 
     /**
-     * @param string $name
-     * @param array  $step
-     * @param array  $conditions
-     * @param array  $metDependencies
-     * @param array  $stepArguments
+     * @param string      $name
+     * @param array       $step
+     * @param array       $conditions
+     * @param array       $metDependencies
+     * @param array       $stepArguments
+     * @param string|null $branch
      */
     private function runStep(
         string $name,
         array $step,
         array $conditions,
         array $metDependencies,
-        array $stepArguments
+        array $stepArguments,
+        string $branch = null
     ): void {
         // If array, run commands in parallel
         if (!empty($step['steps'])) {
@@ -431,7 +433,7 @@ class PlanRunner implements LoggerAwareInterface
             $this->logger->debug($step['comment']);
         }
         $commandWorkingDirectory = !empty($step['run_in_code_root'])
-            ? $this->applicationConfig->getCodePath()
+            ? $this->applicationConfig->getCodePath($branch)
             : $this->planPath;
         if (!empty($step['command'])) {
             $environmentVariables = array_replace(
