@@ -64,12 +64,6 @@ class AppDestroyCommand extends Command
         $this->setName('app:destroy')
             ->setDescription('Destroy application.')
             ->setHelp("This command destroys the local deployment of the application.")
-            ->addOption(
-                'branch',
-                null,
-                InputArgument::OPTIONAL,
-                'The branch instance to destroy. Only relevant when using the \"branch\" file layout.'
-            )
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Do not ask confirmation');
     }
 
@@ -86,15 +80,13 @@ class AppDestroyCommand extends Command
         $this->applicationDestroyer->setLogger($this->logger);
         $appName = $this->applicationConfig->getAppName();
 
-        $branch = $input->getOption('branch');
         if (!$input->getOption('force')) {
             /** @var QuestionHelper $helper */
             $helper = $this->getHelper('question');
             $question = new ConfirmationQuestion(
                 sprintf(
-                    '<question>Are you sure you want to destroy application instances %s%s? [y/N]</question>',
-                    $appName,
-                    ($branch ? " ($branch branch only)" : '')
+                    '<question>Are you sure you want to destroy deployment of application "%s"? [y/N]</question>',
+                    $appName
                 ),
                 false
             );
@@ -104,10 +96,9 @@ class AppDestroyCommand extends Command
             }
         }
 
-        $branchDescription = ($branch ? " ($branch branch only)" : '');
-        $this->logger->info("Destroying application instance $appName$branchDescription.");
-        $this->applicationDestroyer->destroy($branch);
-        $this->logger->info("Application instance $appName$branchDescription destroyed.");
+        $this->logger->info("Destroying deployment of application \"$appName\".");
+        $this->applicationDestroyer->destroy();
+        $this->logger->info("Deployment of application \"$appName\" destroyed.");
         return 0;
     }
 

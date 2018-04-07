@@ -66,7 +66,7 @@ class ApplicationBuilder
 
     /**
      * @param string $buildPlan
-     * @param string $branch
+     * @param string $repoReference
      * @param string $buildId
      * @param string $savePath
      *
@@ -74,7 +74,7 @@ class ApplicationBuilder
      */
     public function build(
         string $buildPlan,
-        string $branch,
+        string $repoReference,
         string $buildId,
         string $savePath
     ): void {
@@ -86,9 +86,9 @@ class ApplicationBuilder
             $buildPlan,
             [],
             [
-                'branch'   => $branch,
-                'buildId'  => $buildId,
-                'savePath' => $savePath,
+                'repoReference' => $repoReference,
+                'buildId'       => $buildId,
+                'savePath'      => $savePath,
             ],
             false, // @todo Any use for clean steps in build?
             false

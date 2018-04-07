@@ -63,13 +63,7 @@ class AppMaintenanceCommand extends Command
             ->setHelp(
                 "This command manages maintenance mode for the application."
             )
-            ->addArgument('action', InputArgument::OPTIONAL, 'Action to take. May use: status, enable, or disable')
-            ->addOption(
-                'branch',
-                null,
-                InputArgument::OPTIONAL,
-                'The branch instance to manage maintenance state for. Only relevant when using the \"branch\" file layout.'
-            );
+            ->addArgument('action', InputArgument::OPTIONAL, 'Action to take. May use: status, enable, or disable');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
@@ -81,20 +75,19 @@ class AppMaintenanceCommand extends Command
         }
 
         $action = $input->getArgument('action') ?? 'status';
-        $branch = $input->getOption('branch');
 
         $appName = $this->applicationConfig->getAppName();
         if ('enable' == $action) {
             $output->writeln("Enabling maintenance mode for app \"$appName\".");
-            $this->maintenanceStrategy->enable($branch);
+            $this->maintenanceStrategy->enable();
             $output->writeln("Maintenance mode <info>enabled</info> for app \"$appName\".");
         } elseif ('disable' == $action) {
             $output->writeln("Disabling maintenance mode for app \"$appName\".");
-            $this->maintenanceStrategy->disable($branch);
+            $this->maintenanceStrategy->disable();
             $output->writeln("Maintenance mode <error>disabled</error> for app \"$appName\".");
         } else {
             $output->writeln("Checking if maintenance mode is enabled for app \"$appName\".");
-            $status = $this->maintenanceStrategy->isEnabled($branch);
+            $status = $this->maintenanceStrategy->isEnabled();
             $statusText = $status ? 'enabled' : 'disabled';
             $output->writeln("Maintenance mode is $statusText for app \"$appName\".");
         }

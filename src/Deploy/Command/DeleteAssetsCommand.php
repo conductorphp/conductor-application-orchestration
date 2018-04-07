@@ -41,7 +41,7 @@ class DeleteAssetsCommand
         string $codeRoot,
         string $buildId = null,
         string $buildPath = null,
-        string $branch = null,
+        string $repoReference = null,
         string $snapshotName = null,
         string $snapshotPath = null,
         bool $includeAssets = true,
@@ -70,7 +70,7 @@ class DeleteAssetsCommand
         }
 
         foreach ($assets as $asset) {
-            $assetPath = $this->getAssetPath($asset, $branch);
+            $assetPath = $this->getAssetPath($asset);
             $this->logger->debug("Deleting asset \"$asset\" from \"$assetPath\".");
             $this->removePath($assetPath);
         }
@@ -96,15 +96,14 @@ class DeleteAssetsCommand
 
     /**
      * @param string      $asset
-     * @param string|null $branch
      *
      * @return string
      */
-    protected function getAssetPath(string $asset, string $branch = null): string
+    protected function getAssetPath(string $asset): string
     {
         $assetConfig = $this->applicationConfig->getSnapshotConfig()->getAssets();
         $location = $assetConfig[$asset]['location'] ?? 'code';
-        $path = $this->applicationConfig->getPath($location, $branch);
+        $path = $this->applicationConfig->getPath($location);
         return "$path/$asset";
     }
 

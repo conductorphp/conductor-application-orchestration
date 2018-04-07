@@ -96,12 +96,6 @@ class AppSnapshotCommand extends Command
                 ),
                 $this->applicationConfig->getDefaultFilesystem() . '://snapshots'
             )
-            ->addOption(
-                'branch',
-                null,
-                InputOption::VALUE_REQUIRED,
-                'Branch to snapshot db from. Only relevant with branch file layout.'
-            )
             // @todo Allow for more granular setting of which databases/assets should be in the snapshot?
             ->addOption(
                 'databases',
@@ -138,9 +132,8 @@ class AppSnapshotCommand extends Command
 
         $appName = $this->applicationConfig->getAppName();
         $snapshotName = $input->getArgument('snapshot-name') ?? $this->applicationConfig->getCurrentEnvironment();
-        $snapshotPlan = $input->getOption('plan') ?? $this->applicationConfig->getDefaultSnapshotPlan();
+        $snapshotPlan = $input->getOption('plan') ?? $this->applicationConfig->getSnapshotConfig()->getDefaultPlan();
         $snapshotPath = $input->getOption('snapshot-path');
-        $branch = $input->getOption('branch');
         $includeDatabases = $input->getOption('databases');
         $includeAssets = $input->getOption('assets');
         if (!($includeDatabases || $includeAssets)) {
@@ -158,7 +151,6 @@ class AppSnapshotCommand extends Command
             $snapshotPlan,
             $snapshotName,
             $snapshotPath,
-            $branch,
             $includeDatabases,
             $includeAssets,
             $replace,

@@ -37,7 +37,6 @@ class DisableMaintenanceCommand
     public function run(
         string $snapshotName,
         string $snapshotPath,
-        string $branch = null,
         bool $includeDatabases = true,
         bool $includeAssets = true,
         array $assetSyncConfig = [],
@@ -49,7 +48,7 @@ class DisableMaintenanceCommand
         }
 
         $this->logger->info('Disabling maintenance mode.');
-        $this->maintenanceStrategy->disable($branch);
+        $this->maintenanceStrategy->disable();
         return null;
     }
 

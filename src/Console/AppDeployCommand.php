@@ -99,7 +99,7 @@ class AppDeployCommand extends Command
                 'repo-reference',
                 null,
                 InputOption::VALUE_REQUIRED,
-                'Repository reference (branch, tag, commit) to deploy. Required if --from-repo given.'
+                'Repository reference (branch, tag, commit) to deploy.'
             )
             ->addOption(
                 'snapshot',
@@ -212,7 +212,6 @@ class AppDeployCommand extends Command
         if ($input->getOption('skeleton')) {
             $this->applicationDeployer->deploySkeleton(
                 $input->getOption('plan'),
-                $input->getOption('repo-reference'),
                 $input->getOption('clean')
             );
         } else {
@@ -239,21 +238,17 @@ class AppDeployCommand extends Command
     /**
      * @param InputInterface $input
      */
-    protected function validateInput(InputInterface $input): void
+    private function validateInput(InputInterface $input): void
     {
-        $isBranchFileStrategy = FileLayoutInterface::STRATEGY_BRANCH == $this->applicationConfig->getFileLayoutStrategy(
-            );
-        if ($input->getOption('skeleton')
-            && ($input->getOption('build-id') || (!$isBranchFileStrategy && $input->getOption('repo-reference'))
-                || $input->getOption('snapshot'))) {
+        if ($input->getOption('build-id') && $input->getOption('repo-reference')) {
             throw new Exception\RuntimeException(
-                'Options --build-id, --repo-reference, and --snapshot may not be specified with --skeleton.'
+                'Options --build-id and --repo-reference may not both be set.'
             );
         }
 
-        if ($input->getOption('build-id') && (!$isBranchFileStrategy && $input->getOption('repo-reference'))) {
+        if ($input->getOption('skeleton') && ($input->getOption('snapshot') || $input->getOption('build-id') || $input->getOption('repo-reference'))) {
             throw new Exception\RuntimeException(
-                'Options --build-id and --repo-reference may not both be specified.'
+                'Options --snapshot, --build-id, and --repo-reference may not be set with --skeleton.'
             );
         }
 
@@ -261,13 +256,6 @@ class AppDeployCommand extends Command
             && ($input->getOption('assets') || $input->getOption('databases'))) {
             throw new Exception\RuntimeException(
                 'Options --assets and --databases may only be specified with --snapshot.'
-            );
-        }
-
-        if ($isBranchFileStrategy && !$input->getOption('repo-reference')) {
-            throw new Exception\RuntimeException(
-                'Option --repo-reference must be set because this environment is using the "'
-                . FileLayoutInterface::STRATEGY_BRANCH . '" file layout strategy.'
             );
         }
     }
@@ -279,7 +267,7 @@ class AppDeployCommand extends Command
      *
      * @return string
      */
-    protected function getDeploymentDescription(InputInterface $input, $includeAssets, $includeDatabases): string
+    private function getDeploymentDescription(InputInterface $input, $includeAssets, $includeDatabases): string
     {
         if ($input->getOption('skeleton')) {
             $message = 'Deploying skeleton only.';
@@ -290,7 +278,7 @@ class AppDeployCommand extends Command
                 if ($input->getOption('build-id')) {
                     $message .= 'build "' . $input->getOption('build-id') . '"';
                 } else {
-                    $message .= 'repository refererence "' . $input->getOption('repo-reference') . '"';
+                    $message .= 'branch/tag/commit "' . $input->getOption('repo-reference') . '"';
                 }
                 if ($input->getOption('snapshot')) {
                     $message .= ' and ';

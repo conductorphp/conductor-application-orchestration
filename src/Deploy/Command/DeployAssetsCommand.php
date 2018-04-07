@@ -44,7 +44,7 @@ class DeployAssetsCommand
         string $codeRoot,
         string $buildId = null,
         string $buildPath = null,
-        string $branch = null,
+        string $repoReference = null,
         string $snapshotName = null,
         string $snapshotPath = null,
         bool $includeAssets = true,

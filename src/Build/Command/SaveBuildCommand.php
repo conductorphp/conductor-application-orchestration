@@ -33,7 +33,7 @@ class SaveBuildCommand
     /**
      * @inheritdoc
      */
-    public function run(string $branch, string $buildId, string $savePath, array $options = null): ?string
+    public function run(string $repoReference, string $buildId, string $savePath, array $options = null): ?string
     {
         $tarFilename = "$buildId.tgz";
         $filename = realpath($tarFilename);

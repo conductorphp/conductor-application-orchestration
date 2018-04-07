@@ -8,7 +8,7 @@ interface DeployCommandInterface
      * @param string      $codeRoot
      * @param string|null $buildId
      * @param string|null $buildPath
-     * @param string|null $branch
+     * @param string|null $repoReference
      * @param string|null $snapshotName
      * @param string|null $snapshotPath
      * @param bool        $includeAssets
@@ -23,7 +23,7 @@ interface DeployCommandInterface
         string $codeRoot,
         string $buildId = null,
         string $buildPath = null,
-        string $branch = null,
+        string $repoReference = null,
         string $snapshotName = null,
         string $snapshotPath = null,
         bool $includeAssets = true,

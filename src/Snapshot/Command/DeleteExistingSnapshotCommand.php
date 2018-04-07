@@ -37,7 +37,6 @@ class DeleteExistingSnapshotCommand
     public function run(
         string $snapshotName,
         string $snapshotPath,
-        string $branch = null,
         bool $includeDatabases = true,
         bool $includeAssets = true,
         array $assetSyncConfig = [],

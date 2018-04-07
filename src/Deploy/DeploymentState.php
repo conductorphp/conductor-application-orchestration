@@ -6,7 +6,6 @@
 namespace ConductorAppOrchestration\Deploy;
 
 use ConductorAppOrchestration\Config\ApplicationConfig;
-use ConductorAppOrchestration\FileLayoutInterface;
 use ConductorCore\Database\DatabaseAdapterManager;
 
 /**
@@ -59,46 +58,27 @@ class DeploymentState
     }
 
     /**
-     * @param string|null $branch
-     *
      * @return bool
      */
-    public function codeDeployed(string $branch = null): bool
+    public function codeDeployed(): bool
     {
-        return $this->codeDeploymentState->codeDeployed($branch);
+        return $this->codeDeploymentState->codeDeployed();
     }
 
     /**
-     * @param string|null $branch
-     *
      * @return bool
      */
-    public function databasesDeployed(string $branch = null): bool
+    public function databasesDeployed(): bool
     {
-        $isBranchFileLayoutStrategy = FileLayoutInterface::STRATEGY_BRANCH == $this->applicationConfig->getFileLayoutStrategy();
         $databases = $this->applicationConfig->getSnapshotConfig()->getDatabases();
         foreach ($databases as $database => $databaseConfig) {
             $adapterName = $databaseConfig['adapter'] ?? $this->applicationConfig->getDefaultDatabaseAdapter();
             $adapter = $this->databaseAdapterManager->getAdapter($adapterName);
-            if ($isBranchFileLayoutStrategy && $branch) {
-                $database .= '_' . $this->sanitizeBranchForDatabase($branch);
-            }
-
             if (!$adapter->databaseExists($database)) {
                 return false;
             }
         }
         return true;
-    }
-
-    /**
-     * @param $branch
-     *
-     * @return string
-     */
-    private function sanitizeBranchForDatabase($branch)
-    {
-        return strtolower(preg_replace('/[^a-z0-9\.-]/i', '_', $branch));
     }
 
 }

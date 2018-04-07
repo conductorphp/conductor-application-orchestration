@@ -38,7 +38,7 @@ class DeployCodeCommand
         string $codeRoot,
         string $buildId = null,
         string $buildPath = null,
-        string $branch = null,
+        string $repoReference = null,
         string $snapshotName = null,
         string $snapshotPath = null,
         bool $includeAssets = true,
@@ -48,7 +48,7 @@ class DeployCodeCommand
         array $options = null
     ): ?string
     {
-        if (!$buildId && !$branch) {
+        if (!$buildId && !$repoReference) {
             $this->logger->notice(
                 'Add condition "code" to this step in your deployment plan. This step can only be run when deploying '
                 . 'code. Skipped.'
@@ -61,7 +61,7 @@ class DeployCodeCommand
         }
 
         // @todo Deal with update and stash arguments
-        $this->applicationCodeDeployer->deployCode($buildId, $buildPath, $branch);
+        $this->applicationCodeDeployer->deployCode($buildId, $buildPath, $repoReference);
         return null;
     }
 

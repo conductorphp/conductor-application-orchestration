@@ -44,7 +44,7 @@ class DeployDatabasesCommand
         string $codeRoot,
         string $buildId = null,
         string $buildPath = null,
-        string $branch = null,
+        string $repoReference = null,
         string $snapshotName = null,
         string $snapshotPath = null,
         bool $includeAssets = true,
@@ -79,7 +79,7 @@ class DeployDatabasesCommand
             $snapshotPath,
             $snapshotName,
             $databases,
-            $branch
+            $repoReference
         );
         return null;
     }

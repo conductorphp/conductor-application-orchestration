@@ -46,13 +46,10 @@ class ApplicationDestroyer implements LoggerAwareInterface
         $this->logger = $logger;
     }
 
-    /**
-     * @param string|null $branch
-     */
-    public function destroy(string $branch = null): void
+    public function destroy(): void
     {
         $application = $this->applicationConfig;
-        $codePath = $application->getCodePath($branch);
+        $codePath = $application->getCodePath();
         $localPath = $application->getLocalPath();
         $sharedPath = $application->getSharedPath();
 
@@ -66,7 +63,7 @@ class ApplicationDestroyer implements LoggerAwareInterface
             $this->logger->debug("Removed directory \"$localPath\".");
         }
 
-        if (!$branch && $codePath != $sharedPath) {
+        if ($codePath != $sharedPath) {
             // Only removing shared contents because the directory may be a shared filesystem mount
             // @todo Check if dir is a mount and remove the entire directory if not
             $this->removePath("{$sharedPath}/*");
@@ -86,45 +83,16 @@ class ApplicationDestroyer implements LoggerAwareInterface
         $databases = $this->applicationConfig->getSnapshotConfig()->getDatabases();
         if ($databases) {
             $this->logger->debug("Destroying databases.");
-            $databasesToDestroy = [];
-            foreach ($databases as $database => $databaseInfo) {
-                if (FileLayoutInterface::STRATEGY_BRANCH == $application->getFileLayoutStrategy()) {
-                    if ($branch) {
-                        $database .= '_' . $this->sanitizeDatabaseName($branch);
-                        $databasesToDestroy[] = $database;
-                    } else {
-                        $adapterName = $databaseInfo['adapter'] ?? $this->applicationConfig->getDefaultDatabaseAdapter();
-                        $databaseAdapter = $this->databaseAdapterManager->getAdapter($adapterName);
-                        $allDatabases = $databaseAdapter->getDatabases();
-                        $appDatabases = preg_grep('%^' . $database . '_%', $allDatabases);
-                        $databasesToDestroy += $appDatabases;
-                    }
-                } else {
-                    $databasesToDestroy[] = $database;
-                }
-            }
 
-            if ($databasesToDestroy) {
-                foreach ($databasesToDestroy as $database) {
-                    $this->logger->debug("Dropping database \"$database\".");
-                    $adapterName = $databaseInfo['adapter'] ?? $this->applicationConfig->getDefaultDatabaseAdapter();
-                    $databaseAdapter = $this->databaseAdapterManager->getAdapter($adapterName);
-                    $databaseAdapter->dropDatabaseIfExists($database);
-                }
+            foreach ($databases as $database => $databaseInfo) {
+                $this->logger->debug("Dropping database \"$database\".");
+                $adapterName = $databaseInfo['adapter'] ?? $this->applicationConfig->getDefaultDatabaseAdapter();
+                $databaseAdapter = $this->databaseAdapterManager->getAdapter($adapterName);
+                $databaseAdapter->dropDatabaseIfExists($database);
             }
         } else {
             $this->logger->debug("No databases to destroy.");
         }
-    }
-
-    /**
-     * @param string $name
-     *
-     * @return string
-     */
-    private function sanitizeDatabaseName(string $name): string
-    {
-        return strtolower(preg_replace('/[^a-z0-9]/i', '_', $name));
     }
 
     /**

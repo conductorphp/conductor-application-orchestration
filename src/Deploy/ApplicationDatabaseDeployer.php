@@ -72,26 +72,17 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
      * @param string      $snapshotPath
      * @param string      $snapshotName
      * @param array       $databases
-     * @param string|null $branch
      *
      * @throws Exception\RuntimeException if app skeleton has not yet been installed
      */
     public function deployDatabases(
         string $snapshotPath,
         string $snapshotName,
-        array $databases,
-        string $branch = null
+        array $databases
     ): void {
 
         if (!$databases) {
             throw new Exception\RuntimeException('No database given for deployment.');
-        }
-
-        if (FileLayoutInterface::STRATEGY_BRANCH == $this->applicationConfig->getFileLayoutStrategy() && !$branch) {
-            throw new Exception\RuntimeException(
-                '$branch must be set because the current environment is running the '
-                . '"' . FileLayoutInterface::STRATEGY_BRANCH . '" file layout.'
-            );
         }
 
         $application = $this->applicationConfig;
@@ -106,9 +97,6 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
 
             $filename = "$databaseName." . $databaseImportExportAdapter::getFileExtension();
             $localDatabaseName = $databaseName;
-            if ('branch' == $application->getFileLayoutStrategy()) {
-                $localDatabaseName .= '_' . $this->sanitizeDatabaseName($branch);
-            }
 
             if ($databaseAdapter->databaseExists($localDatabaseName)) {
                 if (!$databaseAdapter->databaseIsEmpty($localDatabaseName)) {
@@ -135,17 +123,9 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
 
             // @todo Deal with running environment scripts
             if (!empty($database['post_import_scripts'])) {
-                $branchUrl = $branchDatabase = '';
-                if (FileLayoutInterface::STRATEGY_BRANCH == $application->getFileLayoutStrategy()) {
-                    $branchUrl = $this->sanitizeBranchForUrl($branch);
-                    $branchDatabase = $this->sanitizeBranchForDatabase($branch);
-                }
-
                 foreach ($database['post_import_scripts'] as $scriptFilename) {
                     $scriptFilename = $this->findScript($scriptFilename);
                     $scriptFilename = $this->applyStringReplacements(
-                        $branchUrl,
-                        $branchDatabase,
                         $scriptFilename
                     );
 
@@ -169,42 +149,14 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
     }
 
     /**
-     * @param $branch
-     *
-     * @return string
-     */
-    private function sanitizeBranchForUrl($branch)
-    {
-        return strtolower(preg_replace('/[^a-z0-9\.-]/i', '-', $branch));
-    }
-
-    /**
-     * @param $branch
-     *
-     * @return string
-     */
-    private function sanitizeBranchForDatabase($branch)
-    {
-        return strtolower(preg_replace('/[^a-z0-9\.-]/i', '_', $branch));
-    }
-
-    /**
-     * @param                   $branchUrl
-     * @param                   $branchDatabase
      * @param                   $filename
      *
      * @return string Filename
      */
     private function applyStringReplacements(
-        $branchUrl,
-        $branchDatabase,
         $filename
     ): string {
         $stringReplacements = [];
-        if (FileLayoutInterface::STRATEGY_BRANCH == $this->applicationConfig->getFileLayoutStrategy()) {
-            $stringReplacements['{{branch}}'] = $branchUrl;
-            $stringReplacements['{{branch_database}}'] = $branchDatabase;
-        }
         if ($stringReplacements) {
             $contents = file_get_contents($filename);
             foreach ($stringReplacements as $search => $replace) {

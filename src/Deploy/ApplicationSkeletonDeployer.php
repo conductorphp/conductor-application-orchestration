@@ -55,39 +55,20 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         $this->logger = $logger;
     }
 
-    /**
-     * @param string|null $branch
-     */
-    public function deploySkeleton(
-        string $branch = null
-    ): void {
-        if (FileLayoutInterface::STRATEGY_BRANCH == $this->applicationConfig->getFileLayoutStrategy() && !$branch) {
-            throw new Exception\RuntimeException(
-                '$branch must be set because the current environment is running the '
-                . '"' . FileLayoutInterface::STRATEGY_BRANCH . '" file layout.'
-            );
-        }
-
+    public function deploySkeleton(): void {
         $origUmask = umask(0);
-        $this->prepareFileLayout($branch);
-        $this->installAppFiles($branch);
+        $this->prepareFileLayout();
+        $this->installAppFiles();
         umask($origUmask);
     }
 
-    public function prepareFileLayout(string $branch = null): void
+    public function prepareFileLayout(): void
     {
-        if (FileLayoutInterface::STRATEGY_BRANCH == $this->applicationConfig->getFileLayoutStrategy() && !$branch) {
-            throw new Exception\RuntimeException(
-                '$branch must be set because the current environment is running the '
-                . '"' . FileLayoutInterface::STRATEGY_BRANCH . '" file layout.'
-            );
-        }
-
         $this->prepareAppRootPath();
-        $this->prepareCodePath($branch);
-        $this->prepareLocalPath($branch);
-        $this->prepareSharedPath($branch);
-        $this->prepareCurrentReleasePath($branch);
+        $this->prepareCodePath();
+        $this->prepareLocalPath();
+        $this->prepareSharedPath();
+        $this->prepareCurrentReleasePath();
     }
 
     private function prepareAppRootPath(): void
@@ -103,9 +84,9 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         }
     }
 
-    private function prepareCodePath(string $branch = null): void
+    private function prepareCodePath(): void
     {
-        $codePath = $this->applicationConfig->getCodePath($branch);
+        $codePath = $this->applicationConfig->getCodePath();
         if ($codePath != $this->applicationConfig->getAppRoot()) {
             if (!file_exists($codePath)) {
                 mkdir($codePath, $this->applicationConfig->getDefaultDirMode(), true);
@@ -116,10 +97,10 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         }
     }
 
-    private function prepareLocalPath(string $branch = null): void
+    private function prepareLocalPath(): void
     {
         $localPath = $this->applicationConfig->getLocalPath();
-        if ($localPath != $this->applicationConfig->getCodePath($branch) && !file_exists($localPath)) {
+        if ($localPath != $this->applicationConfig->getCodePath() && !file_exists($localPath)) {
             if (!file_exists($localPath)) {
                 mkdir($localPath, $this->applicationConfig->getDefaultDirMode(), true);
                 $this->logger->debug("Created \"{$localPath}\".");
@@ -129,10 +110,10 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         }
     }
 
-    private function prepareSharedPath(string $branch = null): void
+    private function prepareSharedPath(): void
     {
         $sharedPath = $this->applicationConfig->getSharedPath();
-        if ($sharedPath != $this->applicationConfig->getCodePath($branch) && !file_exists($sharedPath)) {
+        if ($sharedPath != $this->applicationConfig->getCodePath() && !file_exists($sharedPath)) {
             if (!file_exists($sharedPath)) {
                 mkdir($sharedPath, $this->applicationConfig->getDefaultDirMode(), true);
                 $this->logger->debug("Created \"{$sharedPath}\".");
@@ -142,11 +123,11 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         }
     }
 
-    private function prepareCurrentReleasePath(string $branch = null): void
+    private function prepareCurrentReleasePath(): void
     {
         if (FileLayoutInterface::STRATEGY_BLUE_GREEN == $this->applicationConfig->getFileLayoutStrategy()) {
             $appRoot = $this->applicationConfig->getAppRoot();
-            $relativeCodePath = substr($this->applicationConfig->getCodePath($branch), strlen($appRoot) + 1);
+            $relativeCodePath = substr($this->applicationConfig->getCodePath(), strlen($appRoot) + 1);
             if (!file_exists("$appRoot/" . FileLayoutInterface::PATH_CURRENT)) {
                 $this->logger->debug(
                     "Created symlink \"$appRoot/" . FileLayoutInterface::PATH_CURRENT
@@ -162,24 +143,14 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         }
     }
 
-    /**
-     * @param string|null $branch
-     */
-    public function installAppFiles(string $branch = null): void
+    public function installAppFiles(): void
     {
-        if (FileLayoutInterface::STRATEGY_BRANCH == $this->applicationConfig->getFileLayoutStrategy() && !$branch) {
-            throw new Exception\RuntimeException(
-                '$branch must be set because the current environment is running the '
-                . '"' . FileLayoutInterface::STRATEGY_BRANCH . '" file layout.'
-            );
-        }
-
-        $this->installDirectories($branch);
-        $this->installFiles($branch);
-        $this->installSymlinks($branch);
+        $this->installDirectories();
+        $this->installFiles();
+        $this->installSymlinks();
     }
 
-    private function installDirectories(string $branch = null): void
+    private function installDirectories(): void
     {
         $directories = $this->applicationConfig->getSkeletonConfig()->getDirectories();
         if ($directories) {
@@ -190,8 +161,8 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
                     );
                 }
 
-                $resolvedFilename = $this->resolveFilename($directory['location'], $filename, $branch);
-                $this->installDirectory($resolvedFilename, $filename, $directory, $branch);
+                $resolvedFilename = $this->resolveFilename($directory['location'], $filename);
+                $this->installDirectory($resolvedFilename, $filename, $directory);
             }
         }
     }
@@ -200,17 +171,15 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
      * @param string      $resolvedFilename
      * @param string      $filename
      * @param array       $fileInfo
-     * @param string|null $branch
      */
     private function installDirectory(
         string $resolvedFilename,
         string $filename,
-        array $fileInfo,
-        string $branch = null
+        array $fileInfo
     ): void {
         if (!empty($fileInfo['auto_symlink'])) {
-            $symlinkResolvedFilename = $this->resolveFilename('code', $filename, $branch);
-            $symlinkResolvedTargetFilename = $this->resolveFilename($fileInfo['location'], $filename, $branch);
+            $symlinkResolvedFilename = $this->resolveFilename('code', $filename);
+            $symlinkResolvedTargetFilename = $this->resolveFilename($fileInfo['location'], $filename);
             $this->installSymlink($symlinkResolvedFilename, $symlinkResolvedTargetFilename);
         }
 
@@ -246,10 +215,7 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         }
     }
 
-    /**
-     * @param string|null $branch
-     */
-    private function installFiles(string $branch = null): void
+    private function installFiles(): void
     {
         $files = $this->applicationConfig->getSkeletonConfig()->getFiles();
         if (!empty($files)) {
@@ -260,8 +226,8 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
                     );
                 }
 
-                $resolvedFilename = $this->resolveFilename($file['location'], $filename, $branch);
-                $this->installFile($resolvedFilename, $filename, $file, $branch);
+                $resolvedFilename = $this->resolveFilename($file['location'], $filename);
+                $this->installFile($resolvedFilename, $filename, $file);
             }
         }
     }
@@ -270,17 +236,15 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
      * @param string      $resolvedFilename
      * @param string      $filename
      * @param array       $fileInfo
-     * @param string|null $branch
      */
     private function installFile(
         string $resolvedFilename,
         string $filename,
-        array $fileInfo,
-        string $branch = null
+        array $fileInfo
     ): void {
         if ($fileInfo['auto_symlink']) {
-            $symlinkResolvedFilename = $this->resolveFilename('code', $filename, $branch);
-            $symlinkResolvedTargetFilename = $this->resolveFilename($fileInfo['location'], $filename, $branch);
+            $symlinkResolvedFilename = $this->resolveFilename('code', $filename);
+            $symlinkResolvedTargetFilename = $this->resolveFilename($fileInfo['location'], $filename);
             $this->installSymlink($symlinkResolvedFilename, $symlinkResolvedTargetFilename);
         }
 
@@ -303,7 +267,7 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         }
         $modeAsString = base_convert((string)$mode, 10, 8);
 
-        $content = $this->renderContent($fileInfo, $globalTemplateVars, $branch);
+        $content = $this->renderContent($fileInfo, $globalTemplateVars);
         if (file_exists($resolvedFilename)) {
             if (!is_file($resolvedFilename) || is_link($resolvedFilename)) {
                 if (is_dir($resolvedFilename)) {
@@ -324,7 +288,7 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         }
     }
 
-    private function installSymlinks(string $branch = null): void
+    private function installSymlinks(): void
     {
         $symlinks = $this->applicationConfig->getSkeletonConfig()->getSymlinks();
         if (!empty($symlinks)) {
@@ -335,11 +299,10 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
                     );
                 }
 
-                $resolvedFilename = $this->resolveFilename($symlink['location'], $sourcePath, $branch);
+                $resolvedFilename = $this->resolveFilename($symlink['location'], $sourcePath);
                 $resolvedTargetFilename = $this->resolveFilename(
                     $symlink['target_location'],
-                    $symlink['target'],
-                    $branch
+                    $symlink['target']
                 );
                 $this->installSymlink($resolvedFilename, $resolvedTargetFilename);
             }
@@ -349,24 +312,22 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
     /**
      * @param string      $location
      * @param string      $filename
-     * @param string|null $branch
      *
      * @return string
      */
-    private function resolveFilename(string $location, string $filename, string $branch = null): string
+    private function resolveFilename(string $location, string $filename): string
     {
-        $path = $this->applicationConfig->getPath($location, $branch);
+        $path = $this->applicationConfig->getPath($location);
         return "$path/$filename";
     }
 
     /**
      * @param array       $fileInfo
      * @param array       $globalTemplateVars
-     * @param string|null $branch
      *
      * @return string
      */
-    private function renderContent(array $fileInfo, array $globalTemplateVars, string $branch = null): string
+    private function renderContent(array $fileInfo, array $globalTemplateVars): string
     {
         if (empty($fileInfo['source'])) {
             return '';
@@ -383,27 +344,6 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
             }
         } else {
             $templateVars = $globalTemplateVars;
-        }
-
-
-        // Special use case to replace branch name in any configuration files in which it is needed with the branch
-        // specific database name.
-        if (FileLayoutInterface::STRATEGY_BRANCH == $this->applicationConfig->getFileLayoutStrategy()) {
-            $databaseSanitizedBranchName = $this->sanitizeDatabaseName($branch);
-            $urlSanitizedBranchName = $this->sanitizeUrl($branch);
-            foreach ($templateVars as &$templateVar) {
-                $templateVar = preg_replace(
-                    '%\{\{\s*database_branch_suffix\s*\}\}%',
-                    $databaseSanitizedBranchName,
-                    $templateVar
-                );
-                $templateVar = preg_replace(
-                    '%\{\{\s*url_branch_suffix\s*\}\}%',
-                    "$urlSanitizedBranchName/",
-                    $templateVar
-                );
-            }
-            unset($templateVar);
         }
 
         if ($templateVars && '.twig' == substr($fileInfo['source'], -5)) {

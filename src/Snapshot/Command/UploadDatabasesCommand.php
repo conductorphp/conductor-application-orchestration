@@ -52,7 +52,6 @@ class UploadDatabasesCommand
     public function run(
         string $snapshotName,
         string $snapshotPath,
-        string $branch = null,
         bool $includeDatabases = true,
         bool $includeAssets = true,
         array $assetSyncConfig = [],
@@ -85,11 +84,7 @@ class UploadDatabasesCommand
                 if (isset($databaseInfo['local_database_name'])) {
                     $localDatabaseName = $database['local_database_name'];
                 } else {
-                    if (FileLayoutInterface::STRATEGY_BRANCH == $this->applicationConfig->getFileLayoutStrategy()) {
-                        $localDatabaseName = $databaseName . '_' . $this->sanitizeDatabaseName($branch);
-                    } else {
-                        $localDatabaseName = $databaseName;
-                    }
+                    $localDatabaseName = $databaseName;
                 }
 
                 // @todo Add ability to alter database in more ways than excluding data, E.g. Remove all but two stores.
@@ -110,16 +105,6 @@ class UploadDatabasesCommand
         }
 
         return null;
-    }
-
-    /**
-     * @param string $name
-     *
-     * @return string
-     */
-    private function sanitizeDatabaseName(string $name): string
-    {
-        return strtolower(preg_replace('/[^a-z0-9]/i', '_', $name));
     }
 
     /**

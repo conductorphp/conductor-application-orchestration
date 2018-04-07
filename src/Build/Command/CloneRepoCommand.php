@@ -41,7 +41,7 @@ class CloneRepoCommand
     /**
      * @inheritdoc
      */
-    public function run(string $branch, string $buildId, string $savePath, array $options = null): ?string
+    public function run(string $repoReference, string $buildId, string $savePath, array $options = null): ?string
     {
         if (!isset($this->applicationConfig)) {
             throw new Exception\RuntimeException('$this->applicationConfig must be set.');
@@ -55,7 +55,7 @@ class CloneRepoCommand
             sprintf(
                 'Cloning "%s:%s".',
                 $this->applicationConfig->getRepoUrl(),
-                $branch
+                $repoReference
             )
         );
 
@@ -63,7 +63,7 @@ class CloneRepoCommand
         $this->repositoryAdapter->setRepoUrl($this->applicationConfig->getRepoUrl());
         // @todo Add support for doing a limited clone of only the files needed; like git's --depth 1 and
         //       --single-branch options
-        $this->repositoryAdapter->checkout($branch);
+        $this->repositoryAdapter->checkout($repoReference);
         return null;
     }
 

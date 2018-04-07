@@ -38,7 +38,7 @@ class PrepareFileLayoutCommand
         string $codeRoot,
         string $buildId = null,
         string $buildPath = null,
-        string $branch = null,
+        string $repoReference = null,
         string $snapshotName = null,
         string $snapshotPath = null,
         bool $includeAssets = true,
@@ -53,7 +53,7 @@ class PrepareFileLayoutCommand
         }
 
         $this->logger->info('Preparing file layout.');
-        $this->applicationSkeletonDeployer->prepareFileLayout($branch);
+        $this->applicationSkeletonDeployer->prepareFileLayout($repoReference ?? $buildId);
         return null;
     }
 

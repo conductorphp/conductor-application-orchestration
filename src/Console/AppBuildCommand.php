@@ -106,13 +106,13 @@ class AppBuildCommand extends Command
         $this->injectOutputIntoLogger($output, $this->logger);
         $this->applicationBuilder->setLogger($this->logger);
         $buildPlan = $input->getOption('plan');
-        $branch = $input->getArgument('repo-reference');
-        $buildId = $input->getArgument('build-id') ?? $branch . '-' . $buildPlan . '-' . time();
+        $repoReference = $input->getArgument('repo-reference');
+        $buildId = $input->getArgument('build-id') ?? $repoReference . '-' . $buildPlan . '-' . time();
         $buildPath = $input->getOption('build-path');
 
         $appName = $this->applicationConfig->getAppName();
         $this->logger->info("Building application \"$appName\".");
-        $this->applicationBuilder->build($buildPlan, $branch, $buildId, $buildPath);
+        $this->applicationBuilder->build($buildPlan, $repoReference, $buildId, $buildPath);
         $this->logger->info("<info>Application \"$appName\" build complete!</info>");
         $output->write($buildId);
         return 0;

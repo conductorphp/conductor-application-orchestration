@@ -76,13 +76,11 @@ class ApplicationDeployer
     }
 
     /**
-     * @param string      $deployPlan
-     * @param string|null $branch
-     * @param bool        $clean
+     * @param string $deployPlan
+     * @param bool   $clean
      */
     public function deploySkeleton(
         string $deployPlan,
-        string $branch = null,
         bool $clean = false
     ): void {
         $deployPlans = $this->applicationConfig->getDeployConfig()->getPlans();
@@ -96,10 +94,9 @@ class ApplicationDeployer
             $deployPlan,
             $conditions,
             [
-                'codeRoot'          => $this->applicationConfig->getCodePath($branch),
                 'buildId'           => null,
                 'buildPath'         => null,
-                'branch'            => $branch,
+                'repoReference'     => null,
                 'snapshotName'      => null,
                 'snapshotPath'      => null,
                 'includeAssets'     => true,
@@ -108,8 +105,7 @@ class ApplicationDeployer
                 'allowFullRollback' => false,
             ],
             $clean,
-            false,
-            $branch
+            false
         );
     }
 
@@ -118,7 +114,7 @@ class ApplicationDeployer
      * @param bool        $skeletonOnly
      * @param string|null $buildId
      * @param string|null $buildPath
-     * @param string|null $branch
+     * @param string|null $repoReference
      * @param string|null $snapshotName
      * @param string|null $snapshotPath
      * @param bool        $includeAssets
@@ -130,10 +126,10 @@ class ApplicationDeployer
      */
     public function deploy(
         string $deployPlan,
-        $skeletonOnly = false,
+        bool $skeletonOnly = false,
         string $buildId = null,
         string $buildPath = null,
-        string $branch = null,
+        string $repoReference = null,
         string $snapshotName = null,
         string $snapshotPath = null,
         bool $includeAssets = true,
@@ -143,32 +139,32 @@ class ApplicationDeployer
         bool $clean = false,
         bool $rollback = false
     ): void {
-        if ($skeletonOnly) {
-            if ($buildId || $branch || $snapshotName) {
-                throw new Exception\RuntimeException(
-                    'Deploying $skeletonOnly. $buildId, $branch, and $snapshotName may not be set.'
-                );
-            }
-        }
 
         $deployPlans = $this->applicationConfig->getDeployConfig()->getPlans();
         $this->planRunner->setPlans($deployPlans);
         $this->planRunner->setPlanPath($this->planPath);
         $this->planRunner->setStepInterface(DeployCommandInterface::class);
 
+        if ($skeletonOnly && $snapshotName) {
+            throw new Exception\RuntimeException('$snapshotName may not be set with $skeletonOnly.');
+        }
+
         $conditions = [];
         if ($skeletonOnly) {
             $conditions[] = 'skeleton';
         }
+
         if ($snapshotName && $includeAssets) {
             $conditions[] = 'skeleton';
             $conditions[] = 'assets';
         }
-        if ($buildId || $branch) {
+
+        if ($buildId || $repoReference) {
             $conditions[] = 'skeleton';
             $conditions[] = 'code';
             $conditions[] = $buildId ? 'code-build' : 'code-repo';
         }
+
         if ($snapshotName && $includeDatabases) {
             $conditions[] = 'databases';
         }
@@ -181,10 +177,10 @@ class ApplicationDeployer
             $deployPlan,
             $conditions,
             [
-                'codeRoot'          => $this->applicationConfig->getCodePath($branch),
+                'codePath'          => $this->applicationConfig->getCodePath(),
                 'buildId'           => $buildId,
                 'buildPath'         => $buildPath,
-                'branch'            => $branch,
+                'repoReference'     => $repoReference,
                 'snapshotName'      => $snapshotName,
                 'snapshotPath'      => $snapshotPath,
                 'includeAssets'     => $includeAssets,
@@ -193,8 +189,7 @@ class ApplicationDeployer
                 'allowFullRollback' => $allowFullRollback,
             ],
             $clean,
-            $rollback,
-            $branch
+            $rollback
         );
     }
 
@@ -216,6 +211,5 @@ class ApplicationDeployer
     {
         $this->planPath = $planPath;
     }
-
 
 }

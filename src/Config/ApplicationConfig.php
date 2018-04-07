@@ -101,7 +101,6 @@ class ApplicationConfig
             $this->config['file_layout'],
             [
                 FileLayoutInterface::STRATEGY_BLUE_GREEN,
-                FileLayoutInterface::STRATEGY_BRANCH,
                 FileLayoutInterface::STRATEGY_DEFAULT
             ]
         )) {
@@ -291,13 +290,13 @@ class ApplicationConfig
     }
 
     /**
-     * @param string $branch
+     * @param string $string
      *
      * @return string
      */
-    private function sanitizeBranchForFilepath(string $branch): string
+    private function sanitizeForFilepath(string $string): string
     {
-        return strtolower(preg_replace('/[^a-z0-9\.-]/i', '-', $branch));
+        return strtolower(preg_replace('/[^a-z0-9\.-]/i', '-', $string));
     }
 
     /**
@@ -363,22 +362,14 @@ class ApplicationConfig
     }
 
     /**
-     * @param string|null $branch
-     *
      * @return string
      */
-    public function getCodePath(string $branch = null): string
+    public function getCodePath(): string
     {
-        if ($branch) {
-            $branch = $this->sanitizeBranchForFilepath($branch);
-        }
         $appRoot = $this->getAppRoot();
         switch ($this->getFileLayoutStrategy()) {
             case FileLayoutInterface::STRATEGY_BLUE_GREEN:
-                return "$appRoot/" . FileLayoutInterface::PATH_RELEASES . "/$branch";
-
-            case FileLayoutInterface::STRATEGY_BRANCH:
-                return "$appRoot/" . FileLayoutInterface::PATH_BRANCHES . "/$branch";
+                return "$appRoot/" . FileLayoutInterface::PATH_BUILDS;
 
             case FileLayoutInterface::STRATEGY_DEFAULT:
             default:
@@ -394,9 +385,6 @@ class ApplicationConfig
         $appRoot = $this->getAppRoot();
         switch ($this->getFileLayoutStrategy()) {
             case FileLayoutInterface::STRATEGY_BLUE_GREEN:
-                return "$appRoot/" . FileLayoutInterface::PATH_LOCAL;
-
-            case FileLayoutInterface::STRATEGY_BRANCH:
                 return "$appRoot/" . FileLayoutInterface::PATH_LOCAL;
 
             case FileLayoutInterface::STRATEGY_DEFAULT:
@@ -415,9 +403,6 @@ class ApplicationConfig
             case FileLayoutInterface::STRATEGY_BLUE_GREEN:
                 return "$appRoot/" . FileLayoutInterface::PATH_SHARED;
 
-            case FileLayoutInterface::STRATEGY_BRANCH:
-                return "$appRoot/" . FileLayoutInterface::PATH_SHARED;
-
             case FileLayoutInterface::STRATEGY_DEFAULT:
             default:
                 return $appRoot;
@@ -426,15 +411,14 @@ class ApplicationConfig
 
     /**
      * @param string      $type
-     * @param string|null $branch
      *
      * @return string
      */
-    public function getPath(string $type, string $branch = null): string
+    public function getPath(string $type): string
     {
         switch ($type) {
             case FileLayoutInterface::PATH_CODE:
-                return $this->getCodePath($branch);
+                return $this->getCodePath();
             case FileLayoutInterface::PATH_LOCAL:
                 return $this->getLocalPath();
             case FileLayoutInterface::PATH_SHARED:

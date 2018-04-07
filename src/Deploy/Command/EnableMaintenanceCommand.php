@@ -38,7 +38,7 @@ class EnableMaintenanceCommand
         string $codeRoot,
         string $buildId = null,
         string $buildPath = null,
-        string $branch = null,
+        string $repoReference = null,
         string $snapshotName = null,
         string $snapshotPath = null,
         bool $includeAssets = true,
@@ -53,7 +53,7 @@ class EnableMaintenanceCommand
         }
 
         $this->logger->info('Enabling maintenance mode.');
-        $this->maintenanceStrategy->enable($branch);
+        $this->maintenanceStrategy->enable($repoReference);
         return null;
     }
 

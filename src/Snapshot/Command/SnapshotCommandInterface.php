@@ -7,7 +7,6 @@ interface SnapshotCommandInterface
     /**
      * @param string      $snapshotName
      * @param string      $snapshotPath
-     * @param string|null $branch
      * @param bool        $includeDatabases
      * @param bool        $includeAssets
      * @param array       $assetSyncConfig
@@ -18,7 +17,6 @@ interface SnapshotCommandInterface
     public function run(
         string $snapshotName,
         string $snapshotPath,
-        string $branch = null,
         bool $includeDatabases = true,
         bool $includeAssets = true,
         array $assetSyncConfig = [],

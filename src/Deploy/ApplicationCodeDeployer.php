@@ -72,30 +72,23 @@ class ApplicationCodeDeployer
     /**
      * @param string $buildId
      * @param string $buildPath
-     * @param string $branch
+     * @param string $repoReference
      *
      * @throws Exception\RuntimeException if app skeleton has not yet been installed
      */
     public function deployCode(
         string $buildId = null,
         string $buildPath = null,
-        string $branch = null
+        string $repoReference = null
     ): void {
-        if (!($buildId || $branch)) {
-            throw new Exception\BadMethodCallException('$buildId or $branch must be set.');
-        }
-
-        if (FileLayoutInterface::STRATEGY_BRANCH == $this->applicationConfig->getFileLayoutStrategy() && !$branch) {
-            throw new Exception\RuntimeException(
-                '$branch must be set because the current environment is running the '
-                . '"' . FileLayoutInterface::STRATEGY_BRANCH . '" file layout.'
-            );
+        if (!($buildId || $repoReference)) {
+            throw new Exception\BadMethodCallException('$buildId or $repoReference must be set.');
         }
 
         if ($buildId) {
-            $this->deployFromBuild($buildId, $buildPath, $branch);
+            $this->deployFromBuild($buildId, $buildPath);
         } else {
-            $this->deployFromRepo($branch);
+            $this->deployFromRepo($repoReference);
         }
     }
 
@@ -104,7 +97,7 @@ class ApplicationCodeDeployer
      */
     private function deployFromRepo(string $repoReference): void
     {
-        $codePath = $this->applicationConfig->getCodePath($repoReference);
+        $codePath = $this->applicationConfig->getCodePath();
         $repoUrl = $this->applicationConfig->getRepoUrl();
 
         $this->logger->debug("Checking out \"$repoUrl:$repoReference\" to \"{$codePath}\".");
@@ -117,15 +110,14 @@ class ApplicationCodeDeployer
     /**
      * @param string      $buildId
      * @param string      $buildPath
-     * @param string|null $branch
      */
-    private function deployFromBuild(string $buildId, string $buildPath, string $branch = null): void
+    private function deployFromBuild(string $buildId, string $buildPath): void
     {
         if (!$buildPath) {
             throw new Exception\BadMethodCallException('$buildPath must be set if $buildId is set.');
         }
 
-        $codePath = $this->applicationConfig->getCodePath($branch);
+        $codePath = $this->applicationConfig->getCodePath();
         $cwd = getcwd();
         $this->logger->debug(
             "Downloading build file from \"$buildPath/$buildId.tgz\" to \"local://$cwd/$buildId.tgz\"."
@@ -133,7 +125,7 @@ class ApplicationCodeDeployer
         $this->mountManager->copy("$buildPath/$buildId.tgz", "local://$cwd/$buildId.tgz");
 
 
-        // Deal with branch and blue/green file layouts here
+        // Deal with blue_green file layout here
         $this->logger->debug("Extracting \"local://$cwd/$buildId.tgz\" to \"$codePath\".");
         $command = 'tar -xzvf ' . escapeshellarg("$cwd/$buildId.tgz") . ' --directory ' . escapeshellarg($codePath);
         $this->shellAdapter->runShellCommand($command);

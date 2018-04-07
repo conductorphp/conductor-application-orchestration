@@ -86,7 +86,6 @@ class ApplicationSnapshotTaker
      * @param string      $snapshotPlan
      * @param string      $snapshotName
      * @param string      $snapshotPath
-     * @param string|null $branch
      * @param bool        $includeDatabases
      * @param bool        $includeAssets
      * @param bool        $replace
@@ -96,7 +95,6 @@ class ApplicationSnapshotTaker
         string $snapshotPlan,
         string $snapshotName,
         string $snapshotPath,
-        string $branch = null,
         bool $includeDatabases = true,
         bool $includeAssets = true,
         bool $replace = false,
@@ -120,7 +118,6 @@ class ApplicationSnapshotTaker
             [
                 'snapshotName'     => $snapshotName,
                 'snapshotPath'     => $snapshotPath,
-                'branch'           => $branch,
                 'includeDatabases' => $includeDatabases,
                 'includeAssets'    => $includeAssets,
                 'assetSyncConfig'  => $assetSyncConfig,

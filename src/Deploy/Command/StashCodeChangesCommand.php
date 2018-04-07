@@ -37,7 +37,7 @@ class StashCodeChangesCommand
         string $codeRoot,
         string $buildId = null,
         string $buildPath = null,
-        string $branch = null,
+        string $repoReference = null,
         string $snapshotName = null,
         string $snapshotPath = null,
         bool $includeAssets = true,
@@ -47,7 +47,7 @@ class StashCodeChangesCommand
         array $options = null
     ): ?string
     {
-        if (!$branch) {
+        if (!$repoReference) {
             $this->logger->notice(
                 'Add condition "code-repo" to this step in your deployment plan. This step can only be run when '
                 . 'deploying code from a repo. Skipped.'
