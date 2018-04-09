@@ -94,6 +94,7 @@ class ApplicationDeployer
             $deployPlan,
             $conditions,
             [
+                'codePath'          => $this->applicationConfig->getCodePath(),
                 'buildId'           => null,
                 'buildPath'         => null,
                 'repoReference'     => null,
