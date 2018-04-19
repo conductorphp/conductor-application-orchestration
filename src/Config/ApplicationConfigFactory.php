@@ -31,7 +31,7 @@ class ApplicationConfigFactory implements FactoryInterface
         $zendExpressiveRoot = realpath(__DIR__ . '/../../../../..');
         $environment = $config['environment'] ?? 'development';
         $sourceFilePathStack = [
-            $zendExpressiveRoot . '/config/app/environments/ ' . $environment . '/files',
+            $zendExpressiveRoot . '/config/app/environments/' . $environment . '/files',
             $zendExpressiveRoot . '/config/app/files',
         ];
         $application = [
