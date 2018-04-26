@@ -118,14 +118,16 @@ class ApplicationCodeDeployer
         }
 
         $codePath = $this->applicationConfig->getCodePath();
+        // Deal with blue_green file layout here
+//        if (FileLayoutInterface::STRATEGY_BLUE_GREEN == $this->applicationConfig->getFileLayoutStrategy()) {
+//            $codePath .= "/$buildId";
+//        }
         $cwd = getcwd();
         $this->logger->debug(
             "Downloading build file from \"$buildPath/$buildId.tgz\" to \"local://$cwd/$buildId.tgz\"."
         );
         $this->mountManager->copy("$buildPath/$buildId.tgz", "local://$cwd/$buildId.tgz");
 
-
-        // Deal with blue_green file layout here
         $this->logger->debug("Extracting \"local://$cwd/$buildId.tgz\" to \"$codePath\".");
         $command = 'tar -xzvf ' . escapeshellarg("$cwd/$buildId.tgz") . ' --directory ' . escapeshellarg($codePath);
         $this->shellAdapter->runShellCommand($command);

@@ -53,7 +53,7 @@ class EnableMaintenanceCommand
         }
 
         $this->logger->info('Enabling maintenance mode.');
-        $this->maintenanceStrategy->enable($repoReference);
+        $this->maintenanceStrategy->enable();
         return null;
     }
 

@@ -9,6 +9,7 @@ Conductor: Application Orchestration
 - Removed support for multiple apps
 - Replaced app:config:list and app:config:get with app:config:show
 - Made app:install commands more cohesive
+- Added deployment mainenance mode management commands
 
 # 0.1.0
 - Initial build copied over from Conductor

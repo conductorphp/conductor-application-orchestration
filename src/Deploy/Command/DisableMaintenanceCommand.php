@@ -52,8 +52,8 @@ class DisableMaintenanceCommand
             throw new Exception\RuntimeException('$this->maintenanceStrategy must be set.');
         }
 
-        $this->logger->info('Enabling maintenance mode.');
-        $this->maintenanceStrategy->disable($repoReference);
+        $this->logger->info('Disabling maintenance mode.');
+        $this->maintenanceStrategy->disable();
         return null;
     }
 
