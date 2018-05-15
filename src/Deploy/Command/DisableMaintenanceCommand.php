@@ -53,7 +53,7 @@ class DisableMaintenanceCommand
         }
 
         $this->logger->info('Disabling maintenance mode.');
-        $this->maintenanceStrategy->disable();
+        $this->maintenanceStrategy->disable($buildId);
         return null;
     }
 

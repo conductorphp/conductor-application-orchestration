@@ -5,8 +5,6 @@ namespace ConductorAppOrchestration\Deploy\Command;
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\Config\ApplicationConfigAwareInterface;
 use ConductorAppOrchestration\Exception;
-use ConductorCore\Database\DatabaseAdapterManager;
-use ConductorCore\Database\DatabaseAdapterManagerAwareInterface;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -95,7 +93,7 @@ class DeleteAssetsCommand
     }
 
     /**
-     * @param string      $asset
+     * @param string $asset
      *
      * @return string
      */

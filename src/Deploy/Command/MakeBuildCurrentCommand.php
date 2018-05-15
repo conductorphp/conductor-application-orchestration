@@ -2,25 +2,25 @@
 
 namespace ConductorAppOrchestration\Deploy\Command;
 
+use ConductorAppOrchestration\Deploy\ApplicationSkeletonDeployer;
+use ConductorAppOrchestration\Deploy\ApplicationSkeletonDeployerAwareInterface;
 use ConductorAppOrchestration\Exception;
-use ConductorAppOrchestration\Maintenance\MaintenanceStrategyAwareInterface;
-use ConductorAppOrchestration\Maintenance\MaintenanceStrategyInterface;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 /**
- * Class EnableMaintenanceCommand
+ * Class MakeBuildCurrentCommand
  *
  * @package ConductorAppOrchestration\Snapshot\Command
  */
-class EnableMaintenanceCommand
-    implements DeployCommandInterface, MaintenanceStrategyAwareInterface, LoggerAwareInterface
+class MakeBuildCurrentCommand
+    implements DeployCommandInterface, ApplicationSkeletonDeployerAwareInterface, LoggerAwareInterface
 {
     /**
-     * @var MaintenanceStrategyInterface
+     * @var ApplicationSkeletonDeployer
      */
-    private $maintenanceStrategy;
+    private $applicationSkeletonDeployer;
     /**
      * @var LoggerInterface
      */
@@ -48,21 +48,21 @@ class EnableMaintenanceCommand
         array $options = null
     ): ?string
     {
-        if (!isset($this->maintenanceStrategy)) {
-            throw new Exception\RuntimeException('$this->maintenanceStrategy must be set.');
+        if (!isset($this->applicationSkeletonDeployer)) {
+            throw new Exception\RuntimeException('$this->applicationSkeletonDeployer must be set.');
         }
 
-        $this->logger->info('Enabling maintenance mode.');
-        $this->maintenanceStrategy->enable($buildId);
+        $this->logger->info("Setting build \"$buildId\" as current build.");
+        $this->applicationSkeletonDeployer->makeBuildCurrent($buildId);
         return null;
     }
 
     /**
      * @inheritdoc
      */
-    public function setMaintenanceStrategy(MaintenanceStrategyInterface $maintenanceStrategy): void
+    public function setApplicationSkeletonDeployer(ApplicationSkeletonDeployer $applicationSkeletonDeployer): void
     {
-        $this->maintenanceStrategy = $maintenanceStrategy;
+        $this->applicationSkeletonDeployer = $applicationSkeletonDeployer;
     }
 
     /**

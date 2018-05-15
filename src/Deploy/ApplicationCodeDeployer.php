@@ -117,7 +117,7 @@ class ApplicationCodeDeployer
             throw new Exception\BadMethodCallException('$buildPath must be set if $buildId is set.');
         }
 
-        $codePath = $this->applicationConfig->getCodePath();
+        $codePath = $this->applicationConfig->getCodePath($buildId);
         // Deal with blue_green file layout here
 //        if (FileLayoutInterface::STRATEGY_BLUE_GREEN == $this->applicationConfig->getFileLayoutStrategy()) {
 //            $codePath .= "/$buildId";

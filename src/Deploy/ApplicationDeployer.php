@@ -77,10 +77,12 @@ class ApplicationDeployer
 
     /**
      * @param string $deployPlan
+     * @param string|null $buildId
      * @param bool   $clean
      */
     public function deploySkeleton(
         string $deployPlan,
+        string $buildId = null,
         bool $clean = false
     ): void {
         $deployPlans = $this->applicationConfig->getDeployConfig()->getPlans();
@@ -94,7 +96,7 @@ class ApplicationDeployer
             $deployPlan,
             $conditions,
             [
-                'codePath'          => $this->applicationConfig->getCodePath(),
+                'codePath'          => $this->applicationConfig->getCodePath($buildId),
                 'buildId'           => null,
                 'buildPath'         => null,
                 'repoReference'     => null,
@@ -178,7 +180,7 @@ class ApplicationDeployer
             $deployPlan,
             $conditions,
             [
-                'codePath'          => $this->applicationConfig->getCodePath(),
+                'codePath'          => $this->applicationConfig->getCodePath($buildId),
                 'buildId'           => $buildId,
                 'buildPath'         => $buildPath,
                 'repoReference'     => $repoReference,

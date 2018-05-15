@@ -364,12 +364,12 @@ class ApplicationConfig
     /**
      * @return string
      */
-    public function getCodePath(): string
+    public function getCodePath(string $buildId = null): string
     {
         $appRoot = $this->getAppRoot();
         switch ($this->getFileLayoutStrategy()) {
             case FileLayoutInterface::STRATEGY_BLUE_GREEN:
-                return "$appRoot/" . FileLayoutInterface::PATH_BUILDS;
+                return "$appRoot/" . FileLayoutInterface::PATH_BUILDS . "/$buildId";
 
             case FileLayoutInterface::STRATEGY_DEFAULT:
             default:
@@ -411,14 +411,17 @@ class ApplicationConfig
 
     /**
      * @param string      $type
+     * @param string|null $buildId
      *
      * @return string
      */
-    public function getPath(string $type): string
+    public function getPath(string $type, string $buildId = null): string
     {
         switch ($type) {
             case FileLayoutInterface::PATH_CODE:
-                return $this->getCodePath();
+                return $this->getCodePath($buildId);
+            case FileLayoutInterface::PATH_CURRENT:
+                return $this->getCurrentPath();
             case FileLayoutInterface::PATH_LOCAL:
                 return $this->getLocalPath();
             case FileLayoutInterface::PATH_SHARED:
@@ -426,5 +429,29 @@ class ApplicationConfig
             default:
                 throw new Exception\RuntimeException('Invalid path type "' . $type . '" given.');
         }
+    }
+
+    /**
+     * @return string
+     */
+    public function getCurrentPath(): string
+    {
+        $path = $this->getAppRoot();
+        if (FileLayoutInterface::STRATEGY_BLUE_GREEN == $this->getFileLayoutStrategy()) {
+            $path .= '/' . FileLayoutInterface::PATH_CURRENT;
+        }
+        return $path;
+    }
+
+    /**
+     * @return string
+     */
+    public function getPreviousPath(): string
+    {
+        $path = $this->getAppRoot();
+        if (FileLayoutInterface::STRATEGY_BLUE_GREEN == $this->getFileLayoutStrategy()) {
+            $path .= '/' . FileLayoutInterface::PATH_PREVIOUS;
+        }
+        return $path;
     }
 }

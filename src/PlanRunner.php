@@ -428,9 +428,11 @@ class PlanRunner implements LoggerAwareInterface
         if (!empty($step['comment'])) {
             $this->logger->debug($step['comment']);
         }
+        # @todo Add logic that logs a notice if run_in_code_root is specified for a given step, but class is given instead of command
         $commandWorkingDirectory = !empty($step['run_in_code_root'])
-            ? $this->applicationConfig->getCodePath()
+            ? $stepArguments['codePath']
             : $this->planPath;
+
         if (!empty($step['command'])) {
             $environmentVariables = array_replace(
                 getenv(),

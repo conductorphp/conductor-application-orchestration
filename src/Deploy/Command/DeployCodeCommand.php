@@ -60,7 +60,6 @@ class DeployCodeCommand
             throw new Exception\RuntimeException('$this->applicationCodeDeployer must be set.');
         }
 
-        // @todo Deal with update and stash arguments
         $this->applicationCodeDeployer->deployCode($buildId, $buildPath, $repoReference);
         return null;
     }

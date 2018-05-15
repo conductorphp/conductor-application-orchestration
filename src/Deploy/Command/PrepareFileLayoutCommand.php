@@ -53,7 +53,7 @@ class PrepareFileLayoutCommand
         }
 
         $this->logger->info('Preparing file layout.');
-        $this->applicationSkeletonDeployer->prepareFileLayout($repoReference ?? $buildId);
+        $this->applicationSkeletonDeployer->prepareFileLayout($buildId);
         return null;
     }
 

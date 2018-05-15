@@ -2,10 +2,10 @@
 
 namespace ConductorAppOrchestration\Deploy\Command;
 
-use ConductorAppOrchestration\Deploy\ApplicationDatabaseDeployer;
-use ConductorAppOrchestration\Deploy\ApplicationDatabaseDeployerAwareInterface;
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\Config\ApplicationConfigAwareInterface;
+use ConductorAppOrchestration\Deploy\ApplicationDatabaseDeployer;
+use ConductorAppOrchestration\Deploy\ApplicationDatabaseDeployerAwareInterface;
 use ConductorAppOrchestration\Exception;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
@@ -17,7 +17,8 @@ use Psr\Log\NullLogger;
  * @package ConductorAppOrchestration\Snapshot\Command
  */
 class DeployDatabasesCommand
-    implements DeployCommandInterface, ApplicationDatabaseDeployerAwareInterface, LoggerAwareInterface, ApplicationConfigAwareInterface
+    implements DeployCommandInterface, ApplicationDatabaseDeployerAwareInterface, LoggerAwareInterface,
+               ApplicationConfigAwareInterface
 {
     /**
      * @var ApplicationDatabaseDeployer
@@ -78,8 +79,7 @@ class DeployDatabasesCommand
         $this->applicationDatabaseDeployer->deployDatabases(
             $snapshotPath,
             $snapshotName,
-            $databases,
-            $repoReference
+            $databases
         );
         return null;
     }

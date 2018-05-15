@@ -10,7 +10,7 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 /**
- * Class DeployCodeCommand
+ * Class RemoveDeployedBuildCommand
  *
  * @package ConductorAppOrchestration\Snapshot\Command
  */
@@ -60,10 +60,9 @@ class RemoveDeployedBuildCommand
             throw new Exception\RuntimeException('$this->applicationConfig must be set.');
         }
 
-        $appRoot = $this->applicationConfig->getAppRoot();
-        $path = "$appRoot/builds/$buildId";
-        $this->logger->debug('Removing deployed build at "' . $path . '".');
-        $this->removePath($path);
+        $buildDeployPath = $this->applicationConfig->getCodePath($buildId);
+        $this->logger->debug("Removing deployed build at \"$buildDeployPath\".");
+        $this->removePath($buildDeployPath);
         return null;
     }
 

@@ -53,7 +53,7 @@ class DeploySkeletonCommand
         }
 
         $this->logger->info('Deploying skeleton.');
-        $this->applicationSkeletonDeployer->installAppFiles($repoReference ?? $buildId);
+        $this->applicationSkeletonDeployer->installAppFiles($buildId);
         return null;
     }
 

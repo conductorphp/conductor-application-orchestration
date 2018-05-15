@@ -2,10 +2,10 @@
 
 namespace ConductorAppOrchestration\Deploy\Command;
 
-use ConductorAppOrchestration\Deploy\ApplicationAssetDeployer;
-use ConductorAppOrchestration\Deploy\ApplicationAssetDeployerAwareInterface;
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\Config\ApplicationConfigAwareInterface;
+use ConductorAppOrchestration\Deploy\ApplicationAssetDeployer;
+use ConductorAppOrchestration\Deploy\ApplicationAssetDeployerAwareInterface;
 use ConductorAppOrchestration\Exception;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
@@ -17,7 +17,8 @@ use Psr\Log\NullLogger;
  * @package ConductorAppOrchestration\Snapshot\Command
  */
 class DeployAssetsCommand
-    implements DeployCommandInterface, ApplicationAssetDeployerAwareInterface, LoggerAwareInterface, ApplicationConfigAwareInterface
+    implements DeployCommandInterface, ApplicationAssetDeployerAwareInterface, LoggerAwareInterface,
+               ApplicationConfigAwareInterface
 {
     /**
      * @var ApplicationAssetDeployer

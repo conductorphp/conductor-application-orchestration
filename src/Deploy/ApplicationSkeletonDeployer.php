@@ -55,20 +55,30 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         $this->logger = $logger;
     }
 
-    public function deploySkeleton(): void {
+    /**
+     * @param string|null $buildId
+     */
+    public function deploySkeleton(string $buildId = null): void
+    {
         $origUmask = umask(0);
-        $this->prepareFileLayout();
-        $this->installAppFiles();
+        $this->prepareFileLayout($buildId);
+        $this->installAppFiles($buildId);
         umask($origUmask);
     }
 
-    public function prepareFileLayout(): void
+    /**
+     * @param string|null $buildId
+     */
+    public function prepareFileLayout(string $buildId = null): void
     {
         $this->prepareAppRootPath();
-        $this->prepareCodePath();
-        $this->prepareLocalPath();
-        $this->prepareSharedPath();
-        $this->prepareCurrentReleasePath();
+        if (FileLayoutInterface::STRATEGY_BLUE_GREEN == $this->applicationConfig->getFileLayoutStrategy()) {
+            $this->prepareLocalPath();
+            $this->prepareSharedPath();
+            if ($buildId) {
+                $this->prepareCodePath($buildId);
+            }
+        }
     }
 
     private function prepareAppRootPath(): void
@@ -84,73 +94,116 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         }
     }
 
-    private function prepareCodePath(): void
+    /**
+     * @param string|null $buildId
+     */
+    private function prepareCodePath(string $buildId): void
     {
-        $codePath = $this->applicationConfig->getCodePath();
-        if ($codePath != $this->applicationConfig->getAppRoot()) {
-            if (!file_exists($codePath)) {
-                mkdir($codePath, $this->applicationConfig->getDefaultDirMode(), true);
-                $this->logger->debug("Created \"{$codePath}\".");
-            } else {
-                $this->logger->debug("Skipped creating \"{$codePath}\". Already exists.");
-            }
+        $codePath = $this->applicationConfig->getCodePath($buildId);
+        if (!file_exists($codePath)) {
+            mkdir($codePath, $this->applicationConfig->getDefaultDirMode(), true);
+            $this->logger->debug("Created \"{$codePath}\".");
+        } else {
+            $this->logger->debug("Skipped creating \"{$codePath}\". Already exists.");
         }
     }
 
     private function prepareLocalPath(): void
     {
         $localPath = $this->applicationConfig->getLocalPath();
-        if ($localPath != $this->applicationConfig->getCodePath() && !file_exists($localPath)) {
-            if (!file_exists($localPath)) {
-                mkdir($localPath, $this->applicationConfig->getDefaultDirMode(), true);
-                $this->logger->debug("Created \"{$localPath}\".");
-            } else {
-                $this->logger->debug("Skipped creating \"{$localPath}\". Already exists.");
-            }
+        if (!file_exists($localPath)) {
+            mkdir($localPath, $this->applicationConfig->getDefaultDirMode(), true);
+            $this->logger->debug("Created \"{$localPath}\".");
+        } else {
+            $this->logger->debug("Skipped creating \"{$localPath}\". Already exists.");
         }
     }
 
     private function prepareSharedPath(): void
     {
         $sharedPath = $this->applicationConfig->getSharedPath();
-        if ($sharedPath != $this->applicationConfig->getCodePath() && !file_exists($sharedPath)) {
-            if (!file_exists($sharedPath)) {
-                mkdir($sharedPath, $this->applicationConfig->getDefaultDirMode(), true);
-                $this->logger->debug("Created \"{$sharedPath}\".");
+        if (!file_exists($sharedPath)) {
+            mkdir($sharedPath, $this->applicationConfig->getDefaultDirMode(), true);
+            $this->logger->debug("Created \"{$sharedPath}\".");
+        } else {
+            $this->logger->debug("Skipped creating \"{$sharedPath}\". Already exists.");
+        }
+    }
+
+    /**
+     * @param string|null $buildId
+     */
+    public function makeBuildCurrent(string $buildId): void
+    {
+        $appRoot = $this->applicationConfig->getAppRoot();
+        $codePath = $this->applicationConfig->getCodePath($buildId);
+        $relativeCodePath = substr($codePath, strlen($appRoot) + 1);
+        $currentPath = $this->applicationConfig->getCurrentPath();
+        if (!file_exists($currentPath)) {
+            symlink($relativeCodePath, $currentPath);
+            $this->logger->debug(
+                "Created symlink \"$currentPath\" -> \"$relativeCodePath\"."
+            );
+        } else {
+            if (realpath($currentPath) != $codePath) {
+                $previousPath = $this->applicationConfig->getPreviousPath();
+                $previousRelativeCodePath = substr(realpath($currentPath), strlen($appRoot) + 1);
+                if (file_exists($previousPath)) {
+                    unlink($previousPath);
+                }
+                symlink($previousRelativeCodePath, $previousPath);
+                $this->logger->debug(
+                    "Created symlink \"$previousPath\" -> \"$previousRelativeCodePath\"."
+                );
+
+                unlink($currentPath);
+                symlink($relativeCodePath, $currentPath);
+                $this->logger->debug(
+                    "Created symlink \"$currentPath\" -> \"$relativeCodePath\"."
+                );
             } else {
-                $this->logger->debug("Skipped creating \"{$sharedPath}\". Already exists.");
+                $this->logger->debug(
+                    "Skipped creating symlink \"$currentPath\" -> \"$relativeCodePath\". Already exists."
+                );
             }
         }
     }
 
-    private function prepareCurrentReleasePath(): void
+    /**
+     * @param string|null $buildId
+     */
+    public function installAppFiles(string $buildId = null): void
     {
-        if (FileLayoutInterface::STRATEGY_BLUE_GREEN == $this->applicationConfig->getFileLayoutStrategy()) {
-            $appRoot = $this->applicationConfig->getAppRoot();
-            $relativeCodePath = substr($this->applicationConfig->getCodePath(), strlen($appRoot) + 1);
-            if (!file_exists("$appRoot/" . FileLayoutInterface::PATH_CURRENT)) {
-                $this->logger->debug(
-                    "Created symlink \"$appRoot/" . FileLayoutInterface::PATH_CURRENT
-                    . "\" -> \"$relativeCodePath\"."
-                );
-                symlink($relativeCodePath, "$appRoot/" . FileLayoutInterface::PATH_CURRENT);
+        if (FileLayoutInterface::STRATEGY_BLUE_GREEN == $this->applicationConfig->getFileLayoutStrategy()
+            && !$buildId
+        ) {
+            $currentPath = $this->applicationConfig->getCurrentPath();
+            if (file_exists($currentPath)) {
+                // Get buildId based on current symlink
+                $target = readlink($currentPath);
+                $parts = explode(DIRECTORY_SEPARATOR, $target);
+                $buildId = array_pop($parts);
             } else {
-                $this->logger->debug(
-                    "Skipped creating symlink \"$appRoot/" . FileLayoutInterface::PATH_CURRENT
-                    . "\" -> \"$relativeCodePath\". Already exists."
+                $this->logger->notice(
+                    sprintf(
+                        "Skipped deploying skeleton because file layout strategy is \"%s\" and build has not yet been "
+                        . "deployed. Deploy a build to deploy the skeleton.",
+                        FileLayoutInterface::STRATEGY_BLUE_GREEN
+                    )
                 );
+                return;
             }
         }
+
+        $this->installDirectories($buildId);
+        $this->installFiles($buildId);
+        $this->installSymlinks($buildId);
     }
 
-    public function installAppFiles(): void
-    {
-        $this->installDirectories();
-        $this->installFiles();
-        $this->installSymlinks();
-    }
-
-    private function installDirectories(): void
+    /**
+     * @param string|null $buildId
+     */
+    private function installDirectories(string $buildId = null): void
     {
         $directories = $this->applicationConfig->getSkeletonConfig()->getDirectories();
         if ($directories) {
@@ -161,8 +214,8 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
                     );
                 }
 
-                $resolvedFilename = $this->resolveFilename($directory['location'], $filename);
-                $this->installDirectory($resolvedFilename, $filename, $directory);
+                $resolvedFilename = $this->resolveFilename($filename, $directory['location'], $buildId);
+                $this->installDirectory($resolvedFilename, $filename, $directory, $buildId);
             }
         }
     }
@@ -171,15 +224,17 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
      * @param string      $resolvedFilename
      * @param string      $filename
      * @param array       $fileInfo
+     * @param string|null $buildId
      */
     private function installDirectory(
         string $resolvedFilename,
         string $filename,
-        array $fileInfo
+        array $fileInfo,
+        string $buildId = null
     ): void {
         if (!empty($fileInfo['auto_symlink'])) {
-            $symlinkResolvedFilename = $this->resolveFilename('code', $filename);
-            $symlinkResolvedTargetFilename = $this->resolveFilename($fileInfo['location'], $filename);
+            $symlinkResolvedFilename = $this->resolveFilename($filename, 'code', $buildId);
+            $symlinkResolvedTargetFilename = $this->resolveFilename($filename, $fileInfo['location'], $buildId);
             $this->installSymlink($symlinkResolvedFilename, $symlinkResolvedTargetFilename);
         }
 
@@ -215,7 +270,7 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         }
     }
 
-    private function installFiles(): void
+    private function installFiles(string $buildId = null): void
     {
         $files = $this->applicationConfig->getSkeletonConfig()->getFiles();
         if (!empty($files)) {
@@ -226,8 +281,8 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
                     );
                 }
 
-                $resolvedFilename = $this->resolveFilename($file['location'], $filename);
-                $this->installFile($resolvedFilename, $filename, $file);
+                $resolvedFilename = $this->resolveFilename($filename, $file['location'], $buildId);
+                $this->installFile($resolvedFilename, $filename, $file, $buildId);
             }
         }
     }
@@ -236,15 +291,17 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
      * @param string      $resolvedFilename
      * @param string      $filename
      * @param array       $fileInfo
+     * @param string|null $buildId
      */
     private function installFile(
         string $resolvedFilename,
         string $filename,
-        array $fileInfo
+        array $fileInfo,
+        string $buildId = null
     ): void {
         if ($fileInfo['auto_symlink']) {
-            $symlinkResolvedFilename = $this->resolveFilename('code', $filename);
-            $symlinkResolvedTargetFilename = $this->resolveFilename($fileInfo['location'], $filename);
+            $symlinkResolvedFilename = $this->resolveFilename($filename, 'code', $buildId);
+            $symlinkResolvedTargetFilename = $this->resolveFilename($filename, $fileInfo['location'], $buildId);
             $this->installSymlink($symlinkResolvedFilename, $symlinkResolvedTargetFilename);
         }
 
@@ -288,7 +345,10 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         }
     }
 
-    private function installSymlinks(): void
+    /**
+     * @param string|null $buildId
+     */
+    private function installSymlinks(string $buildId = null): void
     {
         $symlinks = $this->applicationConfig->getSkeletonConfig()->getSymlinks();
         if (!empty($symlinks)) {
@@ -299,10 +359,11 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
                     );
                 }
 
-                $resolvedFilename = $this->resolveFilename($symlink['location'], $sourcePath);
+                $resolvedFilename = $this->resolveFilename($sourcePath, $symlink['location'], $buildId);
                 $resolvedTargetFilename = $this->resolveFilename(
+                    $symlink['target'],
                     $symlink['target_location'],
-                    $symlink['target']
+                    $buildId
                 );
                 $this->installSymlink($resolvedFilename, $resolvedTargetFilename);
             }
@@ -310,20 +371,21 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
     }
 
     /**
-     * @param string      $location
      * @param string      $filename
+     * @param string      $location
+     * @param string|null $buildId
      *
      * @return string
      */
-    private function resolveFilename(string $location, string $filename): string
+    private function resolveFilename(string $filename, string $location, string $buildId = null): string
     {
-        $path = $this->applicationConfig->getPath($location);
+        $path = $this->applicationConfig->getPath($location, $buildId);
         return "$path/$filename";
     }
 
     /**
-     * @param array       $fileInfo
-     * @param array       $globalTemplateVars
+     * @param array $fileInfo
+     * @param array $globalTemplateVars
      *
      * @return string
      */
