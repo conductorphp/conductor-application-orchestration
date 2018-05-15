@@ -79,7 +79,6 @@ class ApplicationConfig
             'default_database_importexport_adapter',
             'default_dir_mode',
             'default_file_mode',
-            'default_filesystem_adapter',
             'platform',
             'relative_document_root',
             'repo_url',

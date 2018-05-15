@@ -12,7 +12,7 @@ return [
         'default_database_importexport_adapter' => 'default',
         'default_dir_mode'                      => 0750,
         'default_file_mode'                     => 0640,
-        'default_filesystem_adapter'            => 'local',
+        'default_filesystem'                    => 'local',
         'file_layout'                           => 'default',
         'platform'                              => 'custom',
         'platforms'                             => [],
