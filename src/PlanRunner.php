@@ -452,9 +452,12 @@ class PlanRunner implements LoggerAwareInterface
                 $step['run_priority'] ?? ShellAdapterInterface::PRIORITY_NORMAL,
                 $step['options'] ?? null
             );
-        } elseif (!empty($step['callable'])) {
-            chdir($commandWorkingDirectory);
-            $output = call_user_func_array($step['callable'], $step['arguments'] ?? []);
+
+        // @todo Allow callable? Not sure where this could be more useful than creating a class that implements the
+        //       correct interface and this could cause confusion
+//        } elseif (!empty($step['callable'])) {
+//            chdir($commandWorkingDirectory);
+//            $output = call_user_func_array($step['callable'], $step['arguments'] ?? []);
         } else {
             chdir($commandWorkingDirectory);
             $stepObject = new $step['class']();
