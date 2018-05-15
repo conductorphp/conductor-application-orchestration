@@ -386,27 +386,6 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         }
     }
 
-
-    /**
-     * @param string $name
-     *
-     * @return string
-     */
-    private function sanitizeDatabaseName(string $name): string
-    {
-        return strtolower(preg_replace('/[^a-z0-9_]/i', '_', $name));
-    }
-
-    /**
-     * @param string $url
-     *
-     * @return string
-     */
-    private function sanitizeUrl(string $url): string
-    {
-        return strtolower(preg_replace('/[^a-z0-9\.-]/i', '-', $url));
-    }
-
     /**
      * @param string $path
      */
