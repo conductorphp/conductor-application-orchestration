@@ -397,6 +397,10 @@ class ApplicationConfig
      */
     public function getSharedPath(): string
     {
+        if (!empty($this->config['shared_path'])) {
+            return $this->config['shared_path'];
+        }
+
         $appRoot = $this->getAppRoot();
         switch ($this->getFileLayoutStrategy()) {
             case FileLayoutInterface::STRATEGY_BLUE_GREEN:
