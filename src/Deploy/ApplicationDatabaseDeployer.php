@@ -88,7 +88,6 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
         $application = $this->applicationConfig;
         $this->logger->info('Installing databases');
         foreach ($databases as $databaseName => $database) {
-
             $adapterName = $database['adapter'] ?? $application->getDefaultDatabaseAdapter();
             $databaseAdapter = $this->databaseAdapterManager->getAdapter($adapterName);
             $adapterName = $database['importexport_adapter'] ??
@@ -121,6 +120,7 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
                 [] // This command does not yet support any options
             );
 
+
             // @todo Deal with running environment scripts
             if (!empty($database['post_import_scripts'])) {
                 foreach ($database['post_import_scripts'] as $scriptFilename) {
@@ -129,6 +129,7 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
                         $scriptFilename
                     );
 
+                    $this->logger->debug("Running post import script \"$scriptFilename\".");
                     $databaseAdapter->run(
                         file_get_contents($scriptFilename),
                         $localDatabaseName
