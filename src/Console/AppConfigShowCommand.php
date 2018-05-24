@@ -69,11 +69,11 @@ class AppConfigShowCommand extends Command
     ): void {
         ksort($data);
         foreach ($data as $key => $value) {
-            if (is_scalar($value)) {
-                if ($keyPrefix) {
-                    $key = "$keyPrefix/$key";
-                }
+            if ($keyPrefix) {
+                $key = "$keyPrefix/$key";
+            }
 
+            if (is_scalar($value)) {
                 if (!$filter || fnmatch($filter, $key)) {
                     $outputTable->addRow([$key, $value]);
                 }
