@@ -114,6 +114,7 @@ class AppBuildCommand extends Command
         $this->logger->info("Building application \"$appName\".");
         $this->applicationBuilder->build($buildPlan, $repoReference, $buildId, $buildPath);
         $this->logger->info("<info>Application \"$appName\" build complete!</info>");
+        $this->logger->info("<info>Build ID: $buildId</info>");
         $output->write($buildId);
         return 0;
     }
