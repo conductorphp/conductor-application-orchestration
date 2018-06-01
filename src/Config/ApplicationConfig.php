@@ -257,6 +257,22 @@ class ApplicationConfig
     }
 
     /**
+     * @param string|null $buildId
+     *
+     * @return null|string
+     */
+    public function getDocumentRoot(string $buildId = null): ?string
+    {
+        $documentRoot = $this->getCodePath($buildId);
+
+        if ($this->getRelativeDocumentRoot()) {
+            $documentRoot .= '/' . $this->getRelativeDocumentRoot();
+        }
+
+        return $documentRoot;
+    }
+
+    /**
      * @return array
      */
     public function getSshDefaults(): array
@@ -368,7 +384,10 @@ class ApplicationConfig
         $appRoot = $this->getAppRoot();
         switch ($this->getFileLayoutStrategy()) {
             case FileLayoutInterface::STRATEGY_BLUE_GREEN:
-                return "$appRoot/" . FileLayoutInterface::PATH_BUILDS . "/$buildId";
+                if($buildId){
+                    return "$appRoot/" . FileLayoutInterface::PATH_BUILDS . "/$buildId";
+                }
+                return "$appRoot/" . FileLayoutInterface::PATH_CURRENT ;
 
             case FileLayoutInterface::STRATEGY_DEFAULT:
             default:
