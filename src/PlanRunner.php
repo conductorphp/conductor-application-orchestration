@@ -166,11 +166,11 @@ class PlanRunner implements LoggerAwareInterface
      * @todo Deal with user ctrl+c input and clear working directory before exiting
      * @see  http://php.net/manual/en/function.pcntl-signal.php
      *
-     * @param string      $planName
-     * @param array       $conditions
-     * @param array       $stepArguments
-     * @param bool        $clean
-     * @param bool        $rollback
+     * @param string $planName
+     * @param array  $conditions
+     * @param array  $stepArguments
+     * @param bool   $clean
+     * @param bool   $rollback
      */
     public function runPlan(
         string $planName,
@@ -186,15 +186,16 @@ class PlanRunner implements LoggerAwareInterface
 
         $this->logger->debug('Determining current deployment state.');
         $metDependencies = [];
-        if ($this->deploymentState->assetsDeployed()) {
+        // Mark assets, code, and databases as met dependencies if they are deployed and we are not actively cleaning them
+        if (!($clean && in_array('assets', $conditions)) && $this->deploymentState->assetsDeployed()) {
             $metDependencies[] = 'assets';
         }
 
-        if ($this->deploymentState->codeDeployed()) {
+        if (!($clean && in_array('code', $conditions)) && $this->deploymentState->codeDeployed()) {
             $metDependencies[] = 'code';
         }
 
-        if ($this->deploymentState->databasesDeployed()) {
+        if (!($clean && in_array('databases', $conditions)) && $this->deploymentState->databasesDeployed()) {
             $metDependencies[] = 'databases';
         }
 
@@ -215,7 +216,13 @@ class PlanRunner implements LoggerAwareInterface
                 if ($rollbackPreflightSteps) {
                     $this->logger->info(sprintf('Plan: %s (rollback_preflight)', $planName));
                     foreach ($rollbackPreflightSteps as $name => $step) {
-                        $providedDependencies = $this->runStep($name, $step, $conditions, $metDependencies, $stepArguments);
+                        $providedDependencies = $this->runStep(
+                            $name,
+                            $step,
+                            $conditions,
+                            $metDependencies,
+                            $stepArguments
+                        );
                         $metDependencies = array_unique(array_merge($metDependencies, $providedDependencies));
                     }
                 }
@@ -237,16 +244,28 @@ class PlanRunner implements LoggerAwareInterface
                 if ($preflightSteps) {
                     $this->logger->info(sprintf('Plan: %s (preflight)', $planName));
                     foreach ($preflightSteps as $name => $step) {
-                        $providedDependencies = $this->runStep($name, $step, $conditions, $metDependencies, $stepArguments);
+                        $providedDependencies = $this->runStep(
+                            $name,
+                            $step,
+                            $conditions,
+                            $metDependencies,
+                            $stepArguments
+                        );
                         $metDependencies = array_unique(array_merge($metDependencies, $providedDependencies));
                     }
                 }
 
                 $cleanSteps = $plan->getCleanSteps();
                 if ($clean && !empty($cleanSteps)) {
-                    $this->logger->info(sprintf('Plan: %s (cleanup)', $planName));
+                    $this->logger->info(sprintf('Plan: %s (clean)', $planName));
                     foreach ($cleanSteps as $name => $step) {
-                        $providedDependencies = $this->runStep($name, $step, $conditions, $metDependencies, $stepArguments);
+                        $providedDependencies = $this->runStep(
+                            $name,
+                            $step,
+                            $conditions,
+                            $metDependencies,
+                            $stepArguments
+                        );
                         $metDependencies = array_unique(array_merge($metDependencies, $providedDependencies));
                     }
                 }
@@ -372,11 +391,11 @@ class PlanRunner implements LoggerAwareInterface
     }
 
     /**
-     * @param string      $name
-     * @param array       $step
-     * @param array       $conditions
-     * @param array       $metDependencies
-     * @param array       $stepArguments
+     * @param string $name
+     * @param array  $step
+     * @param array  $conditions
+     * @param array  $metDependencies
+     * @param array  $stepArguments
      *
      * @return array $providedDependencies
      */
@@ -395,9 +414,25 @@ class PlanRunner implements LoggerAwareInterface
                 Loop::delay(
                     0,
                     // Since these are run in parallel, they cannot provide dependencies for each other
-                    function () use ($parallelName, $parallelStep, $conditions, $metDependencies, $stepArguments, &$providedDependencies) {
-                        $stepProvidedDependencies = $this->runStep($parallelName, $parallelStep, $conditions, $metDependencies, $stepArguments);
-                        $providedDependencies = array_unique(array_merge($providedDependencies, $stepProvidedDependencies));
+                    function () use (
+                        $parallelName,
+                        $parallelStep,
+                        $conditions,
+                        $metDependencies,
+                        $stepArguments,
+                        &
+                        $providedDependencies
+                    ) {
+                        $stepProvidedDependencies = $this->runStep(
+                            $parallelName,
+                            $parallelStep,
+                            $conditions,
+                            $metDependencies,
+                            $stepArguments
+                        );
+                        $providedDependencies = array_unique(
+                            array_merge($providedDependencies, $stepProvidedDependencies)
+                        );
                     }
                 );
             }
@@ -466,8 +501,8 @@ class PlanRunner implements LoggerAwareInterface
                 $step['options'] ?? null
             );
 
-        // @todo Allow callable? Not sure where this could be more useful than creating a class that implements the
-        //       correct interface and this could cause confusion
+            // @todo Allow callable? Not sure where this could be more useful than creating a class that implements the
+            //       correct interface and this could cause confusion
 //        } elseif (!empty($step['callable'])) {
 //            chdir($commandWorkingDirectory);
 //            $output = call_user_func_array($step['callable'], $step['arguments'] ?? []);
