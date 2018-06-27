@@ -10,6 +10,8 @@ Conductor: Application Orchestration
 - Replaced app:config:list and app:config:get with app:config:show
 - Made app:install commands more cohesive
 - Added deployment mainenance mode management commands
+- Added `provides` argument to steps which works with `depends`. Removed `conditions` from
+  being merged into met dependencies.
 
 # 0.1.0
 - Initial build copied over from Conductor

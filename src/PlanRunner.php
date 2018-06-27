@@ -186,15 +186,15 @@ class PlanRunner implements LoggerAwareInterface
 
         $this->logger->debug('Determining current deployment state.');
         $metDependencies = [];
-        if (in_array('assets', $conditions) || $this->deploymentState->assetsDeployed()) {
+        if ($this->deploymentState->assetsDeployed()) {
             $metDependencies[] = 'assets';
         }
 
-        if (in_array('code', $conditions) || $this->deploymentState->codeDeployed()) {
+        if ($this->deploymentState->codeDeployed()) {
             $metDependencies[] = 'code';
         }
 
-        if (in_array('databases', $conditions) || $this->deploymentState->databasesDeployed()) {
+        if ($this->deploymentState->databasesDeployed()) {
             $metDependencies[] = 'databases';
         }
 
@@ -215,13 +215,15 @@ class PlanRunner implements LoggerAwareInterface
                 if ($rollbackPreflightSteps) {
                     $this->logger->info(sprintf('Plan: %s (rollback_preflight)', $planName));
                     foreach ($rollbackPreflightSteps as $name => $step) {
-                        $this->runStep($name, $step, $conditions, $metDependencies, $stepArguments);
+                        $providedDependencies = $this->runStep($name, $step, $conditions, $metDependencies, $stepArguments);
+                        $metDependencies = array_unique(array_merge($metDependencies, $providedDependencies));
                     }
                 }
 
                 $this->logger->info(sprintf('Plan: %s (rollback)', $planName));
                 foreach ($rollbackSteps as $name => $step) {
-                    $this->runStep($name, $step, $conditions, $metDependencies, $stepArguments);
+                    $providedDependencies = $this->runStep($name, $step, $conditions, $metDependencies, $stepArguments);
+                    $metDependencies = array_unique(array_merge($metDependencies, $providedDependencies));
                 }
             } else {
                 $preflightSteps = $plan->getPreflightSteps();
@@ -235,7 +237,8 @@ class PlanRunner implements LoggerAwareInterface
                 if ($preflightSteps) {
                     $this->logger->info(sprintf('Plan: %s (preflight)', $planName));
                     foreach ($preflightSteps as $name => $step) {
-                        $this->runStep($name, $step, $conditions, $metDependencies, $stepArguments);
+                        $providedDependencies = $this->runStep($name, $step, $conditions, $metDependencies, $stepArguments);
+                        $metDependencies = array_unique(array_merge($metDependencies, $providedDependencies));
                     }
                 }
 
@@ -243,13 +246,15 @@ class PlanRunner implements LoggerAwareInterface
                 if ($clean && !empty($cleanSteps)) {
                     $this->logger->info(sprintf('Plan: %s (cleanup)', $planName));
                     foreach ($cleanSteps as $name => $step) {
-                        $this->runStep($name, $step, $conditions, $metDependencies, $stepArguments);
+                        $providedDependencies = $this->runStep($name, $step, $conditions, $metDependencies, $stepArguments);
+                        $metDependencies = array_unique(array_merge($metDependencies, $providedDependencies));
                     }
                 }
 
                 $this->logger->info(sprintf('Plan: %s', $planName));
                 foreach ($plan->getSteps() as $name => $step) {
-                    $this->runStep($name, $step, $conditions, $metDependencies, $stepArguments);
+                    $providedDependencies = $this->runStep($name, $step, $conditions, $metDependencies, $stepArguments);
+                    $metDependencies = array_unique(array_merge($metDependencies, $providedDependencies));
                 }
             }
 
@@ -372,6 +377,8 @@ class PlanRunner implements LoggerAwareInterface
      * @param array       $conditions
      * @param array       $metDependencies
      * @param array       $stepArguments
+     *
+     * @return array $providedDependencies
      */
     private function runStep(
         string $name,
@@ -379,20 +386,24 @@ class PlanRunner implements LoggerAwareInterface
         array $conditions,
         array $metDependencies,
         array $stepArguments
-    ): void {
+    ): array {
+
         // If array, run commands in parallel
         if (!empty($step['steps'])) {
+            $providedDependencies = [];
             foreach ($step['steps'] as $parallelName => $parallelStep) {
                 Loop::delay(
                     0,
-                    function () use ($parallelName, $parallelStep, $conditions, $metDependencies, $stepArguments) {
-                        $this->runStep($parallelName, $parallelStep, $conditions, $metDependencies, $stepArguments);
+                    // Since these are run in parallel, they cannot provide dependencies for each other
+                    function () use ($parallelName, $parallelStep, $conditions, $metDependencies, $stepArguments, &$providedDependencies) {
+                        $stepProvidedDependencies = $this->runStep($parallelName, $parallelStep, $conditions, $metDependencies, $stepArguments);
+                        $providedDependencies = array_unique(array_merge($providedDependencies, $stepProvidedDependencies));
                     }
                 );
             }
 
             Loop::run();
-            return;
+            return $providedDependencies;
         }
 
         if (!empty($step['conditions'])) {
@@ -405,7 +416,7 @@ class PlanRunner implements LoggerAwareInterface
                         implode(', ', $step['conditions'])
                     )
                 );
-                return;
+                return [];
             }
         }
 
@@ -420,7 +431,7 @@ class PlanRunner implements LoggerAwareInterface
                         implode(', ', $step['depends'])
                     )
                 );
-                return;
+                return [];
             }
         }
 
@@ -525,6 +536,8 @@ class PlanRunner implements LoggerAwareInterface
             }
             $this->logger->debug('Step "' . $name . '" output: ' . $output);
         }
+
+        return $step['provides'] ?? [];
     }
 
     /**
