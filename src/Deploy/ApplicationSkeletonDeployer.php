@@ -299,7 +299,7 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         array $fileInfo,
         string $buildId = null
     ): void {
-        if ($fileInfo['auto_symlink']) {
+        if (!empty($fileInfo['auto_symlink'])) {
             $symlinkResolvedFilename = $this->resolveFilename($filename, 'code', $buildId);
             $symlinkResolvedTargetFilename = $this->resolveFilename($filename, $fileInfo['location'], $buildId);
             $this->installSymlink($symlinkResolvedFilename, $symlinkResolvedTargetFilename);
