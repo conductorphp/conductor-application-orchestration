@@ -81,7 +81,7 @@ class UploadDatabasesCommand
                     $this->applicationConfig->getDefaultDatabaseImportExportAdapter();
                 $databaseImportExportAdapter = $this->databaseImportExportAdapterManager->getAdapter($adapterName);
 
-                if (isset($databaseInfo['local_database_name'])) {
+                if (isset($database['local_database_name'])) {
                     $localDatabaseName = $database['local_database_name'];
                 } else {
                     $localDatabaseName = $databaseName;
