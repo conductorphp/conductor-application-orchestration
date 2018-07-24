@@ -278,14 +278,10 @@ class PlanRunner implements LoggerAwareInterface
             }
 
             if (!$plan->runInCodeRoot()) {
-                $this->clearPlanPath();
                 chdir($origWorkingDirectory);
             }
         } catch (\Exception $e) {
             $this->logger->error('An error occurred running plan "' . $planName . '".');
-            if (!$e instanceof PlanPathNotEmptyException && !(isset($plan) && $plan->runInCodeRoot())) {
-                $this->clearPlanPath();
-            }
             chdir($origWorkingDirectory);
             throw $e;
         }
@@ -380,14 +376,6 @@ class PlanRunner implements LoggerAwareInterface
                 )
             );
         }
-    }
-
-    private function clearPlanPath(): void
-    {
-        $this->logger->info('Clearing plan path.');
-        $command = 'if [[ -d ' . escapeshellarg($this->planPath) . ' ]]; then '
-            . 'find ' . escapeshellarg($this->planPath) . ' -mindepth 1 -maxdepth 1 -exec rm -rf {} \;; fi';
-        $this->shellAdapter->runShellCommand($command);
     }
 
     /**
