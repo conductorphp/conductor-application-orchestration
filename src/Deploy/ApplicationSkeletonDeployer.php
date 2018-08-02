@@ -256,18 +256,15 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         }
         $modeAsString = base_convert((string)$mode, 10, 8);
 
-        if (file_exists($resolvedFilename)) {
-            if (!is_dir($resolvedFilename) || is_link($resolvedFilename)) {
-                unlink($resolvedFilename);
-                mkdir($resolvedFilename, $mode);
-            } else {
-                chmod($resolvedFilename, $mode);
-            }
-            $this->logger->debug("Ensured \"$resolvedFilename\" is a directory and has permissions $modeAsString.");
-        } else {
-            mkdir($resolvedFilename, $mode, true);
-            $this->logger->debug("Created directory \"$resolvedFilename\" with permissions $modeAsString.");
+        if (is_link($resolvedFilename) || is_file($resolvedFilename)) {
+            unlink($resolvedFilename);
+            mkdir($resolvedFilename, $mode);
+            chmod($resolvedFilename, $mode);
+        } elseif (!file_exists($resolvedFilename)) {
+            mkdir($resolvedFilename, $mode);
+            chmod($resolvedFilename, $mode);
         }
+        $this->logger->debug("Ensured \"$resolvedFilename\" is a directory and has permissions $modeAsString.");
     }
 
     private function installFiles(string $buildId = null): void
@@ -325,24 +322,16 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         $modeAsString = base_convert((string)$mode, 10, 8);
 
         $content = $this->renderContent($fileInfo, $globalTemplateVars);
-        if (file_exists($resolvedFilename)) {
-            if (!is_file($resolvedFilename) || is_link($resolvedFilename)) {
-                if (is_dir($resolvedFilename)) {
-                    $command = 'rm -rf ' . escapeshellarg($resolvedFilename);
-                    $this->shellAdapter->runShellCommand($command);
-                } else {
-                    unlink($resolvedFilename);
-                }
-            }
-            file_put_contents($resolvedFilename, $content);
-            chmod($resolvedFilename, $mode);
-            $this->logger->debug("Ensured \"$resolvedFilename\" is file and has permissions $modeAsString.");
-        } else {
-
-            file_put_contents($resolvedFilename, $content);
-            chmod($resolvedFilename, $mode);
-            $this->logger->debug("Created file \"$resolvedFilename\" with permissions $modeAsString.");
+        if (is_link($resolvedFilename)) {
+            unlink($resolvedFilename);
+        } elseif (is_dir($resolvedFilename)) {
+            $command = 'rm -rf ' . escapeshellarg($resolvedFilename);
+            $this->shellAdapter->runShellCommand($command);
         }
+
+        file_put_contents($resolvedFilename, $content);
+        chmod($resolvedFilename, $mode);
+        $this->logger->debug("Ensured \"$resolvedFilename\" is file and has permissions $modeAsString.");
     }
 
     /**
@@ -433,19 +422,15 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         $parentDir = dirname($resolvedTargetFilename);
         $this->ensureDirExists($parentDir);
 
-        if (file_exists($resolvedFilename) || is_link($resolvedFilename)) {
-            if (is_link($resolvedFilename) || is_file($resolvedFilename)) {
-                unlink($resolvedFilename);
-            } else {
-                $command = 'rm -rf ' . escapeshellarg($resolvedFilename);
-                $this->shellAdapter->runShellCommand($command);
-            }
-            symlink($resolvedTargetFilename, $resolvedFilename);
-            $this->logger->debug("Ensured \"$resolvedFilename\" is a symlink pointed to \"$resolvedTargetFilename\".");
-        } else {
-            symlink($resolvedTargetFilename, $resolvedFilename);
-            $this->logger->debug("Created symlink \"$resolvedFilename\" pointed to \"$resolvedTargetFilename\".");
+        if (is_file($resolvedFilename) || is_link($resolvedFilename)) {
+            unlink($resolvedFilename);
+        } elseif (is_dir($resolvedFilename)) {
+            $command = 'rm -rf ' . escapeshellarg($resolvedFilename);
+            $this->shellAdapter->runShellCommand($command);
         }
+
+        symlink($resolvedTargetFilename, $resolvedFilename);
+        $this->logger->debug("Ensured \"$resolvedFilename\" is a symlink pointed to \"$resolvedTargetFilename\".");
     }
 
     /**
