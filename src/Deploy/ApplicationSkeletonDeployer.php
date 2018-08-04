@@ -85,8 +85,9 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
     {
         $appRoot = $this->applicationConfig->getAppRoot();
         $defaultDirMode = $this->applicationConfig->getDefaultDirMode();
+
         if (!is_writable($appRoot)) {
-            if (is_writable(dirname($appRoot))) {
+            if (!is_dir($appRoot) && is_writable(dirname($appRoot))) {
                 mkdir($appRoot, $defaultDirMode);
             } else {
                 throw new Exception\RuntimeException("Project root \"$appRoot\" is not writable.");
