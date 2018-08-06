@@ -80,7 +80,7 @@ class DeployAssetsCommand
             $snapshotPath,
             $snapshotName,
             $assets,
-            [] // @todo add sync options
+            $assetSyncConfig
         );
         return null;
     }
