@@ -31,6 +31,7 @@ use FilesystemIterator;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use ConductorCore\ForkManager;
 
 class PlanRunner implements LoggerAwareInterface
 {
@@ -278,14 +279,10 @@ class PlanRunner implements LoggerAwareInterface
             }
 
             if (!$plan->runInCodeRoot()) {
-                $this->clearPlanPath();
                 chdir($origWorkingDirectory);
             }
         } catch (\Exception $e) {
             $this->logger->error('An error occurred running plan "' . $planName . '".');
-            if (!$e instanceof PlanPathNotEmptyException && !(isset($plan) && $plan->runInCodeRoot())) {
-                $this->clearPlanPath();
-            }
             chdir($origWorkingDirectory);
             throw $e;
         }
@@ -382,14 +379,6 @@ class PlanRunner implements LoggerAwareInterface
         }
     }
 
-    private function clearPlanPath(): void
-    {
-        $this->logger->info('Clearing plan path.');
-        $command = 'if [[ -d ' . escapeshellarg($this->planPath) . ' ]]; then '
-            . 'find ' . escapeshellarg($this->planPath) . ' -mindepth 1 -maxdepth 1 -exec rm -rf {} \;; fi';
-        $this->shellAdapter->runShellCommand($command);
-    }
-
     /**
      * @param string $name
      * @param array  $step
@@ -410,34 +399,44 @@ class PlanRunner implements LoggerAwareInterface
         // If array, run commands in parallel
         if (!empty($step['steps'])) {
             $providedDependencies = [];
+
+            $forkManager = ForkManager::isPcntlEnabled() ? new ForkManager($this->logger, count($step['steps'])) : null;
+
             foreach ($step['steps'] as $parallelName => $parallelStep) {
-                Loop::delay(
-                    0,
-                    // Since these are run in parallel, they cannot provide dependencies for each other
-                    function () use (
+                $stepExecutor = function () use (
+                    $parallelName,
+                    $parallelStep,
+                    $conditions,
+                    $metDependencies,
+                    $stepArguments,
+                    &
+                    $providedDependencies
+                ) {
+                    $stepProvidedDependencies = $this->runStep(
                         $parallelName,
                         $parallelStep,
                         $conditions,
                         $metDependencies,
-                        $stepArguments,
-                        &
-                        $providedDependencies
-                    ) {
-                        $stepProvidedDependencies = $this->runStep(
-                            $parallelName,
-                            $parallelStep,
-                            $conditions,
-                            $metDependencies,
-                            $stepArguments
-                        );
-                        $providedDependencies = array_unique(
-                            array_merge($providedDependencies, $stepProvidedDependencies)
-                        );
-                    }
-                );
+                        $stepArguments
+                    );
+                    $providedDependencies = array_unique(
+                        array_merge($providedDependencies, $stepProvidedDependencies)
+                    );
+                };
+
+                if ($forkManager) {
+                    $forkManager->addWorker($stepExecutor);
+                } else {
+                    Loop::delay(0, $stepExecutor);
+                }
             }
 
-            Loop::run();
+            if ($forkManager) {
+                $forkManager->execute();
+            } else {
+                Loop::run();
+            }
+
             return $providedDependencies;
         }
 
