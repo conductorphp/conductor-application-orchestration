@@ -2,7 +2,6 @@
 
 namespace ConductorAppOrchestration;
 
-use Amp\Loop;
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\Config\ApplicationConfigAwareInterface;
 use ConductorAppOrchestration\Deploy\ApplicationAssetDeployer;
@@ -107,6 +106,10 @@ class PlanRunner implements LoggerAwareInterface
      * @var string
      */
     private $planPath;
+    /**
+     * @var int
+     */
+    private $maxStepConcurrency;
 
     /**
      * PlanRunner constructor.
@@ -122,6 +125,7 @@ class PlanRunner implements LoggerAwareInterface
      * @param ApplicationCodeDeployer            $applicationCodeInstaller
      * @param ApplicationAssetDeployer           $applicationAssetDeployer
      * @param ApplicationDatabaseDeployer        $applicationDatabaseDeployer
+     * @param int                                $maxStepConcurrency
      * @param int                                $diskSpaceErrorThreshold
      * @param int                                $diskSpaceWarningThreshold
      * @param LoggerInterface                    $logger
@@ -139,6 +143,8 @@ class PlanRunner implements LoggerAwareInterface
         ApplicationAssetDeployer $applicationAssetDeployer,
         ApplicationDatabaseDeployer $applicationDatabaseDeployer,
         DeploymentState $deploymentState,
+        // @todo Allow max step concurrency to be set in build, deploy, and snapshot commands
+        int $maxStepConcurrency = 20,
         int $diskSpaceErrorThreshold = 52428800,
         int $diskSpaceWarningThreshold = 104857600,
         LoggerInterface $logger
@@ -155,6 +161,7 @@ class PlanRunner implements LoggerAwareInterface
         $this->applicationAssetDeployer = $applicationAssetDeployer;
         $this->applicationDatabaseDeployer = $applicationDatabaseDeployer;
         $this->deploymentState = $deploymentState;
+        $this->maxStepConcurrency = $maxStepConcurrency;
         $this->diskSpaceErrorThreshold = $diskSpaceErrorThreshold;
         $this->diskSpaceWarningThreshold = $diskSpaceWarningThreshold;
         if (is_null($logger)) {
@@ -400,10 +407,9 @@ class PlanRunner implements LoggerAwareInterface
         if (!empty($step['steps'])) {
             $providedDependencies = [];
 
-            $forkManager = ForkManager::isPcntlEnabled() ? new ForkManager($this->logger, count($step['steps'])) : null;
-
+            $workers = [];
             foreach ($step['steps'] as $parallelName => $parallelStep) {
-                $stepExecutor = function () use (
+                $workers[] = function () use (
                     $parallelName,
                     $parallelStep,
                     $conditions,
@@ -423,20 +429,10 @@ class PlanRunner implements LoggerAwareInterface
                         array_merge($providedDependencies, $stepProvidedDependencies)
                     );
                 };
-
-                if ($forkManager) {
-                    $forkManager->addWorker($stepExecutor);
-                } else {
-                    Loop::delay(0, $stepExecutor);
-                }
             }
 
-            if ($forkManager) {
-                $forkManager->execute();
-            } else {
-                Loop::run();
-            }
-
+            $forkManager = new ForkManager($workers, $this->maxStepConcurrency, $this->logger);
+            $forkManager->execute();
             return $providedDependencies;
         }
 
