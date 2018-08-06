@@ -128,7 +128,7 @@ class AppDeployCommand extends Command
                 null,
                 InputOption::VALUE_REQUIRED,
                 'Batch size for asset sync when deploying a snapshot.',
-                100
+                20
             )
             ->addOption(
                 'databases',
