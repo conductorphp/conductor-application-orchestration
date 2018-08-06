@@ -31,6 +31,7 @@ use FilesystemIterator;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use ConductorCore\ForkManager;
 
 class PlanRunner implements LoggerAwareInterface
 {
@@ -398,34 +399,44 @@ class PlanRunner implements LoggerAwareInterface
         // If array, run commands in parallel
         if (!empty($step['steps'])) {
             $providedDependencies = [];
+
+            $forkManager = ForkManager::isPcntlEnabled() ? new ForkManager($this->logger, count($step['steps'])) : null;
+
             foreach ($step['steps'] as $parallelName => $parallelStep) {
-                Loop::delay(
-                    0,
-                    // Since these are run in parallel, they cannot provide dependencies for each other
-                    function () use (
+                $stepExecutor = function () use (
+                    $parallelName,
+                    $parallelStep,
+                    $conditions,
+                    $metDependencies,
+                    $stepArguments,
+                    &
+                    $providedDependencies
+                ) {
+                    $stepProvidedDependencies = $this->runStep(
                         $parallelName,
                         $parallelStep,
                         $conditions,
                         $metDependencies,
-                        $stepArguments,
-                        &
-                        $providedDependencies
-                    ) {
-                        $stepProvidedDependencies = $this->runStep(
-                            $parallelName,
-                            $parallelStep,
-                            $conditions,
-                            $metDependencies,
-                            $stepArguments
-                        );
-                        $providedDependencies = array_unique(
-                            array_merge($providedDependencies, $stepProvidedDependencies)
-                        );
-                    }
-                );
+                        $stepArguments
+                    );
+                    $providedDependencies = array_unique(
+                        array_merge($providedDependencies, $stepProvidedDependencies)
+                    );
+                };
+
+                if ($forkManager) {
+                    $forkManager->addWorker($stepExecutor);
+                } else {
+                    Loop::delay(0, $stepExecutor);
+                }
             }
 
-            Loop::run();
+            if ($forkManager) {
+                $forkManager->execute();
+            } else {
+                Loop::run();
+            }
+
             return $providedDependencies;
         }
 
