@@ -59,11 +59,11 @@ class CloneRepoCommand
             )
         );
 
+        $shallow = array_key_exists('shallow', $options) ? $options['shallow'] : true;
+
         $this->repositoryAdapter->setPath(getcwd());
         $this->repositoryAdapter->setRepoUrl($this->applicationConfig->getRepoUrl());
-        // @todo Add support for doing a limited clone of only the files needed; like git's --depth 1 and
-        //       --single-branch options
-        $this->repositoryAdapter->checkout($repoReference);
+        $this->repositoryAdapter->checkout($repoReference, $shallow);
         return null;
     }
 
