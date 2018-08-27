@@ -1,7 +1,10 @@
 Conductor: Application Orchestration
 ==============================================
 
-# 0.2.0 (Unreleased)
+# 0.9.1
+- Fixed deployment and snapshot excludes/includes
+
+# 0.9.0
 - Renamed to Conductor
 - Updated PHP version requirement to 7.1
 - Refactored all app commands
