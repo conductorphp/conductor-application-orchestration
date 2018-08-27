@@ -77,6 +77,7 @@ class ApplicationAssetDeployer
         }
 
         $this->logger->info('Installing assets');
+        $snapshotConfig = $this->applicationConfig->getSnapshotConfig();
         foreach ($assets as $sourcePath => $asset) {
             if (empty($asset['ensure']) || empty($asset['location'])) {
                 throw new Exception\RuntimeException(
@@ -93,6 +94,20 @@ class ApplicationAssetDeployer
             $destinationPath = "$path/$destinationPath";
 
             $sourcePath = "$snapshotPath/$snapshotName/assets/{$asset['location']}/$sourcePath";
+
+            if (!empty($asset['excludes'])) {
+                $syncOptions['excludes'] = array_merge(
+                    $syncOptions['excludes'] ?? [],
+                    $snapshotConfig->expandAssetGroups($asset['excludes'])
+                );
+            }
+
+            if (!empty($asset['includes'])) {
+                $syncOptions['includes'] = array_merge(
+                    $syncOptions['includes'] ?? [],
+                    $snapshotConfig->expandAssetGroups($asset['includes'])
+                );
+            }
 
             $this->mountManager->sync(
                 $sourcePath,

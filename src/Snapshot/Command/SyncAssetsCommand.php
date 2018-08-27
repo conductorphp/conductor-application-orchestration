@@ -80,15 +80,15 @@ class SyncAssetsCommand
                 $this->logger->debug("Syncing asset \"$sourcePath\" to \"$targetPath\".");
 
                 if (!empty($asset['excludes'])) {
-                    $syncOptions['excludes'] = array_merge(
-                        $syncOptions['excludes'] ?? [],
+                    $assetSyncConfig['excludes'] = array_merge(
+                        $assetSyncConfig['excludes'] ?? [],
                         $snapshotConfig->expandAssetGroups($asset['excludes'])
                     );
                 }
 
                 if (!empty($asset['includes'])) {
-                    $syncOptions['includes'] = array_merge(
-                        $syncOptions['includes'] ?? [],
+                    $assetSyncConfig['includes'] = array_merge(
+                        $assetSyncConfig['includes'] ?? [],
                         $snapshotConfig->expandAssetGroups($asset['includes'])
                     );
                 }
