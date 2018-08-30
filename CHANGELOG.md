@@ -5,6 +5,7 @@ Conductor: Application Orchestration
 - Added ability to set working directory in cli arguments
 - Updated commands to prompt to clear working directory if not empty
   rather than throwing an exception
+- Fixed cleaning of working directory after plan completes
 
 # 0.9.3
 - Updated conductor/core require to ~0.9.2

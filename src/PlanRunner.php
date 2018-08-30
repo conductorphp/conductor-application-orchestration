@@ -277,8 +277,12 @@ class PlanRunner implements LoggerAwareInterface
                 }
             }
 
+            $this->logger->debug("Cleaning working directory \"{$this->planPath}\".");
+            $this->removePath($this->planPath);
+            mkdir($this->planPath, 0700);
+
         } catch (\Exception $e) {
-            $this->logger->error('An error occurred running plan "' . $planName . '".');
+            $this->logger->error("An error occurred running plan \"$planName\".");
             chdir($origWorkingDirectory);
             throw $e;
         }
