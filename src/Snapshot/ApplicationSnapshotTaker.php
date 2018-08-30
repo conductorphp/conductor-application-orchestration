@@ -137,4 +137,12 @@ class ApplicationSnapshotTaker
         $this->logger = $logger;
     }
 
+    /**
+     * @param string $planPath
+     */
+    public function setPlanPath(string $planPath): void
+    {
+        $this->planPath = $planPath;
+    }
+
 }

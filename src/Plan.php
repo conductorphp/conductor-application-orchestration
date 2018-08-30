@@ -13,10 +13,6 @@ class Plan
      */
     private $stepInterface;
     /**
-     * @var bool
-     */
-    private $runInCodeRoot;
-    /**
      * @var array
      */
     private $preflightSteps;
@@ -49,7 +45,6 @@ class Plan
         $this->name = $name;
         $this->stepInterface = $stepInterface;
         $plan = $this->validateAndNormalize($plan);
-        $this->runInCodeRoot = !empty($plan['run_in_code_root']);
         $this->preflightSteps = $plan['preflight_steps'];
         $this->cleanSteps = $plan['clean_steps'];
         $this->steps = $plan['steps'];
@@ -63,14 +58,6 @@ class Plan
     public function getName(): string
     {
         return $this->name;
-    }
-
-    /**
-     * @return bool
-     */
-    public function runInCodeRoot(): bool
-    {
-        return $this->runInCodeRoot;
     }
 
     /**
