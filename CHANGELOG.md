@@ -1,6 +1,9 @@
 Conductor: Application Orchestration
 ==============================================
 
+# 0.9.5
+- Added consideration to deployment state check that local db name may be different
+
 # 0.9.4
 - Added ability to set working directory in cli arguments
 - Updated commands to prompt to clear working directory if not empty
