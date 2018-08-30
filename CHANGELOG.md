@@ -1,6 +1,9 @@
 Conductor: Application Orchestration
 ==============================================
 
+# 0.9.3
+- Updated conductor/core require to ~0.9.2
+
 # 0.9.2
 - Removed -v flag from tar command on app:build
 - Added consideration for shallow clone when running app:build
