@@ -277,9 +277,6 @@ class PlanRunner implements LoggerAwareInterface
                 }
             }
 
-            if (!$plan->runInCodeRoot()) {
-                chdir($origWorkingDirectory);
-            }
         } catch (\Exception $e) {
             $this->logger->error('An error occurred running plan "' . $planName . '".');
             chdir($origWorkingDirectory);
@@ -327,33 +324,42 @@ class PlanRunner implements LoggerAwareInterface
      */
     private function preparePlanPath(Plan $plan): void
     {
-        if ($plan->runInCodeRoot()) {
-            $this->planPath = $this->applicationConfig->getAppRoot();
-            return;
-        }
-
         $this->logger->info('Preparing path "' . $this->planPath . '".');
-        if (!file_exists($this->planPath)) {
-            mkdir($this->planPath, 0777, true);
-        }
+        if (file_exists($this->planPath)) {
+            if (is_dir($this->planPath)) {
+                if (!is_writable($this->planPath)) {
+                    throw new Exception\RuntimeException(
+                        sprintf(
+                            'Path "%s" is not a writable directory.',
+                            $this->planPath
+                        )
+                    );
+                }
 
-        if (!(is_dir($this->planPath) && is_writable($this->planPath))) {
-            throw new Exception\RuntimeException(
-                sprintf(
-                    'Path "%s" is not a writable directory.',
-                    $this->planPath
-                )
-            );
-        }
+                $isEmpty = !(new FilesystemIterator($this->planPath))->valid();
+                if (!$isEmpty) {
+                    $this->removePath($this->planPath);
+                    mkdir($this->planPath, 0700);
+                }
+            } else {
+                throw new Exception\RuntimeException(
+                    sprintf(
+                        'Path "%s" is not a directory.',
+                        $this->planPath
+                    )
+                );
+            }
+        } else {
+            if (!is_writable(dirname($this->planPath))) {
+                throw new Exception\RuntimeException(
+                    sprintf(
+                        'Path "%s" could not be created because parent directory is not a writable.',
+                        $this->planPath
+                    )
+                );
+            }
 
-        $isEmpty = !(new FilesystemIterator($this->planPath))->valid();
-        if (!$isEmpty) {
-            throw new Exception\PlanPathNotEmptyException(
-                sprintf(
-                    'Path "%s" is not empty. Ensure path is empty, then run this command again.',
-                    $this->planPath
-                )
-            );
+            mkdir($this->planPath, 0700, true);
         }
 
         $freeDiskSpace = disk_free_space($this->planPath);
@@ -599,5 +605,43 @@ class PlanRunner implements LoggerAwareInterface
         $this->applicationSkeletonDeployer->setLogger($logger);
         $this->databaseAdapterManager->setLogger($logger);
         $this->databaseImportExportAdapterManager->setLogger($logger);
+    }
+
+    /**
+     * rmdir() will not remove the dir if it is not empty
+     *
+     * @param string $path
+     *
+     * @return void
+     */
+    private function removePath(string $path): void
+    {
+        if (false !== strpos($path, '*')) {
+            $paths = glob($path);
+            foreach ($paths as $path) {
+                $this->removePath($path);
+            }
+        } else {
+            if (is_dir($path)) {
+                $iterator = new \RecursiveDirectoryIterator($path);
+                $iterator = new \RecursiveIteratorIterator($iterator, \RecursiveIteratorIterator::CHILD_FIRST);
+                /** @var \SplFileInfo $file */
+                foreach ($iterator as $file) {
+                    if ('.' === $file->getBasename() || '..' === $file->getBasename()) {
+                        continue;
+                    }
+                    if ($file->isLink() || $file->isFile()) {
+                        unlink($file->getPathname());
+                    } else {
+                        rmdir($file->getPathname());
+                    }
+                }
+                rmdir($path);
+            } else {
+                if (is_file($path)) {
+                    unlink($path);
+                }
+            }
+        }
     }
 }
