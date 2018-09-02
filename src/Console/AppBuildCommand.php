@@ -9,6 +9,7 @@ use ConductorAppOrchestration\Build\ApplicationBuilder;
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\MonologConsoleHandlerAwareTrait;
+use FilesystemIterator;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Console\Command\Command;
@@ -16,6 +17,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Question\ConfirmationQuestion;
 
 class AppBuildCommand extends Command
 {
@@ -42,20 +44,20 @@ class AppBuildCommand extends Command
      * AppBuildCommand constructor.
      *
      * @param ApplicationConfig    $applicationConfig
-     * @param ApplicationBuilder   $applicationDeployer
+     * @param ApplicationBuilder   $applicationBuilder
      * @param MountManager         $mountManager
      * @param LoggerInterface|null $logger
      * @param string|null          $name
      */
     public function __construct(
         ApplicationConfig $applicationConfig,
-        ApplicationBuilder $applicationDeployer,
+        ApplicationBuilder $applicationBuilder,
         MountManager $mountManager,
         LoggerInterface $logger = null,
         string $name = null
     ) {
         $this->applicationConfig = $applicationConfig;
-        $this->applicationBuilder = $applicationDeployer;
+        $this->applicationBuilder = $applicationBuilder;
         $this->mountManager = $mountManager;
         if (is_null($logger)) {
             $logger = new NullLogger();
@@ -97,14 +99,40 @@ class AppBuildCommand extends Command
                     implode(', ', $filesystemPrefixes)
                 ),
                 $this->applicationConfig->getDefaultFilesystem() . '://builds'
+            )
+            ->addOption(
+                'working-dir',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'The local working directory to use during build process.',
+                '/tmp/.conductor/build'
             );
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        $workingDir = $input->getOption('working-dir');
+
+        // Confirm continue if working directory is not empty since it will be cleared
+        if (is_dir($workingDir) && (new FilesystemIterator($workingDir))->valid()) {
+            $helper = $this->getHelper('question');
+            $question = new ConfirmationQuestion(
+                sprintf(
+                    '<comment>All contents of working directory "%s" will be deleted. Are you sure you want to continue? [y/N]</comment> ',
+                    $workingDir
+                ), false
+            );
+
+            if (!$helper->ask($input, $output, $question)) {
+                return;
+            }
+        }
+
         $this->applicationConfig->validate();
+
         $this->injectOutputIntoLogger($output, $this->logger);
         $this->applicationBuilder->setLogger($this->logger);
+        $this->applicationBuilder->setPlanPath($workingDir);
         $buildPlan = $input->getOption('plan');
         $repoReference = $input->getArgument('repo-reference');
         $buildId = $input->getArgument('build-id') ?? $repoReference . '-' . $buildPlan . '-' . time();

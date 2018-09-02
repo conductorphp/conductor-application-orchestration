@@ -18,6 +18,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
+use FilesystemIterator;
 
 class AppDeployCommand extends Command
 {
@@ -166,14 +167,39 @@ class AppDeployCommand extends Command
                 null,
                 InputOption::VALUE_NONE,
                 'Bypass confirmation text when running with --clean.'
+            )
+            ->addOption(
+                'working-dir',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'The local working directory to use during deploy process.',
+                '/tmp/.conductor/deploy'
             );
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        $workingDir = $input->getOption('working-dir');
+
+        // Confirm continue if working directory is not empty since it will be cleared
+        if (is_dir($workingDir) && (new FilesystemIterator($workingDir))->valid()) {
+            $helper = $this->getHelper('question');
+            $question = new ConfirmationQuestion(
+                sprintf(
+                    '<comment>All contents of working directory "%s" will be deleted. Are you sure you want to continue? [y/N]</comment> ',
+                    $workingDir
+                ), false
+            );
+
+            if (!$helper->ask($input, $output, $question)) {
+                return;
+            }
+        }
+
         $this->applicationConfig->validate();
         $this->injectOutputIntoLogger($output, $this->logger);
         $this->applicationDeployer->setLogger($this->logger);
+        $this->applicationDeployer->setPlanPath($workingDir);
         $appName = $this->applicationConfig->getAppName();
 
         if ($input->getOption('clean') && !$input->getOption('force')) {
