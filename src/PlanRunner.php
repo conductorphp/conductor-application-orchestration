@@ -354,7 +354,12 @@ class PlanRunner implements LoggerAwareInterface
                 );
             }
         } else {
-            if (!is_writable(dirname($this->planPath))) {
+            $parentDir = dirname($this->planPath);
+            while ('.' != $parentDir && !file_exists($parentDir)) {
+                $parentDir = dirname($parentDir);
+            }
+
+            if (!is_writable($parentDir)) {
                 throw new Exception\RuntimeException(
                     sprintf(
                         'Path "%s" could not be created because parent directory is not a writable.',

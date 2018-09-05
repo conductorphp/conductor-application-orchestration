@@ -1,6 +1,10 @@
 Conductor: Application Orchestration
 ==============================================
 
+# 0.9.6
+- Fixed issue with creating working directory if it did not exist and was 
+  more than one level deep
+
 # 0.9.5
 - Added consideration to deployment state check that local db name may be different
 
