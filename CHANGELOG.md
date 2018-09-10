@@ -1,5 +1,7 @@
 Conductor: Application Orchestration
 ==============================================
+# 0.9.7
+- Added force to snapshot plan
 
 # 0.9.6
 - Fixed issue with creating working directory if it did not exist and was 

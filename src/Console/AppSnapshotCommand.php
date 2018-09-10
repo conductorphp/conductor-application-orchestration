@@ -130,15 +130,22 @@ class AppSnapshotCommand extends Command
                 InputOption::VALUE_REQUIRED,
                 'The local working directory to use during snapshot process.',
                 '/tmp/.conductor/snapshot'
+            )
+            ->addOption(
+                'force',
+                null,
+                InputOption::VALUE_NONE,
+                'Bypass confirmation text when prompted.'
             );
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $workingDir = $input->getOption('working-dir');
+        $forceSnapshot =  $input->getOption('force');
 
         // Confirm continue if working directory is not empty since it will be cleared
-        if (is_dir($workingDir) && (new FilesystemIterator($workingDir))->valid()) {
+        if (!$forceSnapshot && is_dir($workingDir) && (new FilesystemIterator($workingDir))->valid()) {
             $helper = $this->getHelper('question');
             $question = new ConfirmationQuestion(
                 sprintf(
@@ -163,6 +170,7 @@ class AppSnapshotCommand extends Command
         $snapshotPath = $input->getOption('snapshot-path');
         $includeDatabases = $input->getOption('databases');
         $includeAssets = $input->getOption('assets');
+
         if (!($includeDatabases || $includeAssets)) {
             $includeDatabases = $includeAssets = true;
         }
