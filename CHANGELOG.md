@@ -1,5 +1,9 @@
 Conductor: Application Orchestration
 ==============================================
+
+# 0.9.8
+- Added initial documentation structure 
+
 # 0.9.7
 - Added force to snapshot plan
 
