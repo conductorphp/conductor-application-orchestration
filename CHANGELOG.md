@@ -1,5 +1,5 @@
 Conductor: Application Orchestration
-==============================================
+====================================
 
 # 0.9.8
 - Added initial documentation structure 
