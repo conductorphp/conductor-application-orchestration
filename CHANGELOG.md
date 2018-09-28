@@ -1,5 +1,16 @@
 Conductor: Application Orchestration
-==============================================
+
+# 0.9.10
+- Fixed Apache license ID per https://spdx.org/licenses
+
+# 0.9.9
+- Added maintenance strategy and code deployment state strategy placeholder classes 
+  that will show an exception stating that they are not implemented when no platform
+  support package has been included.
+
+# 0.9.8
+- Added initial documentation structure 
+
 # 0.9.7
 - Added force to snapshot plan
 
