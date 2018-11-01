@@ -1,5 +1,9 @@
 Conductor: Application Orchestration
 
+# 0.9.11
+- Removed NoCodeDeploymentState and NoAppMaintenanceStrategy as they were causing 
+  confusion because they introduced the need to order module includes
+
 # 0.9.10
 - Fixed Apache license ID per https://spdx.org/licenses
 
