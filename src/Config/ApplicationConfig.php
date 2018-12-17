@@ -440,6 +440,8 @@ class ApplicationConfig
     public function getPath(string $type, string $buildId = null): string
     {
         switch ($type) {
+            case FileLayoutInterface::PATH_ABSOLUTE:
+                return '';
             case FileLayoutInterface::PATH_CODE:
                 return $this->getCodePath($buildId);
             case FileLayoutInterface::PATH_CURRENT:

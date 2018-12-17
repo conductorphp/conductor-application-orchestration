@@ -16,6 +16,7 @@ interface FileLayoutInterface
     const STRATEGY_DEFAULT = 'default';
 
     const PATH_BUILDS = 'builds';
+    const PATH_ABSOLUTE = 'absolute';
     const PATH_CODE = 'code';
     const PATH_CURRENT = 'current';
     const PATH_LOCAL = 'local';
