@@ -1,5 +1,11 @@
 Conductor: Application Orchestration
 
+# 0.9.13
+- Fixed deployment state checking
+
+# 0.9.12
+- Added consideration for "absolute" path type 
+
 # 0.9.11
 - Removed NoCodeDeploymentState and NoAppMaintenanceStrategy as they were causing 
   confusion because they introduced the need to order module includes
