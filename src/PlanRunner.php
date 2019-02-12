@@ -14,6 +14,7 @@ use ConductorAppOrchestration\Deploy\ApplicationDatabaseDeployerAwareInterface;
 use ConductorAppOrchestration\Deploy\ApplicationSkeletonDeployer;
 use ConductorAppOrchestration\Deploy\ApplicationSkeletonDeployerAwareInterface;
 use ConductorAppOrchestration\Deploy\DeploymentState;
+use ConductorAppOrchestration\Deploy\Command\DeployCommandInterface;
 use ConductorAppOrchestration\Exception\PlanPathNotEmptyException;
 use ConductorAppOrchestration\Maintenance\MaintenanceStrategyAwareInterface;
 use ConductorAppOrchestration\Maintenance\MaintenanceStrategyInterface;
@@ -184,19 +185,23 @@ class PlanRunner implements LoggerAwareInterface
             $this->planPath = getcwd();
         }
 
-        $this->logger->debug('Determining current deployment state.');
-        $metDependencies = [];
-        // Mark assets, code, and databases as met dependencies if they are deployed and we are not actively cleaning them
-        if (!($clean && in_array('assets', $conditions)) && $this->deploymentState->assetsDeployed()) {
-            $metDependencies[] = 'assets';
-        }
+        if ($this->stepInterface == DeployCommandInterface::class) {
+            $this->logger->debug('Determining current deployment state.');
+            $metDependencies = [];
+            // Mark assets, code, and databases as met dependencies if they are deployed and we are not actively cleaning them
+            if (!($clean && in_array('assets', $conditions)) && $this->deploymentState->assetsDeployed()) {
+                $metDependencies[] = 'assets';
+            }
 
-        if (!($clean && in_array('code', $conditions)) && $this->deploymentState->codeDeployed()) {
-            $metDependencies[] = 'code';
-        }
+            if (!($clean && in_array('code', $conditions)) && $this->deploymentState->codeDeployed()) {
+                $metDependencies[] = 'code';
+            }
 
-        if (!($clean && in_array('databases', $conditions)) && $this->deploymentState->databasesDeployed()) {
-            $metDependencies[] = 'databases';
+            if (!($clean && in_array('databases', $conditions)) && $this->deploymentState->databasesDeployed()) {
+                $metDependencies[] = 'databases';
+            }
+        } else {
+            $metDependencies = ['assets', 'code', 'databases'];
         }
 
         try {
