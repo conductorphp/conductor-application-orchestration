@@ -97,12 +97,7 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
             $filename = "$databaseName." . $databaseImportExportAdapter::getFileExtension();
             $localDatabaseName = $database['local_database_name'] ?? $databaseName;
 
-            if ($databaseAdapter->databaseExists($localDatabaseName)) {
-                if (!$databaseAdapter->databaseIsEmpty($localDatabaseName)) {
-                    $this->logger->notice("Database \"$localDatabaseName\" exists and is not empty. Skipped.");
-                    continue;
-                }
-            } else {
+            if (!$databaseAdapter->databaseExists($localDatabaseName)) {
                 $this->logger->debug("Creating database \"$localDatabaseName\".");
                 $databaseAdapter->createDatabase($localDatabaseName);
             }

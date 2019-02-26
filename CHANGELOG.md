@@ -1,5 +1,9 @@
 Conductor: Application Orchestration
 
+# 0.9.15
+- Removed logic to check for existing db with data; This made it difficult to import 
+  in environments without a user that could drop/create the db.
+
 # 0.9.14
 - Added ability to set "local_database_name" in deployment plans
 
