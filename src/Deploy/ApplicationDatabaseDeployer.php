@@ -95,7 +95,7 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
             $databaseImportExportAdapter = $this->databaseImportAdapterManager->getAdapter($adapterName);
 
             $filename = "$databaseName." . $databaseImportExportAdapter::getFileExtension();
-            $localDatabaseName = $databaseName;
+            $localDatabaseName = $database['local_database_name'] ?? $databaseName;
 
             if ($databaseAdapter->databaseExists($localDatabaseName)) {
                 if (!$databaseAdapter->databaseIsEmpty($localDatabaseName)) {
@@ -103,7 +103,7 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
                     continue;
                 }
             } else {
-                $this->logger->debug("Created database \"$localDatabaseName\".");
+                $this->logger->debug("Creating database \"$localDatabaseName\".");
                 $databaseAdapter->createDatabase($localDatabaseName);
             }
 
