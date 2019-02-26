@@ -1,5 +1,8 @@
 Conductor: Application Orchestration
 
+# 0.9.14
+- Added ability to set "local_database_name" in deployment plans
+
 # 0.9.13
 - Fixed deployment state checking
 
