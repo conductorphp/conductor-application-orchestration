@@ -75,7 +75,7 @@ class ApplicationConfigFactory implements FactoryInterface
     {
 
         if (self::PLATFORM_CUSTOM  != $application['platform'] 
-            && !isset($config['application_orchestration']‌['platforms']‌[$application['platform']])
+            && !isset($config['application_orchestration']['platforms'][$application['platform']])
         ) {
             throw new Exception\RuntimeException(sprintf('Platform configured as "%s", but there '
                 . 'is no "application_orchestration/platforms/%s" configuration key defined. You '
@@ -86,8 +86,8 @@ class ApplicationConfigFactory implements FactoryInterface
             ));
         }
 
-        if (isset($config['application_orchestration']‌['platforms']‌[$application['platform']])) {
-            $platformConfig = $config['application_orchestration']‌['platforms']‌[$application['platform']];
+        if (isset($config['application_orchestration']['platforms'][$application['platform']])) {
+            $platformConfig = $config['application_orchestration']['platforms'][$application['platform']];
             if (!empty($platformConfig['source_file_path'])) {
                 $sourceFilePathStack[] = $platformConfig['source_file_path'];
                 unset($platformConfig['source_file_path']);

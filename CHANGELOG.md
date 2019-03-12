@@ -1,5 +1,8 @@
 Conductor: Application Orchestration
 
+# 0.9.17
+- Removed invalid characters in the code
+
 # 0.9.16
 - Removed extra leading slash when path is empty for absolute paths
 - Allowed for setting skeleton paths to null to remove them
