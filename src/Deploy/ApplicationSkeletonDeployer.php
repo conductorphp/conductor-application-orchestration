@@ -374,7 +374,10 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
     private function resolveFilename(string $filename, string $location, string $buildId = null): string
     {
         $path = $this->applicationConfig->getPath($location, $buildId);
-        return "$path/$filename";
+        if ($path) {
+            return "$path/$filename";
+        }
+        return $filename;
     }
 
     /**
