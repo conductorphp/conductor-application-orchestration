@@ -52,7 +52,28 @@ class ApplicationConfigFactory implements FactoryInterface
             unset($application['environments']);
 
             // Merge in platform config
-            $application = $this->mergePlatformConfig($config, $application);
+            if (self::PLATFORM_CUSTOM  != $application['platform']
+                && !isset($config['application_orchestration']['platforms'][$application['platform']])
+            ) {
+                throw new Exception\RuntimeException(sprintf('Platform configured as "%s", but there '
+                    . 'is no "application_orchestration/platforms/%s" configuration key defined. You '
+                    . 'likely need to include the correct platform support package. '
+                    . 'See https://github.com/conductorphp/?q=platform-support',
+                    $application['platform'],
+                    $application['platform']
+                ));
+            }
+
+            if (isset($config['application_orchestration']['platforms'][$application['platform']])) {
+                $platformConfig = $config['application_orchestration']['platforms'][$application['platform']];
+
+                if (!empty($platformConfig['source_file_path'])) {
+                    $sourceFilePathStack[] = $platformConfig['source_file_path'];
+                    unset($platformConfig['source_file_path']);
+                }
+
+                $application = array_replace_recursive($platformConfig, $application);
+            }
         }
 
         $applicationConfig = array_replace_recursive(
@@ -62,41 +83,6 @@ class ApplicationConfigFactory implements FactoryInterface
         $applicationConfig['source_file_paths'] = $sourceFilePathStack;
 
         return new ApplicationConfig($applicationConfig);
-    }
-
-    /**
-     * @param array $config
-     * @param array $application
-     *
-     * @return array
-     * @throws Exception\RuntimeException if configured platform doesn't match platform support package
-     */
-    private function mergePlatformConfig(array $config, array $application): array
-    {
-
-        if (self::PLATFORM_CUSTOM  != $application['platform'] 
-            && !isset($config['application_orchestration']['platforms'][$application]['platform']])
-        ) {
-            throw new Exception\RuntimeException(sprintf('Platform configured as "%s", but there '
-                . 'is no "application_orchestration/platforms/%s" configuration key defined. You '
-                . 'likely need to include the correct platform support package. '
-                . 'See https://github.com/conductorphp/?q=platform-support',
-                $application['platform'],
-                $application['platform']
-            ));
-        }
-
-        if (isset($config['application_orchestration']['platforms'][$application]['platform']])) {
-            $platformConfig = $config['application_orchestration']['platforms'][$application]['platform']];
-
-	    if (!empty($platformConfig['source_file_path'])) {
-                $sourceFilePathStack[] = $platformConfig['source_file_path'];
-                unset($platformConfig['source_file_path']);
-            }
-            $application = array_replace_recursive($platformConfig, $application);
-        }
-
-        return $application;
     }
 
 }

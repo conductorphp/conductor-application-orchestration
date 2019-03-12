@@ -1,5 +1,8 @@
 Conductor: Application Orchestration
 
+# 0.9.20
+- Fixed source_file_path stack
+
 # 0.9.19
 - Removed invalid characters in the code
 
