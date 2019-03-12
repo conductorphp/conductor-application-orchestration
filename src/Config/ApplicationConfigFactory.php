@@ -86,9 +86,10 @@ class ApplicationConfigFactory implements FactoryInterface
             ));
         }
 
-        if (isset($config['application_orchestration']['platforms'][$application['platform']])) {
-            $platformConfig = $config['application_orchestration']['platforms'][$application['platform']];
-            if (!empty($platformConfig['source_file_path'])) {
+        if (isset($config['application_orchestration']['platforms'][$application]['platform']])) {
+            $platformConfig = $config['application_orchestration']['platforms'][$application]['platform']];
+
+	    if (!empty($platformConfig['source_file_path'])) {
                 $sourceFilePathStack[] = $platformConfig['source_file_path'];
                 unset($platformConfig['source_file_path']);
             }
