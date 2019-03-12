@@ -209,6 +209,10 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         $directories = $this->applicationConfig->getSkeletonConfig()->getDirectories();
         if ($directories) {
             foreach ($directories as $filename => $directory) {
+                if (is_null($directory)) {
+                    continue;
+                }
+
                 if (empty($directory['location'])) {
                     throw new Exception\RuntimeException(
                         "Directory \"$filename\" must have \"location\" property set."
