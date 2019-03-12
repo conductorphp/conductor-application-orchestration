@@ -1,5 +1,8 @@
 Conductor: Application Orchestration
 
+# 0.9.19
+- Removed invalid characters in the code
+
 # 0.9.18
 - Removed invalid characters in the code
 

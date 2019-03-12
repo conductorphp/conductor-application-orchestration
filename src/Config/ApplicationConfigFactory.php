@@ -75,7 +75,7 @@ class ApplicationConfigFactory implements FactoryInterface
     {
 
         if (self::PLATFORM_CUSTOM  != $application['platform'] 
-            && !isset($config['application_orchestration']['platforms'][$application['platform']])
+            && !isset($config['application_orchestration']['platforms'][$application]['platform']])
         ) {
             throw new Exception\RuntimeException(sprintf('Platform configured as "%s", but there '
                 . 'is no "application_orchestration/platforms/%s" configuration key defined. You '
