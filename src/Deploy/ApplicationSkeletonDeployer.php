@@ -209,6 +209,10 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         $directories = $this->applicationConfig->getSkeletonConfig()->getDirectories();
         if ($directories) {
             foreach ($directories as $filename => $directory) {
+                if (is_null($directory)) {
+                    continue;
+                }
+
                 if (empty($directory['location'])) {
                     throw new Exception\RuntimeException(
                         "Directory \"$filename\" must have \"location\" property set."
@@ -370,7 +374,10 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
     private function resolveFilename(string $filename, string $location, string $buildId = null): string
     {
         $path = $this->applicationConfig->getPath($location, $buildId);
-        return "$path/$filename";
+        if ($path) {
+            return "$path/$filename";
+        }
+        return $filename;
     }
 
     /**

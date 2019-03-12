@@ -1,5 +1,9 @@
 Conductor: Application Orchestration
 
+# 0.9.16
+- Removed extra leading slash when path is empty for absolute paths
+- Allowed for setting skeleton paths to null to remove them
+
 # 0.9.15
 - Removed logic to check for existing db with data; This made it difficult to import 
   in environments without a user that could drop/create the db.
