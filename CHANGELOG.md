@@ -1,6 +1,10 @@
 Conductor: Application Orchestration
 ====================================
 
+## 0.9.22
+- Reduced default batch size for file syncing since forking may consume too many
+  resources at 100 forks.
+
 ## 0.9.21
 - Fixed pushing asset sync config from console command down to asset deployer
 
