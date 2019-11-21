@@ -135,7 +135,7 @@ class AppBuildCommand extends Command
         $this->applicationBuilder->setPlanPath($workingDir);
         $buildPlan = $input->getOption('plan');
         $repoReference = $input->getArgument('repo-reference');
-        $buildId = $input->getArgument('build-id') ?? $repoReference . '-' . $buildPlan . '-' . time();
+        $buildId = $this->getBuildId($input, $repoReference, $buildPlan);
         $buildPath = $input->getOption('build-path');
 
         $appName = $this->applicationConfig->getAppName();
@@ -145,6 +145,24 @@ class AppBuildCommand extends Command
         $this->logger->info("Build ID: $buildId");
         $output->write($buildId);
         return 0;
+    }
+
+    /**
+     * @param InputInterface $input
+     * @param string $repoReference
+     * @param string $buildPlan
+     * @return string
+     */
+    private function getBuildId(InputInterface $input, string $repoReference, string $buildPlan): string
+    {
+        $buildId = $input->getArgument('build-id');
+        if ($buildId) {
+            return $buildId;
+        }
+
+        $buildId = $repoReference . '-' . $buildId . '-' . date('YmdHisO');
+
+        return $buildId;
     }
 
 }

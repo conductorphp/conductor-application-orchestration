@@ -1,6 +1,10 @@
 Conductor: Application Orchestration
 ====================================
 
+## 0.9.23
+- Improved generation of buildId if not provided to build command:
+  * Replaced timestamp with date('YmdHisO') (e.g. 20191120221400-05:00)
+
 ## 0.9.22
 - Reduced default batch size for file syncing since forking may consume too many
   resources at 100 forks.
