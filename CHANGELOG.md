@@ -5,6 +5,7 @@ Conductor: Application Orchestration
 - Improved generation of buildId if not provided to build command:
   * Replaced timestamp with date('YmdHisO') (e.g. 20191120221400-05:00)
   * Added sanitization to ensure buildId is filename friendly
+- Fixed tar usage issue related to calling --exclude after other arguments
 
 ## 0.9.22
 - Reduced default batch size for file syncing since forking may consume too many
