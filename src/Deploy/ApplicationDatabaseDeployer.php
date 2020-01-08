@@ -16,6 +16,12 @@ use ConductorCore\Shell\Adapter\LocalShellAdapter;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use Symfony\Component\Console\Question\ConfirmationQuestion;
+use Symfony\Component\Console\Helper\QuestionHelper;
+use Symfony\Component\Console\Helper\HelperSet;
+use Symfony\Component\Console\Helper\FormatterHelper;
+use Symfony\Component\Console\Input\ArgvInput;
+use Symfony\Component\Console\Output\ConsoleOutput;
 
 /**
  * Class ApplicationDatabaseDeployer
@@ -49,19 +55,41 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
      */
     protected $logger;
 
+    /**
+     * @pvar ArgvInput
+     */
+    protected $input;
+
+    /**
+     * @pvar ConsoleOutput
+     */
+    protected $output;
+
+    /**
+     * @pvar QuestionHelper
+     */
+    protected $questionHelper;
+
     public function __construct(
         ApplicationConfig $applicationConfig,
         MountManager $mountManager,
         DatabaseAdapterManager $databaseAdapterManager,
         DatabaseImportExportAdapterManager $databaseImportAdapterManager,
         LocalShellAdapter $localShellAdapter,
-        LoggerInterface $logger = null
+        LoggerInterface $logger = null,
+        ArgvInput $input,
+        ConsoleOutput $output,
+        QuestionHelper $questionHelper
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->mountManager = $mountManager;
         $this->databaseImportAdapterManager = $databaseImportAdapterManager;
         $this->databaseAdapterManager = $databaseAdapterManager;
         $this->shellAdapter = $localShellAdapter;
+        $this->input = $input;
+        $this->output = $output;
+        $this->questionHelper = $questionHelper;
+
         if (is_null($logger)) {
             $logger = new NullLogger();
         }
@@ -78,13 +106,13 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
     public function deployDatabases(
         string $snapshotPath,
         string $snapshotName,
-        array $databases
+        array $databases,
+        bool  $force = false
     ): void {
 
         if (!$databases) {
             throw new Exception\RuntimeException('No database given for deployment.');
         }
-
         $application = $this->applicationConfig;
         $this->logger->info('Installing databases');
         foreach ($databases as $databaseName => $database) {
@@ -97,6 +125,22 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
             $filename = "$databaseName." . $databaseImportExportAdapter::getFileExtension();
             $localDatabaseName = $database['local_database_name'] ?? $databaseName;
 
+            if($databaseAdapter->databaseExists($localDatabaseName)){
+                if($force)
+                {
+                    $this->logger->debug("Dropping database \"$localDatabaseName\".");
+                    $databaseAdapter->dropDatabase($localDatabaseName);
+                }else{
+                    if($this->askDbQuestion($localDatabaseName)&&!$force)
+                    {
+                        $this->logger->debug("Dropping database \"$localDatabaseName\".");
+                        $databaseAdapter->dropDatabase($localDatabaseName);
+                    }else{
+                        $this->logger->debug("User didn't confirm database dropping \"$localDatabaseName\".");
+                        throw new Exception\RuntimeException('User didn\'t confirm database dropping');
+                    }
+                }
+            }
             if (!$databaseAdapter->databaseExists($localDatabaseName)) {
                 $this->logger->debug("Creating database \"$localDatabaseName\".");
                 $databaseAdapter->createDatabase($localDatabaseName);
@@ -207,5 +251,21 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
             $this->shellAdapter->setLogger($logger);
         }
         $this->logger = $logger;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    private function askDbQuestion($database)
+    {
+        $helperSet       = new HelperSet([new FormatterHelper()]);
+        $this->questionHelper->setHelperSet($helperSet);
+        $question        = new ConfirmationQuestion(
+            sprintf(
+                '<comment>Existing database "%s" will be dropped. Are you sure you want to continue? [y/N]</comment> ',
+                $database
+            ), false);
+
+        return $this->questionHelper->ask($this->input,$this->output,$question);
     }
 }
