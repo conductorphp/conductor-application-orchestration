@@ -565,9 +565,16 @@ class PlanRunner implements LoggerAwareInterface
                 $stepObject->setApplicationDatabaseDeployer($this->applicationDatabaseDeployer);
             }
 
+            if (empty($stepArguments['options'])) {
+                $stepArguments['options'] = $step['options'] ?? [];
+            } elseif (!empty($step['options'])) {
+                // Step arguments take precedence over options since they are set at runtime
+                $stepArguments['options'] = array_replace_recursive($step['options'], $stepArguments['options']);
+            }
+
             $output = call_user_func_array(
                 [$stepObject, 'run'],
-                array_merge($stepArguments, ['options' => $step['options'] ?? []])
+                $stepArguments
             );
         }
 

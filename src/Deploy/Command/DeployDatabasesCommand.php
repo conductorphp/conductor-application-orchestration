@@ -18,7 +18,7 @@ use Psr\Log\NullLogger;
  */
 class DeployDatabasesCommand
     implements DeployCommandInterface, ApplicationDatabaseDeployerAwareInterface, LoggerAwareInterface,
-               ApplicationConfigAwareInterface
+    ApplicationConfigAwareInterface
 {
     /**
      * @var ApplicationDatabaseDeployer
@@ -75,11 +75,13 @@ class DeployDatabasesCommand
         if (!empty($options['databases'])) {
             $databases = array_replace_recursive($databases, $options['databases']);
         }
+        $force = $options['force'] ?? false;
 
         $this->applicationDatabaseDeployer->deployDatabases(
             $snapshotPath,
             $snapshotName,
-            $databases
+            $databases,
+            $force
         );
         return null;
     }
