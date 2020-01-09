@@ -125,26 +125,17 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
             $filename = "$databaseName." . $databaseImportExportAdapter::getFileExtension();
             $localDatabaseName = $database['local_database_name'] ?? $databaseName;
 
-            if($databaseAdapter->databaseExists($localDatabaseName)){
-                if($force)
-                {
-                    $this->logger->debug("Dropping database \"$localDatabaseName\".");
-                    $databaseAdapter->dropDatabase($localDatabaseName);
-                }else{
-                    if($this->askDbQuestion($localDatabaseName)&&!$force)
-                    {
-                        $this->logger->debug("Dropping database \"$localDatabaseName\".");
-                        $databaseAdapter->dropDatabase($localDatabaseName);
-                    }else{
-                        $this->logger->debug("User didn't confirm database dropping \"$localDatabaseName\".");
-                        throw new Exception\RuntimeException('User didn\'t confirm database dropping');
-                    }
+            if ($databaseAdapter->databaseExists($localDatabaseName)) {
+                if (!$force && !$this->confirmDatabaseDrop($localDatabaseName)) {
+                    throw new Exception\RuntimeException('Aborted database deployment because user did not confirm dropping existing database.');
                 }
+
+                $this->logger->debug("Dropping database \"$localDatabaseName\".");
+                $databaseAdapter->dropDatabase($localDatabaseName);
             }
-            if (!$databaseAdapter->databaseExists($localDatabaseName)) {
-                $this->logger->debug("Creating database \"$localDatabaseName\".");
-                $databaseAdapter->createDatabase($localDatabaseName);
-            }
+
+            $this->logger->debug("Creating database \"$localDatabaseName\".");
+            $databaseAdapter->createDatabase($localDatabaseName);
 
             $workingDir = getcwd() . '/' . DatabaseImportExportAdapterInterface::DEFAULT_WORKING_DIR;
             $this->logger->debug("Downloading database script \"$filename\".");
@@ -256,16 +247,16 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
     /**
      * @inheritdoc
      */
-    private function askDbQuestion($database)
+    private function confirmDatabaseDrop($database)
     {
-        $helperSet       = new HelperSet([new FormatterHelper()]);
+        $helperSet = new HelperSet([new FormatterHelper()]);
         $this->questionHelper->setHelperSet($helperSet);
-        $question        = new ConfirmationQuestion(
+        $question = new ConfirmationQuestion(
             sprintf(
-                '<comment>Existing database "%s" will be dropped. Are you sure you want to continue? [y/N]</comment> ',
+                '<error>Existing database "%s" will be dropped. Are you sure you want to continue? [y/N]</error> ',
                 $database
             ), false);
 
-        return $this->questionHelper->ask($this->input,$this->output,$question);
+        return $this->questionHelper->ask($this->input, $this->output, $question);
     }
 }
