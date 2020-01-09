@@ -1,6 +1,11 @@
 Conductor: Application Orchestration
 ====================================
 
+## 0.9.24
+- Added confirmation message for dropping db if already exists on database deployment
+- Updated to always drop database if exists on deployment after confirmation
+- Fixed merging of "options" key if set at runtime through step arguments
+
 ## 0.9.23
 - Improved generation of buildId if not provided to build command:
   * Replaced timestamp with date('YmdHisO') (e.g. 20191120221400-05:00)
