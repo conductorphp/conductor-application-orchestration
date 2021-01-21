@@ -14,7 +14,6 @@
     "config": {
         "sort-packages": true
     },
-    "minimum-stability": "dev",
     "require": {
         "php": "~7.1.0|~7.2.0|~7.3.0|~7.4.0",
         "conductor/core": "^1.0.0"
