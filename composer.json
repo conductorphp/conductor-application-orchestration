@@ -16,7 +16,7 @@
     },
     "minimum-stability": "dev",
     "require": {
-        "php": "^7.1",
+        "php": "~7.1.0|~7.2.0|~7.3.0|~7.4.0",
         "conductor/core": "^1.0.0",
         "twig/twig": "^2.0",
         "laminas/laminas-servicemanager": "^3.3"
