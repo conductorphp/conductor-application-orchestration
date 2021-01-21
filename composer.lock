@@ -1615,7 +1615,7 @@
             },
             "autoload": {
                 "psr-4": {
-                    "Zend\\ServiceManager\\": "src/"
+                    "Laminas\\ServiceManager\\": "src/"
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
@@ -1666,7 +1666,7 @@
             },
             "autoload": {
                 "psr-4": {
-                    "Zend\\Stdlib\\": "src/"
+                    "Laminas\\Stdlib\\": "src/"
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
