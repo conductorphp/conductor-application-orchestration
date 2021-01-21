@@ -1,6 +1,6 @@
 {
     "name": "conductor/application-orchestration",
-    "description": "Conductor: Application Orchestration",
+    "description": "Conductor Application Orchestration",
     "type": "library",
     "homepage": "https://github.com/conductorphp/conductor-application-orchestration",
     "license": "Apache-2.0",

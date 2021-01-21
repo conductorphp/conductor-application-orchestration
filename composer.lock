@@ -164,7 +164,7 @@
                     "role": "Architect"
                 }
             ],
-            "description": "Conductor: Core",
+            "description": "Conductor Core",
             "homepage": "https://github.com/conductorphp/conductor-core",
             "support": {
                 "issues": "https://github.com/conductorphp/conductor-core/issues",
