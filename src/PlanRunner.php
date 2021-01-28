@@ -2,7 +2,6 @@
 
 namespace ConductorAppOrchestration;
 
-use Amp\Loop;
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\Config\ApplicationConfigAwareInterface;
 use ConductorAppOrchestration\Deploy\ApplicationAssetDeployer;
@@ -24,6 +23,7 @@ use ConductorCore\Database\DatabaseImportExportAdapterManager;
 use ConductorCore\Database\DatabaseImportExportAdapterManagerAwareInterface;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\Filesystem\MountManager\MountManagerAwareInterface;
+use ConductorCore\ForkManager;
 use ConductorCore\Repository\RepositoryAdapterAwareInterface;
 use ConductorCore\Repository\RepositoryAdapterInterface;
 use ConductorCore\Shell\Adapter\ShellAdapterAwareInterface;
@@ -418,11 +418,9 @@ class PlanRunner implements LoggerAwareInterface
         // If array, run commands in parallel
         if (!empty($step['steps'])) {
             $providedDependencies = [];
+            $forkManager = new ForkManager($this->logger);
             foreach ($step['steps'] as $parallelName => $parallelStep) {
-                Loop::delay(
-                    0,
-                    // Since these are run in parallel, they cannot provide dependencies for each other
-                    function () use (
+                $worker = function () use (
                         $parallelName,
                         $parallelStep,
                         $conditions,
@@ -441,11 +439,13 @@ class PlanRunner implements LoggerAwareInterface
                         $providedDependencies = array_unique(
                             array_merge($providedDependencies, $stepProvidedDependencies)
                         );
-                    }
-                );
+                };
+                $forkManager->addWorker($worker);
             }
 
-            Loop::run();
+            $forkManager->execute();
+            var_dump($providedDependencies);
+            die(__METHOD__);
             return $providedDependencies;
         }
 
