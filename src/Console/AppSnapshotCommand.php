@@ -116,7 +116,14 @@ class AppSnapshotCommand extends Command
                 null,
                 InputOption::VALUE_REQUIRED,
                 'Batch size for asset sync.',
-                20
+                100
+            )
+            ->addOption(
+                'asset-max-concurrency',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Max concurrency of assets to sync at one time.',
+                10
             )
             ->addOption(
                 'replace',
@@ -176,6 +183,7 @@ class AppSnapshotCommand extends Command
         }
         $assetSyncConfig = [
             'batch_size' => $input->getOption('asset-batch-size'),
+            'max_concurrency' => $input->getOption('asset-max-concurrency'),
         ];
         $replace = $input->getOption('replace');
 

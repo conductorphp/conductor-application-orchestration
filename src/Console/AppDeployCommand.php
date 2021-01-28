@@ -129,7 +129,13 @@ class AppDeployCommand extends Command
                 null,
                 InputOption::VALUE_REQUIRED,
                 'Batch size for asset sync when deploying a snapshot.',
-                20
+                100
+            )->addOption(
+                'asset-max-concurrency',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Max concurrency of assets to deploy at one time.',
+                10
             )
             ->addOption(
                 'databases',
@@ -251,7 +257,10 @@ class AppDeployCommand extends Command
                 $input->getOption('snapshot'),
                 $input->getOption('snapshot-path'),
                 $includeAssets,
-                ['batch_size' => $input->getOption('asset-batch-size')],
+                [
+                    'batch_size' => $input->getOption('asset-batch-size'),
+                    'max_concurrency' => $input->getOption('asset-max-concurrency'),
+                ],
                 $includeDatabases,
                 $input->getOption('allow-full-rollback'),
                 $input->getOption('clean'),
