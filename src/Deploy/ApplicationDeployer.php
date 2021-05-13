@@ -83,7 +83,8 @@ class ApplicationDeployer
     public function deploySkeleton(
         string $deployPlan,
         string $buildId = null,
-        bool $clean = false
+        bool $clean = false,
+        bool $force = false
     ): void {
         $deployPlans = $this->applicationConfig->getDeployConfig()->getPlans();
         $this->planRunner->setPlans($deployPlans);
@@ -106,9 +107,11 @@ class ApplicationDeployer
                 'assetSyncConfig'   => [],
                 'includeDatabases'  => true,
                 'allowFullRollback' => false,
+                'options'           => ['force' => $force],
             ],
             $clean,
-            false
+            false,
+            $force
         );
     }
 
@@ -140,7 +143,8 @@ class ApplicationDeployer
         bool $includeDatabases = true,
         bool $allowFullRollback = false,
         bool $clean = false,
-        bool $rollback = false
+        bool $rollback = false,
+        bool $force = false
     ): void {
 
         $deployPlans = $this->applicationConfig->getDeployConfig()->getPlans();
@@ -190,6 +194,7 @@ class ApplicationDeployer
                 'assetSyncConfig'   => $assetSyncConfig,
                 'includeDatabases'  => $includeDatabases,
                 'allowFullRollback' => $allowFullRollback,
+                'options'           => ['force' => $force],
             ],
             $clean,
             $rollback

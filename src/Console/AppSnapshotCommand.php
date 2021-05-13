@@ -116,7 +116,7 @@ class AppSnapshotCommand extends Command
                 null,
                 InputOption::VALUE_REQUIRED,
                 'Batch size for asset sync.',
-                100
+                20
             )
             ->addOption(
                 'replace',

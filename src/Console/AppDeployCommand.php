@@ -129,7 +129,7 @@ class AppDeployCommand extends Command
                 null,
                 InputOption::VALUE_REQUIRED,
                 'Batch size for asset sync when deploying a snapshot.',
-                100
+                20
             )
             ->addOption(
                 'databases',
@@ -238,7 +238,8 @@ class AppDeployCommand extends Command
         if ($input->getOption('skeleton')) {
             $this->applicationDeployer->deploySkeleton(
                 $input->getOption('plan'),
-                $input->getOption('clean')
+                $input->getOption('clean'),
+                $input->getOption('force')
             );
         } else {
             $this->applicationDeployer->deploy(
@@ -254,7 +255,8 @@ class AppDeployCommand extends Command
                 $includeDatabases,
                 $input->getOption('allow-full-rollback'),
                 $input->getOption('clean'),
-                $input->getOption('rollback')
+                $input->getOption('rollback'),
+                $input->getOption('force')
             );
         }
         $this->logger->info("<info>Application \"$appName\" deployment completed!</info>");

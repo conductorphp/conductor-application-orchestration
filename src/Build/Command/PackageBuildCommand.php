@@ -58,7 +58,7 @@ class PackageBuildCommand
         );
 
         $tarFilename = "$buildId.tgz";
-        $command = 'tar -cz -f ' . escapeshellarg($tarFilename) . ' ./* --exclude-vcs ';
+        $command = 'tar -cz --exclude-vcs ';
 
         if (!empty($options['excludes'])) {
             foreach ($options['excludes'] as $excludePath) {
@@ -68,6 +68,8 @@ class PackageBuildCommand
                 $command .= '--exclude ' . escapeshellarg($excludePath) . ' ';
             }
         }
+
+        $command .= '-f ' . escapeshellarg($tarFilename) . ' ./*';
 
         return $this->shellAdapter->runShellCommand($command);
     }

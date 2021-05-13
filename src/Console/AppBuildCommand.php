@@ -135,7 +135,7 @@ class AppBuildCommand extends Command
         $this->applicationBuilder->setPlanPath($workingDir);
         $buildPlan = $input->getOption('plan');
         $repoReference = $input->getArgument('repo-reference');
-        $buildId = $input->getArgument('build-id') ?? $repoReference . '-' . $buildPlan . '-' . time();
+        $buildId = $this->getBuildId($input, $repoReference, $buildPlan);
         $buildPath = $input->getOption('build-path');
 
         $appName = $this->applicationConfig->getAppName();
@@ -145,6 +145,33 @@ class AppBuildCommand extends Command
         $this->logger->info("Build ID: $buildId");
         $output->write($buildId);
         return 0;
+    }
+
+    /**
+     * @param InputInterface $input
+     * @param string $repoReference
+     * @param string $buildPlan
+     * @return string
+     */
+    private function getBuildId(InputInterface $input, string $repoReference, string $buildPlan): string
+    {
+        $buildId = $input->getArgument('build-id');
+        if ($buildId) {
+            return $buildId;
+        }
+
+        // Assuming max allowed length of 255 for a filename, truncate for sanity check
+        // 200 + 1 + 34 + 1 + 19 = 255
+        $buildId = substr($repoReference, 0, 200)
+            . '-'
+            . substr($buildPlan, 0, 34)
+            . '-'
+            . date('YmdHisO'); # 19 characters
+
+        // Replace sets of characters outside of whitelist with a dash
+        $buildId = preg_replace('%[^a-z0-9+]+%i', '-', $buildId);
+
+        return $buildId;
     }
 
 }
