@@ -80,7 +80,9 @@ class ApplicationConfigFactory implements FactoryInterface
             $config['application_orchestration']['defaults'],
             $application
         );
-        $applicationConfig['source_file_paths'] = $sourceFilePathStack;
+        $applicationConfig['source_file_paths'] = array_merge($sourceFilePathStack,
+            $config['application_orchestration']['defaults']['source_file_paths']
+        );
 
         return new ApplicationConfig($applicationConfig);
     }
