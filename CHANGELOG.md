@@ -6,10 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [1.3.0] - 2022-05-16
-
+- 
 - Created top level application/databases configuration for `alias`, `adapter`, and `importexport_adapter`.
-
-## [Unreleased]
 - Added `var_export` Twig extension.
 - Added a default list of `source_file_paths` for templates in order to support the
   `var-export.php.twig` template.
