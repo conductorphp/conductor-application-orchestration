@@ -9,6 +9,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Created top level application/databases configuration for `alias`, `adapter`, and `importexport_adapter`.
 
+## [Unreleased]
+- Added `var_export` Twig extension.
+- Added a default list of `source_file_paths` for templates in order to support the
+  `var-export.php.twig` template.
+- Enabled Twig debug mode and added `DebugExtension` to allow for calling of `dump` in templates.
+
 ## [1.2.0] - 2021-05-20
 
 ### Added

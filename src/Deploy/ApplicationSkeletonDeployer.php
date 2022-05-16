@@ -8,6 +8,7 @@ namespace ConductorAppOrchestration\Deploy;
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\Exception;
 use ConductorAppOrchestration\FileLayoutInterface;
+use ConductorAppOrchestration\Twig\Extension\VarExportExtension;
 use ConductorCore\Shell\Adapter\LocalShellAdapter;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
@@ -406,7 +407,11 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         }
 
         if ($templateVars && '.twig' == substr($fileInfo['source'], -5)) {
-            $twig = new TwigEnvironment(new TwigArrayLoader([]));
+            $twig = new TwigEnvironment(new TwigArrayLoader([]), [
+                'debug' => true,
+            ]);
+            $twig->addExtension(new \Twig\Extension\DebugExtension());
+            $twig->addExtension(new VarExportExtension());
             $template = $twig->createTemplate($content);
             $content = $template->render($templateVars);
         }

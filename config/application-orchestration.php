@@ -29,7 +29,9 @@ return [
             'default_plan'          => 'default',
             'plans'                 => [],
         ],
-        'source_file_paths'                     => [],
+        'source_file_paths'                     => [
+            dirname(__DIR__) . '/files',
+        ],
         'template_vars'                         => [],
     ],
 ];
