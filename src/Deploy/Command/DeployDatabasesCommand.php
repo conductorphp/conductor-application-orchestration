@@ -71,12 +71,11 @@ class DeployDatabasesCommand
             throw new Exception\RuntimeException('$this->applicationConfig must be set.');
         }
 
-        $databases = $this->applicationConfig->getSnapshotConfig()->getDatabases();
+        $databases = $this->applicationConfig->getDatabases();
         if (!empty($options['databases'])) {
             $databases = array_replace_recursive($databases, $options['databases']);
         }
         $force = $options['force'] ?? false;
-
         $this->applicationDatabaseDeployer->deployDatabases(
             $snapshotPath,
             $snapshotName,

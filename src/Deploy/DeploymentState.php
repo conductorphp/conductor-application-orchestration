@@ -70,17 +70,12 @@ class DeploymentState
      */
     public function databasesDeployed(): bool
     {
-        $databases = $this->applicationConfig->getSnapshotConfig()->getDatabases();
+        $databases = $this->applicationConfig->getDatabases();
         foreach ($databases as $database => $databaseConfig) {
-            if (isset($databaseConfig['local_database_name'])) {
-                $localDatabaseName = $databaseConfig['local_database_name'];
-            } else {
-                $localDatabaseName = $database;
-            }
-
+            $alias = $databaseConfig['alias'] ?? $database;
             $adapterName = $databaseConfig['adapter'] ?? $this->applicationConfig->getDefaultDatabaseAdapter();
             $adapter = $this->databaseAdapterManager->getAdapter($adapterName);
-            if (!$adapter->databaseExists($localDatabaseName)) {
+            if (!$adapter->databaseExists($alias)) {
                 return false;
             }
         }

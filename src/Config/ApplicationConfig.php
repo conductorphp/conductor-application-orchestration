@@ -7,6 +7,7 @@ namespace ConductorAppOrchestration\Config;
 
 use ConductorAppOrchestration\Exception;
 use ConductorAppOrchestration\FileLayoutInterface;
+use Psr\Log\LoggerInterface;
 
 class ApplicationConfig
 {
@@ -30,13 +31,16 @@ class ApplicationConfig
      * @var SkeletonConfig
      */
     private $skeletonConfig;
+    /**
+     * @var LoggerInterface|null
+     */
+    private ?LoggerInterface $logger = null;
 
     /**
-     * ApplicationConfig constructor.
-     *
      * @param array $config
+     * @param LoggerInterface|null $logger
      */
-    public function __construct(array $config)
+    public function __construct(array $config, LoggerInterface $logger = null)
     {
         $this->buildConfig = new BuildConfig($config['build'] ?? []);
         $this->deployConfig = new DeployConfig($config['deploy'] ?? []);
@@ -45,6 +49,23 @@ class ApplicationConfig
         unset($config['build'], $config['deploy'], $config['snapshot'], $config['skeleton']);
         $config = $this->filter($config);
         $this->config = $config;
+        $this->logger = $logger;
+    }
+
+    /**
+     * @return LoggerInterface|null
+     */
+    public function getLogger(): ?LoggerInterface
+    {
+        return $this->logger;
+    }
+
+    /**
+     * @param LoggerInterface|null $logger
+     */
+    public function setLogger(?LoggerInterface $logger): void
+    {
+        $this->logger = $logger;
     }
 
     /**
@@ -126,6 +147,44 @@ class ApplicationConfig
     public function getAppRoot(): string
     {
         return $this->config['app_root'];
+    }
+
+    /**
+     * @return array
+     */
+    public function getDatabases(): ?array
+    {
+        $databases = $this->config['databases'] ?? [];
+        $snapshotDatabases = $this->getSnapshotConfig()->getDatabases();
+        if ($snapshotDatabases) {
+            foreach ($snapshotDatabases as $name => $snapshotDatabase) {
+                if (isset($snapshotDatabase['local_database_name'])) {
+                    $this->logger->warning('Use of "local_database_name" in snapshot configuration is deprecated. '
+                        . 'Use top level "databases" configuration instead.');
+                    if (!isset($databases[$name]['alias'])) {
+                        $databases[$name]['alias'] = $snapshotDatabase['local_database_name'];
+                    }
+                }
+
+                if (isset($snapshotDatabase['adapter'])) {
+                    $this->logger->warning('Use of "adapter" in snapshot configuration is deprecated. '
+                        . 'Use top level "databases" configuration instead.');
+                    if (!isset($databases[$name]['adapter'])) {
+                        $databases[$name]['adapter'] = $snapshotDatabase['adapter'];
+                    }
+                }
+
+                if (isset($snapshotDatabase['importexport_adapter'])) {
+                    $this->logger->warning('Use of "importexport_adapter" in snapshot configuration is deprecated. '
+                        . 'Use top level "databases" configuration instead.');
+                    if (!isset($databases[$name]['importexport_adapter'])) {
+                        $databases[$name]['importexport_adapter'] = $snapshotDatabase['importexport_adapter'];
+                    }
+                }
+            }
+        }
+
+        return $databases;
     }
 
     /**

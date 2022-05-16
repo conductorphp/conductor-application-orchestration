@@ -123,19 +123,19 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
             $databaseImportExportAdapter = $this->databaseImportAdapterManager->getAdapter($adapterName);
 
             $filename = "$databaseName." . $databaseImportExportAdapter::getFileExtension();
-            $localDatabaseName = $database['local_database_name'] ?? $databaseName;
+            $databaseAlias = $database['alias'] ?? $databaseName;
 
-            if ($databaseAdapter->databaseExists($localDatabaseName)) {
-                if (!$force && !$this->confirmDatabaseDrop($localDatabaseName)) {
+            if ($databaseAdapter->databaseExists($databaseAlias)) {
+                if (!$force && !$this->confirmDatabaseDrop($databaseAlias)) {
                     throw new Exception\RuntimeException('Aborted database deployment because user did not confirm dropping existing database.');
                 }
 
-                $this->logger->debug("Dropping database \"$localDatabaseName\".");
-                $databaseAdapter->dropDatabase($localDatabaseName);
+                $this->logger->debug("Dropping database \"$databaseAlias\".");
+                $databaseAdapter->dropDatabase($databaseAlias);
             }
 
-            $this->logger->debug("Creating database \"$localDatabaseName\".");
-            $databaseAdapter->createDatabase($localDatabaseName);
+            $this->logger->debug("Creating database \"$databaseAlias\".");
+            $databaseAdapter->createDatabase($databaseAlias);
 
             $workingDir = getcwd() . '/' . DatabaseImportExportAdapterInterface::DEFAULT_WORKING_DIR;
             $this->logger->debug("Downloading database script \"$filename\".");
@@ -146,7 +146,7 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
 
             $databaseImportExportAdapter->importFromFile(
                 "$workingDir/$filename",
-                $localDatabaseName,
+                $databaseAlias,
                 [] // This command does not yet support any options
             );
 
@@ -162,7 +162,7 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
                     $this->logger->debug("Running post import script \"$scriptFilename\".");
                     $databaseAdapter->run(
                         file_get_contents($scriptFilename),
-                        $localDatabaseName
+                        $databaseAlias
                     );
                 }
             }

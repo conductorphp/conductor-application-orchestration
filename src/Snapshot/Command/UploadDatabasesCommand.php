@@ -76,16 +76,17 @@ class UploadDatabasesCommand
 
         if (!empty($options['databases'])) {
             $snapshotConfig = $this->applicationConfig->getSnapshotConfig();
+            $databases = $this->applicationConfig->getDatabases();
             foreach ($options['databases'] as $databaseName => $database) {
+                if (isset($databases[$databaseName])) {
+                    $database = array_replace_recursive($databases[$databaseName], $database);
+                }
+
                 $adapterName = $database['importexport_adapter'] ??
                     $this->applicationConfig->getDefaultDatabaseImportExportAdapter();
                 $databaseImportExportAdapter = $this->databaseImportExportAdapterManager->getAdapter($adapterName);
 
-                if (isset($database['local_database_name'])) {
-                    $localDatabaseName = $database['local_database_name'];
-                } else {
-                    $localDatabaseName = $databaseName;
-                }
+                $databaseAlias = $database['alias'] ?? $databaseName;
 
                 // @todo Add ability to alter database in more ways than excluding data, E.g. Remove all but two stores.
                 $exportOptions = [];
@@ -94,7 +95,7 @@ class UploadDatabasesCommand
                 }
 
                 $filename = $databaseImportExportAdapter->exportToFile(
-                    $localDatabaseName,
+                    $databaseAlias,
                     getcwd(),
                     $exportOptions
                 );
