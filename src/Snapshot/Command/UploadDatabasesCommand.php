@@ -101,7 +101,14 @@ class UploadDatabasesCommand
                 );
                 $targetPath = "$snapshotPath/$snapshotName/databases/$databaseName."
                     . $databaseImportExportAdapter::getFileExtension();
-                $this->mountManager->putFile("local://$filename", $targetPath);
+                $result = $this->mountManager->putFile("local://$filename", $targetPath);
+                if ($result === false) {
+                    throw new Exception\RuntimeException(sprintf(
+                        'Failed to push database export "%s" to "%s".',
+                        $filename,
+                        $targetPath
+                    ));
+                }
             }
         }
 

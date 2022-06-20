@@ -38,7 +38,14 @@ class SaveBuildCommand
         $tarFilename = "$buildId.tgz";
         $filename = realpath($tarFilename);
         $this->logger->info("Saving build to \"$savePath/$tarFilename\".");
-        $this->mountManager->putFile("local://$filename", "$savePath/$tarFilename");
+        $result = $this->mountManager->putFile("local://$filename", "$savePath/$tarFilename");
+        if ($result === false) {
+            throw new Exception\RuntimeException(sprintf(
+                'Failed to push code build "%s" to "%s".',
+                $filename,
+                "$savePath/$tarFilename"
+            ));
+        }
         return null;
     }
 
