@@ -265,11 +265,10 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         if (is_link($resolvedFilename) || is_file($resolvedFilename)) {
             unlink($resolvedFilename);
             mkdir($resolvedFilename, $mode);
-            chmod($resolvedFilename, $mode);
         } elseif (!file_exists($resolvedFilename)) {
             mkdir($resolvedFilename, $mode);
-            chmod($resolvedFilename, $mode);
         }
+        chmod($resolvedFilename, $mode);
         $this->logger->debug("Ensured \"$resolvedFilename\" is a directory and has permissions $modeAsString.");
     }
 

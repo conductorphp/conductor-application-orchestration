@@ -19,6 +19,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `var-export.php.twig` template.
 - Enabled Twig debug mode and added `DebugExtension` to allow for calling of `dump` in templates.
 
+## [1.2.1] - 2022-07-13
+### Fixed
+- Fixed bug in ensuring directory permissions
+
 ## [1.2.0] - 2021-05-20
 
 ### Added
