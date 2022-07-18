@@ -574,7 +574,7 @@ class PlanRunner implements LoggerAwareInterface
 
             $output = call_user_func_array(
                 [$stepObject, 'run'],
-                $stepArguments
+                array_values($stepArguments)
             );
         }
 
