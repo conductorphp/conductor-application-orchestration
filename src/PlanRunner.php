@@ -124,7 +124,7 @@ class PlanRunner implements LoggerAwareInterface
      * @param ApplicationDatabaseDeployer        $applicationDatabaseDeployer
      * @param int                                $diskSpaceErrorThreshold
      * @param int                                $diskSpaceWarningThreshold
-     * @param LoggerInterface                    $logger
+     * @param LoggerInterface|null               $logger
      */
     public function __construct(
         ApplicationConfig $applicationConfig,
@@ -141,7 +141,7 @@ class PlanRunner implements LoggerAwareInterface
         DeploymentState $deploymentState,
         int $diskSpaceErrorThreshold = 52428800,
         int $diskSpaceWarningThreshold = 104857600,
-        LoggerInterface $logger
+        LoggerInterface $logger = null
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->repositoryAdapter = $repositoryAdapter;
