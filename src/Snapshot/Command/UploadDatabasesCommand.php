@@ -14,32 +14,14 @@ use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
-/**
- * Class UploadDatabasesCommand
- *
- * @package ConductorAppOrchestration\Snapshot\Command
- */
 class UploadDatabasesCommand
     implements SnapshotCommandInterface, ApplicationConfigAwareInterface, MountManagerAwareInterface,
                DatabaseImportExportAdapterManagerAwareInterface, LoggerAwareInterface
 {
-    /**
-     * @var ApplicationConfig
-     */
-    private $applicationConfig;
-    /**
-     * @var MountManager
-     */
-    private $mountManager;
-    /**
-     * @var DatabaseImportExportAdapterManager
-     */
-    private $databaseImportExportAdapterManager;
-
-    /**
-     * @var LoggerInterface
-     */
-    private $logger;
+    private ApplicationConfig $applicationConfig;
+    private MountManager $mountManager;
+    private DatabaseImportExportAdapterManager $databaseImportExportAdapterManager;
+    private LoggerInterface $logger;
 
     public function __construct()
     {
@@ -102,6 +84,7 @@ class UploadDatabasesCommand
                 );
                 $targetPath = "$snapshotPath/$snapshotName/databases/$databaseName."
                     . $databaseImportExportAdapter::getFileExtension();
+                $this->logger->debug("Copying to \"$targetPath\".");
                 $this->mountManager->copy("local://$filename", $targetPath);
             }
         }
@@ -109,34 +92,22 @@ class UploadDatabasesCommand
         return null;
     }
 
-    /**
-     * @inheritdoc
-     */
     public function setApplicationConfig(ApplicationConfig $applicationConfig): void
     {
         $this->applicationConfig = $applicationConfig;
     }
 
-    /**
-     * @inheritdoc
-     */
     public function setMountManager(MountManager $mountManager): void
     {
         $this->mountManager = $mountManager;
     }
 
-    /**
-     * @inheritdoc
-     */
     public function setDatabaseImportExportAdapterManager(
         DatabaseImportExportAdapterManager $databaseImportExportAdapterManager
-    ) {
+    ): void {
         $this->databaseImportExportAdapterManager = $databaseImportExportAdapterManager;
     }
 
-    /**
-     * @inheritdoc
-     */
     public function setLogger(LoggerInterface $logger): void
     {
         $this->logger = $logger;
