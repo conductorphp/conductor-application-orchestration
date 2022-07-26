@@ -48,6 +48,7 @@ class UploadDatabasesCommand
 
     /**
      * @inheritdoc
+     * @throws \League\Flysystem\FilesystemException
      */
     public function run(
         string $snapshotName,
@@ -101,14 +102,7 @@ class UploadDatabasesCommand
                 );
                 $targetPath = "$snapshotPath/$snapshotName/databases/$databaseName."
                     . $databaseImportExportAdapter::getFileExtension();
-                $result = $this->mountManager->putFile("local://$filename", $targetPath);
-                if ($result === false) {
-                    throw new Exception\RuntimeException(sprintf(
-                        'Failed to push database export "%s" to "%s".',
-                        $filename,
-                        $targetPath
-                    ));
-                }
+                $this->mountManager->copy("local://$filename", $targetPath);
             }
         }
 
