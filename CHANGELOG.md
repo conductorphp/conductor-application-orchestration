@@ -6,11 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [2.0.0] - Unreleased
-### Added
-- Added support for PHP 8.1
-- Upgraded all dependencies
 
-## Removed
+### Added
+
+- Added PHP 8.1 support
+
+### Removed
+
 - Removed support for PHP 8.0 and below
 
 ## [1.3.3] - 2022-07-13
