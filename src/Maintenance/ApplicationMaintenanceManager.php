@@ -4,16 +4,8 @@ namespace ConductorAppOrchestration\Maintenance;
 
 class ApplicationMaintenanceManager
 {
-    /**
-     * @var MaintenanceStrategyInterface
-     */
-    private $maintenanceStrategy;
+    private MaintenanceStrategyInterface $maintenanceStrategy;
 
-    /**
-     * AppMaintenance constructor.
-     *
-     * @param MaintenanceStrategyInterface $maintenanceStrategy
-     */
     public function __construct(MaintenanceStrategyInterface $maintenanceStrategy)
     {
         $this->maintenanceStrategy = $maintenanceStrategy;
@@ -30,9 +22,6 @@ class ApplicationMaintenanceManager
         $this->maintenanceStrategy->disable();
     }
 
-    /**
-     * @return bool
-     */
     public function isEnabled(): bool
     {
         return $this->maintenanceStrategy->isEnabled();

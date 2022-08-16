@@ -5,18 +5,18 @@ namespace ConductorAppOrchestration\Snapshot\Command;
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\Config\ApplicationConfigAwareInterface;
 use ConductorAppOrchestration\Exception;
-use ConductorAppOrchestration\FileLayoutInterface;
 use ConductorCore\Database\DatabaseImportExportAdapterManager;
 use ConductorCore\Database\DatabaseImportExportAdapterManagerAwareInterface;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\Filesystem\MountManager\MountManagerAwareInterface;
+use League\Flysystem\FilesystemException;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 class UploadDatabasesCommand
     implements SnapshotCommandInterface, ApplicationConfigAwareInterface, MountManagerAwareInterface,
-               DatabaseImportExportAdapterManagerAwareInterface, LoggerAwareInterface
+    DatabaseImportExportAdapterManagerAwareInterface, LoggerAwareInterface
 {
     private ApplicationConfig $applicationConfig;
     private MountManager $mountManager;
@@ -28,19 +28,14 @@ class UploadDatabasesCommand
         $this->logger = new NullLogger();
     }
 
-    /**
-     * @inheritdoc
-     * @throws \League\Flysystem\FilesystemException
-     */
     public function run(
         string $snapshotName,
         string $snapshotPath,
-        bool $includeDatabases = true,
-        bool $includeAssets = true,
-        array $assetSyncConfig = [],
-        array $options = null
-    ): ?string
-    {
+        bool   $includeDatabases = true,
+        bool   $includeAssets = true,
+        array  $assetSyncConfig = [],
+        ?array  $options = null
+    ): ?string {
         if (!$includeDatabases) {
             return null;
         }

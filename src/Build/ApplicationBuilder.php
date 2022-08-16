@@ -1,76 +1,30 @@
 <?php
-/**
- * @author Kirk Madera <kirk.madera@rmgmedia.com>
- */
 
 namespace ConductorAppOrchestration\Build;
 
 use ConductorAppOrchestration\Build\Command\BuildCommandInterface;
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\PlanRunner;
-use ConductorCore\Filesystem\MountManager\MountManager;
-use ConductorCore\Shell\Adapter\ShellAdapterInterface;
 use Exception;
 use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
 
-/**
- * Class ApplicationBuilder
- *
- * @package ConductorAppOrchestration\Build
- */
 class ApplicationBuilder
 {
-    /**
-     * @var ApplicationConfig
-     */
-    private $applicationConfig;
-    /**
-     * @var PlanRunner
-     */
-    private $planRunner;
-    /**
-     * @var ShellAdapterInterface
-     */
-    private $shellAdapter;
-    /**
-     * @var MountManager
-     */
-    private $mountManager;
-    /**
-     * @var LoggerInterface
-     */
-    private $logger;
-    /**
-     * @var string
-     */
-    private $planPath;
+    private ApplicationConfig $applicationConfig;
+    private PlanRunner $planRunner;
+    private string $planPath;
 
     public function __construct(
-        ApplicationConfig     $applicationConfig,
-        PlanRunner            $planRunner,
-        ShellAdapterInterface $shellAdapter,
-        MountManager          $mountManager,
-        string                $planPath = '/tmp/.conductor/build',
-        LoggerInterface       $logger = null
+        ApplicationConfig $applicationConfig,
+        PlanRunner        $planRunner,
+        string            $planPath = '/tmp/.conductor/build',
     ) {
         $this->applicationConfig = $applicationConfig;
-        $this->shellAdapter = $shellAdapter;
-        $this->mountManager = $mountManager;
         $this->planRunner = $planRunner;
-        if (is_null($logger)) {
-            $logger = new NullLogger();
-        }
         $this->planPath = $planPath;
-        $this->logger = $logger;
     }
 
     /**
-     * @param string $buildPlan
-     * @param string $repoReference
-     * @param string $buildId
-     * @param string $savePath
-     *
      * @throws Exception
      */
     public function build(
@@ -91,26 +45,17 @@ class ApplicationBuilder
                 'buildId' => $buildId,
                 'savePath' => $savePath,
             ],
-            false, // @todo Any use for clean steps in build?
-            false
         );
     }
 
-    /**
-     * @inheritdoc
-     */
-    public function setLogger(LoggerInterface $logger): void
-    {
-        $this->logger = $logger;
-        $this->planRunner->setLogger($logger);
-    }
-
-    /**
-     * @param string $planPath
-     */
     public function setPlanPath(string $planPath): void
     {
         $this->planPath = $planPath;
+    }
+
+    public function setLogger(LoggerInterface $logger): void
+    {
+        $this->planRunner->setLogger($logger);
     }
 
 }

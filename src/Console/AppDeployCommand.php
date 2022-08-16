@@ -1,16 +1,13 @@
 <?php
-/**
- * @author Kirk Madera <kirk.madera@rmgmedia.com>
- */
 
 namespace ConductorAppOrchestration\Console;
 
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\Deploy\ApplicationDeployer;
 use ConductorAppOrchestration\Exception;
-use ConductorAppOrchestration\FileLayoutInterface;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\MonologConsoleHandlerAwareTrait;
+use FilesystemIterator;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Console\Command\Command;
@@ -18,44 +15,22 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
-use FilesystemIterator;
 
 class AppDeployCommand extends Command
 {
     use MonologConsoleHandlerAwareTrait;
 
-    /**
-     * @var ApplicationConfig
-     */
-    private $applicationConfig;
-    /**
-     * @var ApplicationDeployer
-     */
-    private $applicationDeployer;
-    /**
-     * @var MountManager
-     */
-    private $mountManager;
-    /**
-     * @var LoggerInterface
-     */
-    private $logger;
+    private ApplicationConfig $applicationConfig;
+    private ApplicationDeployer $applicationDeployer;
+    private MountManager $mountManager;
+    private LoggerInterface $logger;
 
-    /**
-     * AppDeployCommand constructor.
-     *
-     * @param ApplicationConfig    $applicationConfig
-     * @param ApplicationDeployer  $applicationDeployer
-     * @param MountManager         $mountManager
-     * @param LoggerInterface|null $logger
-     * @param string|null          $name
-     */
     public function __construct(
-        ApplicationConfig $applicationConfig,
+        ApplicationConfig   $applicationConfig,
         ApplicationDeployer $applicationDeployer,
-        MountManager $mountManager,
-        LoggerInterface $logger = null,
-        string $name = null
+        MountManager        $mountManager,
+        LoggerInterface     $logger = null,
+        string              $name = null
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->applicationDeployer = $applicationDeployer;
@@ -67,7 +42,7 @@ class AppDeployCommand extends Command
         parent::__construct($name);
     }
 
-    protected function configure()
+    protected function configure(): void
     {
         $filesystemPrefixes = $this->mountManager->getFilesystemPrefixes();
         $this->setName('app:deploy')
@@ -183,7 +158,7 @@ class AppDeployCommand extends Command
             );
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $workingDir = $input->getOption('working-dir');
 
@@ -198,7 +173,7 @@ class AppDeployCommand extends Command
             );
 
             if (!$helper->ask($input, $output, $question)) {
-                return;
+                return self::SUCCESS;
             }
         }
 
@@ -216,7 +191,7 @@ class AppDeployCommand extends Command
             );
 
             if (!$helper->ask($input, $output, $question)) {
-                return null;
+                return self::SUCCESS;
             }
         }
 
@@ -269,12 +244,9 @@ class AppDeployCommand extends Command
             );
         }
         $this->logger->info("<info>Application \"$appName\" deployment completed!</info>");
-        return 0;
+        return self::SUCCESS;
     }
 
-    /**
-     * @param InputInterface $input
-     */
     private function validateInput(InputInterface $input): void
     {
         if ($input->getOption('build-id') && $input->getOption('repo-reference')) {
@@ -297,14 +269,7 @@ class AppDeployCommand extends Command
         }
     }
 
-    /**
-     * @param InputInterface $input
-     * @param                $includeAssets
-     * @param                $includeDatabases
-     *
-     * @return string
-     */
-    private function getDeploymentDescription(InputInterface $input, $includeAssets, $includeDatabases): string
+    private function getDeploymentDescription(InputInterface $input, bool $includeAssets, bool $includeDatabases): string
     {
         if ($input->getOption('skeleton')) {
             $message = 'Deploying skeleton only.';

@@ -11,54 +11,32 @@ use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
-/**
- * Class SyncAssetsCommand
- *
- * @package ConductorAppOrchestration\Snapshot\Command
- */
 class SyncAssetsCommand
     implements SnapshotCommandInterface, ApplicationConfigAwareInterface, MountManagerAwareInterface,
-               LoggerAwareInterface
+    LoggerAwareInterface
 {
-    /**
-     * @var ApplicationConfig
-     */
-    private $applicationConfig;
-    /**
-     * @var MountManager
-     */
-    private $mountManager;
-
-    /**
-     * @var LoggerInterface
-     */
-    private $logger;
+    private ApplicationConfig $applicationConfig;
+    private MountManager $mountManager;
+    private LoggerInterface $logger;
 
     public function __construct()
     {
         $this->logger = new NullLogger();
     }
 
-    /**
-     * @inheritdoc
-     */
     public function setLogger(LoggerInterface $logger): void
     {
         $this->logger = $logger;
     }
 
-    /**
-     * @inheritdoc
-     */
     public function run(
         string $snapshotName,
         string $snapshotPath,
-        bool $includeDatabases = true,
-        bool $includeAssets = true,
-        array $assetSyncConfig = [],
-        array $options = null
-    ): ?string
-    {
+        bool   $includeDatabases = true,
+        bool   $includeAssets = true,
+        array  $assetSyncConfig = [],
+        ?array  $options = null
+    ): ?string {
         if (!$includeAssets) {
             return null;
         }
@@ -101,17 +79,11 @@ class SyncAssetsCommand
     }
 
 
-    /**
-     * @inheritdoc
-     */
     public function setApplicationConfig(ApplicationConfig $applicationConfig): void
     {
         $this->applicationConfig = $applicationConfig;
     }
 
-    /**
-     * @inheritdoc
-     */
     public function setMountManager(MountManager $mountManager): void
     {
         $this->mountManager = $mountManager;

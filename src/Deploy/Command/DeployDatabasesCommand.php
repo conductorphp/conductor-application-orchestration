@@ -11,50 +11,32 @@ use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
-/**
- * Class DeployDatabasesCommand
- *
- * @package ConductorAppOrchestration\Snapshot\Command
- */
 class DeployDatabasesCommand
     implements DeployCommandInterface, ApplicationDatabaseDeployerAwareInterface, LoggerAwareInterface,
     ApplicationConfigAwareInterface
 {
-    /**
-     * @var ApplicationDatabaseDeployer
-     */
-    private $applicationDatabaseDeployer;
-    /**
-     * @var ApplicationConfig
-     */
-    private $applicationConfig;
-    /**
-     * @var LoggerInterface
-     */
-    private $logger;
+    private ApplicationDatabaseDeployer $applicationDatabaseDeployer;
+    private ApplicationConfig $applicationConfig;
+    private LoggerInterface $logger;
 
     public function __construct()
     {
         $this->logger = new NullLogger();
     }
 
-    /**
-     * @inheritdoc
-     */
     public function run(
-        string $codeRoot,
-        string $buildId = null,
-        string $buildPath = null,
-        string $repoReference = null,
-        string $snapshotName = null,
-        string $snapshotPath = null,
-        bool $includeAssets = true,
-        array $assetSyncConfig = [],
-        bool $includeDatabases = true,
-        bool $allowFullRollback = false,
-        array $options = null
-    ): ?string
-    {
+        string  $codeRoot,
+        ?string $buildId = null,
+        ?string $buildPath = null,
+        ?string $repoReference = null,
+        ?string $snapshotName = null,
+        ?string $snapshotPath = null,
+        bool    $includeAssets = true,
+        array   $assetSyncConfig = [],
+        bool    $includeDatabases = true,
+        bool    $allowFullRollback = false,
+        ?array  $options = null
+    ): ?string {
         if (!$includeDatabases) {
             $this->logger->notice(
                 'Add condition "databases" to this step in your deployment plan. This step can only be run when deploying '
@@ -85,25 +67,16 @@ class DeployDatabasesCommand
         return null;
     }
 
-    /**
-     * @inheritdoc
-     */
     public function setApplicationDatabaseDeployer(ApplicationDatabaseDeployer $applicationDatabaseDeployer): void
     {
         $this->applicationDatabaseDeployer = $applicationDatabaseDeployer;
     }
 
-    /**
-     * @inheritdoc
-     */
     public function setLogger(LoggerInterface $logger): void
     {
         $this->logger = $logger;
     }
 
-    /**
-     * @param ApplicationConfig $applicationConfig
-     */
     public function setApplicationConfig(ApplicationConfig $applicationConfig): void
     {
         $this->applicationConfig = $applicationConfig;

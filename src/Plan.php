@@ -4,42 +4,14 @@ namespace ConductorAppOrchestration;
 
 class Plan
 {
-    /**
-     * @var string
-     */
-    private $name;
-    /**
-     * @var string
-     */
-    private $stepInterface;
-    /**
-     * @var array
-     */
-    private $preflightSteps;
-    /**
-     * @var array
-     */
-    private $cleanSteps;
-    /**
-     * @var array
-     */
-    private $steps;
-    /**
-     * @var array
-     */
-    private $rollbackPreflightSteps;
-    /**
-     * @var array
-     */
-    private $rollbackSteps;
+    private string $name;
+    private string $stepInterface;
+    private array $preflightSteps;
+    private array $cleanSteps;
+    private array $steps;
+    private array $rollbackPreflightSteps;
+    private array $rollbackSteps;
 
-    /**
-     * Plan constructor.
-     *
-     * @param string $name
-     * @param array  $plan
-     * @param string $stepInterface
-     */
     public function __construct(string $name, array $plan, string $stepInterface)
     {
         $this->name = $name;
@@ -52,59 +24,36 @@ class Plan
         $this->rollbackSteps = $plan['rollback_steps'];
     }
 
-    /**
-     * @return string
-     */
     public function getName(): string
     {
         return $this->name;
     }
 
-    /**
-     * @return array
-     */
     public function getPreflightSteps(): array
     {
         return $this->preflightSteps;
     }
 
-    /**
-     * @return array
-     */
     public function getCleanSteps(): array
     {
         return $this->cleanSteps;
     }
 
-    /**
-     * @return array
-     */
     public function getSteps(): array
     {
         return $this->steps;
     }
 
-    /**
-     * @return array
-     */
     public function getRollbackPreflightSteps(): array
     {
         return $this->rollbackPreflightSteps;
     }
 
-    /**
-     * @return array
-     */
     public function getRollbackSteps(): array
     {
         return $this->rollbackSteps;
     }
 
-    /**
-     * @param array $plan
-     *
-     * @return array
-     */
     private function validateAndNormalize(array $plan): array
     {
         if (empty($plan['steps'])) {
@@ -130,13 +79,7 @@ class Plan
         return $normalizedPlan;
     }
 
-    /**
-     * @param string       $name
-     * @param array|string $step
-     *
-     * @return array
-     */
-    private function validateAndNormalizeStep(string $name, $step): array
+    private function validateAndNormalizeStep(string $name, array|string $step): array
     {
         static $depth = 0;
         if (!is_array($step)) {
@@ -155,8 +98,8 @@ class Plan
             }
         } else {
             $numMatchedStepTypes = count(array_intersect(['class', 'command', 'callable', 'steps'], array_keys($step)));
-            if (0 == $numMatchedStepTypes) {
-                if (0 == $depth) {
+            if (0 === $numMatchedStepTypes) {
+                if (0 === $depth) {
                     $depth++;
                     // Assume this is an array of commands to be run in parallel
                     $parallelSteps = [];

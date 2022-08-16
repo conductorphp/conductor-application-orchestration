@@ -1,7 +1,4 @@
 <?php
-/**
- * @author Kirk Madera <kirk.madera@rmgmedia.com>
- */
 
 namespace ConductorAppOrchestration\Console;
 
@@ -9,6 +6,7 @@ use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\Snapshot\ApplicationSnapshotTaker;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\MonologConsoleHandlerAwareTrait;
+use FilesystemIterator;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Console\Command\Command;
@@ -17,44 +15,22 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
-use FilesystemIterator;
 
 class AppSnapshotCommand extends Command
 {
     use MonologConsoleHandlerAwareTrait;
 
-    /**
-     * @var ApplicationConfig
-     */
-    private $applicationConfig;
-    /**
-     * @var ApplicationSnapshotTaker
-     */
-    private $applicationSnapshotTaker;
-    /**
-     * @var MountManager
-     */
-    private $mountManager;
-    /**
-     * @var LoggerInterface
-     */
-    private $logger;
+    private ApplicationConfig $applicationConfig;
+    private ApplicationSnapshotTaker $applicationSnapshotTaker;
+    private MountManager $mountManager;
+    private LoggerInterface $logger;
 
-    /**
-     * AppSnapshotCommand constructor.
-     *
-     * @param ApplicationConfig $applicationConfig
-     * @param ApplicationSnapshotTaker $applicationSnapshotTaker
-     * @param MountManager $mountManager
-     * @param LoggerInterface|null $logger
-     * @param string|null $name
-     */
     public function __construct(
-        ApplicationConfig $applicationConfig,
+        ApplicationConfig        $applicationConfig,
         ApplicationSnapshotTaker $applicationSnapshotTaker,
-        MountManager $mountManager,
-        LoggerInterface $logger = null,
-        string $name = null
+        MountManager             $mountManager,
+        LoggerInterface          $logger = null,
+        string                   $name = null
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->applicationSnapshotTaker = $applicationSnapshotTaker;
@@ -66,7 +42,7 @@ class AppSnapshotCommand extends Command
         parent::__construct($name);
     }
 
-    protected function configure()
+    protected function configure(): void
     {
         $filesystemPrefixes = $this->mountManager->getFilesystemPrefixes();
         $this->setName('app:snapshot')
@@ -146,10 +122,10 @@ class AppSnapshotCommand extends Command
             );
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $workingDir = $input->getOption('working-dir');
-        $forceSnapshot =  $input->getOption('force');
+        $forceSnapshot = $input->getOption('force');
 
         // Confirm continue if working directory is not empty since it will be cleared
         if (!$forceSnapshot && is_dir($workingDir) && (new FilesystemIterator($workingDir))->valid()) {
@@ -162,7 +138,7 @@ class AppSnapshotCommand extends Command
             );
 
             if (!$helper->ask($input, $output, $question)) {
-                return;
+                return self::SUCCESS;
             }
         }
 
@@ -200,8 +176,6 @@ class AppSnapshotCommand extends Command
             $assetSyncConfig
         );
         $this->logger->info("<info>Application \"$appName\" snapshot completed!</info>");
-        return 0;
+        return self::SUCCESS;
     }
-
-
 }

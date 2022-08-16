@@ -1,18 +1,14 @@
 <?php
-/**
- * @author Kirk Madera <kirk.madera@rmgmedia.com>
- */
 
 namespace ConductorAppOrchestration\Console;
 
-use ConductorAppOrchestration\Destroy\ApplicationDestroyer;
 use ConductorAppOrchestration\Config\ApplicationConfig;
+use ConductorAppOrchestration\Destroy\ApplicationDestroyer;
 use ConductorCore\MonologConsoleHandlerAwareTrait;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\QuestionHelper;
-use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -22,33 +18,16 @@ class AppDestroyCommand extends Command
 {
     use MonologConsoleHandlerAwareTrait;
 
-    /**
-     * @var ApplicationConfig
-     */
-    private $applicationConfig;
-    /**
-     * @var ApplicationDestroyer
-     */
-    private $applicationDestroyer;
-    /**
-     * @var LoggerInterface
-     */
-    private $logger;
+    private ApplicationConfig $applicationConfig;
+    private ApplicationDestroyer $applicationDestroyer;
+    private LoggerInterface $logger;
 
 
-    /**
-     * AppDestroyCommand constructor.
-     *
-     * @param ApplicationConfig    $applicationConfig
-     * @param ApplicationDestroyer $applicationDestroyer
-     * @param LoggerInterface|null $logger
-     * @param string|null          $name
-     */
     public function __construct(
-        ApplicationConfig $applicationConfig,
+        ApplicationConfig    $applicationConfig,
         ApplicationDestroyer $applicationDestroyer,
-        LoggerInterface $logger = null,
-        string $name = null
+        LoggerInterface      $logger = null,
+        string               $name = null
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->applicationDestroyer = $applicationDestroyer;
@@ -59,7 +38,7 @@ class AppDestroyCommand extends Command
         parent::__construct($name);
     }
 
-    protected function configure()
+    protected function configure(): void
     {
         $this->setName('app:destroy')
             ->setDescription('Destroy application.')
@@ -67,13 +46,7 @@ class AppDestroyCommand extends Command
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Do not ask confirmation');
     }
 
-    /**
-     * @param InputInterface  $input
-     * @param OutputInterface $output
-     *
-     * @return int
-     */
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $this->applicationConfig->validate();
         $this->injectOutputIntoLogger($output, $this->logger);
@@ -92,14 +65,14 @@ class AppDestroyCommand extends Command
             );
 
             if (!$helper->ask($input, $output, $question)) {
-                return 0;
+                return self::SUCCESS;
             }
         }
 
         $this->logger->info("Destroying deployment of application \"$appName\".");
         $this->applicationDestroyer->destroy();
         $this->logger->info("Deployment of application \"$appName\" destroyed.");
-        return 0;
+        return self::SUCCESS;
     }
 
 }

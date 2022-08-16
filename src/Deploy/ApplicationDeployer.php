@@ -1,7 +1,4 @@
 <?php
-/**
- * @author Kirk Madera <kirk.madera@rmgmedia.com>
- */
 
 namespace ConductorAppOrchestration\Deploy;
 
@@ -14,77 +11,27 @@ use ConductorCore\Shell\Adapter\ShellAdapterInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
-/**
- * Class ApplicationDeployer
- *
- * @package ConductorAppOrchestration\Deploy
- */
 class ApplicationDeployer
 {
-    /**
-     * @var ApplicationConfig
-     */
-    private $applicationConfig;
-    /**
-     * @var PlanRunner
-     */
-    private $planRunner;
-    /**
-     * @var ShellAdapterInterface
-     */
-    private $shellAdapter;
-    /**
-     * @var MountManager
-     */
-    private $mountManager;
-    /**
-     * @var LoggerInterface
-     */
-    private $logger;
-    /**
-     * @var string
-     */
-    private $planPath;
+    private ApplicationConfig $applicationConfig;
+    private PlanRunner $planRunner;
+    private string $planPath;
 
-    /**
-     * ApplicationDeployer constructor.
-     *
-     * @param ApplicationConfig     $applicationConfig
-     * @param PlanRunner            $planRunner
-     * @param ShellAdapterInterface $shellAdapter
-     * @param MountManager          $mountManager
-     * @param string                $planPath
-     * @param LoggerInterface|null  $logger
-     */
     public function __construct(
-        ApplicationConfig $applicationConfig,
-        PlanRunner $planRunner,
-        ShellAdapterInterface $shellAdapter,
-        MountManager $mountManager,
-        string $planPath = '/tmp/.conductor/deploy',
-        LoggerInterface $logger = null
+        ApplicationConfig     $applicationConfig,
+        PlanRunner            $planRunner,
+        string                $planPath = '/tmp/.conductor/deploy',
     ) {
         $this->applicationConfig = $applicationConfig;
-        $this->shellAdapter = $shellAdapter;
-        $this->mountManager = $mountManager;
         $this->planRunner = $planRunner;
-        if (is_null($logger)) {
-            $logger = new NullLogger();
-        }
         $this->planPath = $planPath;
-        $this->logger = $logger;
     }
 
-    /**
-     * @param string $deployPlan
-     * @param string|null $buildId
-     * @param bool   $clean
-     */
     public function deploySkeleton(
         string $deployPlan,
-        string $buildId = null,
-        bool $clean = false,
-        bool $force = false
+        ?string $buildId = null,
+        bool   $clean = false,
+        bool   $force = false
     ): void {
         $deployPlans = $this->applicationConfig->getDeployConfig()->getPlans();
         $this->planRunner->setPlans($deployPlans);
@@ -97,17 +44,17 @@ class ApplicationDeployer
             $deployPlan,
             $conditions,
             [
-                'codePath'          => $this->applicationConfig->getCodePath($buildId),
-                'buildId'           => null,
-                'buildPath'         => null,
-                'repoReference'     => null,
-                'snapshotName'      => null,
-                'snapshotPath'      => null,
-                'includeAssets'     => true,
-                'assetSyncConfig'   => [],
-                'includeDatabases'  => true,
+                'codePath' => $this->applicationConfig->getCodePath($buildId),
+                'buildId' => null,
+                'buildPath' => null,
+                'repoReference' => null,
+                'snapshotName' => null,
+                'snapshotPath' => null,
+                'includeAssets' => true,
+                'assetSyncConfig' => [],
+                'includeDatabases' => true,
                 'allowFullRollback' => false,
-                'options'           => ['force' => $force],
+                'options' => ['force' => $force],
             ],
             $clean,
             false,
@@ -115,36 +62,21 @@ class ApplicationDeployer
         );
     }
 
-    /**
-     * @param string      $deployPlan
-     * @param bool        $skeletonOnly
-     * @param string|null $buildId
-     * @param string|null $buildPath
-     * @param string|null $repoReference
-     * @param string|null $snapshotName
-     * @param string|null $snapshotPath
-     * @param bool        $includeAssets
-     * @param array       $assetSyncConfig
-     * @param bool        $includeDatabases
-     * @param bool        $allowFullRollback
-     * @param bool        $clean
-     * @param bool        $rollback
-     */
     public function deploy(
         string $deployPlan,
-        bool $skeletonOnly = false,
-        string $buildId = null,
-        string $buildPath = null,
-        string $repoReference = null,
-        string $snapshotName = null,
-        string $snapshotPath = null,
-        bool $includeAssets = true,
-        array $assetSyncConfig = [],
-        bool $includeDatabases = true,
-        bool $allowFullRollback = false,
-        bool $clean = false,
-        bool $rollback = false,
-        bool $force = false
+        bool   $skeletonOnly = false,
+        ?string $buildId = null,
+        ?string $buildPath = null,
+        ?string $repoReference = null,
+        ?string $snapshotName = null,
+        ?string $snapshotPath = null,
+        bool   $includeAssets = true,
+        array  $assetSyncConfig = [],
+        bool   $includeDatabases = true,
+        bool   $allowFullRollback = false,
+        bool   $clean = false,
+        bool   $rollback = false,
+        bool   $force = false
     ): void {
 
         $deployPlans = $this->applicationConfig->getDeployConfig()->getPlans();
@@ -184,37 +116,29 @@ class ApplicationDeployer
             $deployPlan,
             $conditions,
             [
-                'codePath'          => $this->applicationConfig->getCodePath($buildId),
-                'buildId'           => $buildId,
-                'buildPath'         => $buildPath,
-                'repoReference'     => $repoReference,
-                'snapshotName'      => $snapshotName,
-                'snapshotPath'      => $snapshotPath,
-                'includeAssets'     => $includeAssets,
-                'assetSyncConfig'   => $assetSyncConfig,
-                'includeDatabases'  => $includeDatabases,
+                'codePath' => $this->applicationConfig->getCodePath($buildId),
+                'buildId' => $buildId,
+                'buildPath' => $buildPath,
+                'repoReference' => $repoReference,
+                'snapshotName' => $snapshotName,
+                'snapshotPath' => $snapshotPath,
+                'includeAssets' => $includeAssets,
+                'assetSyncConfig' => $assetSyncConfig,
+                'includeDatabases' => $includeDatabases,
                 'allowFullRollback' => $allowFullRollback,
-                'options'           => ['force' => $force],
+                'options' => ['force' => $force],
             ],
             $clean,
             $rollback
         );
     }
 
-    /**
-     * @param LoggerInterface $logger
-     *
-     * @return void
-     */
     public function setLogger(LoggerInterface $logger): void
     {
         $this->logger = $logger;
         $this->planRunner->setLogger($logger);
     }
 
-    /**
-     * @param string $planPath
-     */
     public function setPlanPath(string $planPath): void
     {
         $this->planPath = $planPath;

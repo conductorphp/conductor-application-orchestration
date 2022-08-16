@@ -11,36 +11,19 @@ use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
-/**
- * Class CloneRepoCommand
- *
- * @package ConductorAppOrchestration\Build\Command
- */
 class CloneRepoCommand
     implements BuildCommandInterface, ApplicationConfigAwareInterface, RepositoryAdapterAwareInterface,
-               LoggerAwareInterface
+    LoggerAwareInterface
 {
-    /**
-     * @var LoggerInterface
-     */
-    private $logger;
-    /**
-     * @var ApplicationConfig
-     */
-    private $applicationConfig;
-    /**
-     * @var RepositoryAdapterInterface
-     */
-    private $repositoryAdapter;
+    private LoggerInterface $logger;
+    private ApplicationConfig $applicationConfig;
+    private RepositoryAdapterInterface $repositoryAdapter;
 
     public function __construct()
     {
         $this->logger = new NullLogger();
     }
 
-    /**
-     * @inheritdoc
-     */
     public function run(string $repoReference, string $buildId, string $savePath, array $options = null): ?string
     {
         if (!isset($this->applicationConfig)) {
@@ -67,25 +50,16 @@ class CloneRepoCommand
         return null;
     }
 
-    /**
-     * @inheritdoc
-     */
     public function setApplicationConfig(ApplicationConfig $applicationConfig): void
     {
         $this->applicationConfig = $applicationConfig;
     }
 
-    /**
-     * @inheritdoc
-     */
     public function setRepositoryAdapter(RepositoryAdapterInterface $repositoryAdapter): void
     {
         $this->repositoryAdapter = $repositoryAdapter;
     }
 
-    /**
-     * @inheritdoc
-     */
     public function setLogger(LoggerInterface $logger): void
     {
         $this->logger = $logger;

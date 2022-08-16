@@ -1,55 +1,27 @@
 <?php
-/**
- * @author Kirk Madera <kirk.madera@rmgmedia.com>
- */
 
 namespace ConductorAppOrchestration\Deploy;
 
-use ConductorAppOrchestration\Exception;
 use ConductorAppOrchestration\Config\ApplicationConfig;
+use ConductorAppOrchestration\Exception;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\Shell\Adapter\LocalShellAdapter;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
-/**
- * Class ApplicationAssetDeployer
- *
- * @package ConductorAppOrchestration
- */
 class ApplicationAssetDeployer
 {
-    /**
-     * @var ApplicationConfig
-     */
-    private $applicationConfig;
-    /**
-     * @var LocalShellAdapter
-     */
-    private $shellAdapter;
-    /**
-     * @var MountManager
-     */
-    protected $mountManager;
-    /**
-     * @var LoggerInterface
-     */
-    protected $logger;
+    private ApplicationConfig $applicationConfig;
+    private LocalShellAdapter $shellAdapter;
+    protected MountManager $mountManager;
+    protected LoggerInterface $logger;
 
-    /**
-     * ApplicationAssetDeployer constructor.
-     *
-     * @param ApplicationConfig    $applicationConfig
-     * @param LocalShellAdapter    $localShellAdapter
-     * @param MountManager         $mountManager
-     * @param LoggerInterface|null $logger
-     */
     public function __construct(
         ApplicationConfig $applicationConfig,
         LocalShellAdapter $localShellAdapter,
-        MountManager $mountManager,
-        LoggerInterface $logger = null
+        MountManager      $mountManager,
+        LoggerInterface   $logger = null
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->shellAdapter = $localShellAdapter;
@@ -60,17 +32,11 @@ class ApplicationAssetDeployer
         $this->logger = $logger;
     }
 
-    /**
-     * @param string $snapshotPath
-     * @param string $snapshotName
-     * @param array  $assets
-     * @param array  $syncOptions
-     */
     public function deployAssets(
         string $snapshotPath,
         string $snapshotName,
-        array $assets,
-        array $syncOptions = []
+        array  $assets,
+        array  $syncOptions = []
     ): void {
         if (!$assets) {
             throw new Exception\RuntimeException('No assets given for deployment.');
@@ -117,11 +83,6 @@ class ApplicationAssetDeployer
         }
     }
 
-    /**
-     * @param LoggerInterface $logger
-     *
-     * @return void
-     */
     public function setLogger(LoggerInterface $logger): void
     {
         if ($this->shellAdapter instanceof LoggerAwareInterface) {

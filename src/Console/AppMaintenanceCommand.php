@@ -1,7 +1,4 @@
 <?php
-/**
- * @author Kirk Madera <kirk.madera@rmgmedia.com>
- */
 
 namespace ConductorAppOrchestration\Console;
 
@@ -20,32 +17,15 @@ class AppMaintenanceCommand extends Command
 {
     use MonologConsoleHandlerAwareTrait;
 
-    /**
-     * @var ApplicationConfig
-     */
-    private $applicationConfig;
-    /**
-     * @var MaintenanceStrategyInterface
-     */
-    private $maintenanceStrategy;
-    /**
-     * @var LoggerInterface
-     */
-    private $logger;
+    private ApplicationConfig $applicationConfig;
+    private MaintenanceStrategyInterface $maintenanceStrategy;
+    private LoggerInterface $logger;
 
-    /**
-     * AppMaintenanceCommand constructor.
-     *
-     * @param ApplicationConfig            $applicationConfig
-     * @param MaintenanceStrategyInterface $maintenanceStrategy
-     * @param LoggerInterface|null         $logger
-     * @param string|null                  $name
-     */
     public function __construct(
-        ApplicationConfig $applicationConfig,
+        ApplicationConfig            $applicationConfig,
         MaintenanceStrategyInterface $maintenanceStrategy,
-        LoggerInterface $logger = null,
-        string $name = null
+        LoggerInterface              $logger = null,
+        string                       $name = null
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->maintenanceStrategy = $maintenanceStrategy;
@@ -56,7 +36,7 @@ class AppMaintenanceCommand extends Command
         parent::__construct($name);
     }
 
-    protected function configure()
+    protected function configure(): void
     {
         $this->setName('app:maintenance')
             ->setDescription('Manage maintenance mode.')
@@ -66,7 +46,7 @@ class AppMaintenanceCommand extends Command
             ->addArgument('action', InputArgument::OPTIONAL, 'Action to take. May use: status, enable, or disable');
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $this->applicationConfig->validate();
         $this->injectOutputIntoLogger($output, $this->logger);
@@ -77,11 +57,11 @@ class AppMaintenanceCommand extends Command
         $action = $input->getArgument('action') ?? 'status';
 
         $appName = $this->applicationConfig->getAppName();
-        if ('enable' == $action) {
+        if ('enable' === $action) {
             $output->writeln("Enabling maintenance mode for app \"$appName\".");
             $this->maintenanceStrategy->enable();
             $output->writeln("Maintenance mode <info>enabled</info> for app \"$appName\".");
-        } elseif ('disable' == $action) {
+        } elseif ('disable' === $action) {
             $output->writeln("Disabling maintenance mode for app \"$appName\".");
             $this->maintenanceStrategy->disable();
             $output->writeln("Maintenance mode <error>disabled</error> for app \"$appName\".");
@@ -91,7 +71,7 @@ class AppMaintenanceCommand extends Command
             $statusText = $status ? 'enabled' : 'disabled';
             $output->writeln("Maintenance mode is $statusText for app \"$appName\".");
         }
-        return 0;
+        return self::SUCCESS;
     }
 
 }

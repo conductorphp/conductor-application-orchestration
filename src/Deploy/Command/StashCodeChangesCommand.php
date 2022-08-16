@@ -8,45 +8,30 @@ use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
-/**
- * Class StashCodeChangesCommand
- *
- * @package ConductorAppOrchestration\Deploy\Command
- */
 class StashCodeChangesCommand
     implements DeployCommandInterface, RepositoryAdapterAwareInterface, LoggerAwareInterface
 {
-    /**
-     * @var RepositoryAdapterInterface
-     */
-    private $repositoryAdapter;
-    /**
-     * @var LoggerInterface
-     */
-    private $logger;
+    private RepositoryAdapterInterface $repositoryAdapter;
+    private LoggerInterface $logger;
 
     public function __construct()
     {
         $this->logger = new NullLogger();
     }
 
-    /**
-     * @inheritdoc
-     */
     public function run(
-        string $codeRoot,
-        string $buildId = null,
-        string $buildPath = null,
-        string $repoReference = null,
-        string $snapshotName = null,
-        string $snapshotPath = null,
-        bool $includeAssets = true,
-        array $assetSyncConfig = [],
-        bool $includeDatabases = true,
-        bool $allowFullRollback = false,
-        array $options = null
-    ): ?string
-    {
+        string  $codeRoot,
+        ?string $buildId = null,
+        ?string $buildPath = null,
+        ?string $repoReference = null,
+        ?string $snapshotName = null,
+        ?string $snapshotPath = null,
+        bool    $includeAssets = true,
+        array   $assetSyncConfig = [],
+        bool    $includeDatabases = true,
+        bool    $allowFullRollback = false,
+        ?array  $options = null
+    ): ?string {
         if (!$repoReference) {
             $this->logger->notice(
                 'Add condition "code-repo" to this step in your deployment plan. This step can only be run when '
@@ -64,17 +49,11 @@ class StashCodeChangesCommand
         return null;
     }
 
-    /**
-     * @inheritdoc
-     */
     public function setLogger(LoggerInterface $logger): void
     {
         $this->logger = $logger;
     }
 
-    /**
-     * @inheritdoc
-     */
     public function setRepositoryAdapter(RepositoryAdapterInterface $repositoryAdapter): void
     {
         $this->repositoryAdapter = $repositoryAdapter;

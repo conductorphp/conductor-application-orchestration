@@ -1,7 +1,4 @@
 <?php
-/**
- * @author Kirk Madera <kirk.madera@rmgmedia.com>
- */
 
 namespace ConductorAppOrchestration\Destroy;
 
@@ -12,31 +9,20 @@ use ConductorCore\Database\DatabaseAdapterManager;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
+use SplFileInfo;
 
-/**
- * Class App
- *
- * @package App
- */
 class ApplicationDestroyer implements LoggerAwareInterface
 {
-    /**
-     * @var ApplicationConfig
-     */
-    private $applicationConfig;
-    /**
-     * @var LoggerInterface
-     */
-    protected $logger;
-    /**
-     * @var DatabaseAdapterInterface
-     */
-    protected $databaseAdapterManager;
+    private ApplicationConfig $applicationConfig;
+    protected LoggerInterface $logger;
+    protected DatabaseAdapterManager $databaseAdapterManager;
 
     public function __construct(
-        ApplicationConfig $applicationConfig,
+        ApplicationConfig      $applicationConfig,
         DatabaseAdapterManager $databaseAdapterManager,
-        LoggerInterface $logger = null
+        LoggerInterface        $logger = null
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->databaseAdapterManager = $databaseAdapterManager;
@@ -63,7 +49,7 @@ class ApplicationDestroyer implements LoggerAwareInterface
             $this->logger->debug("Removed directory \"$localPath\".");
         }
 
-        if ($codePath != $sharedPath) {
+        if ($codePath !== $sharedPath) {
             // Only removing shared contents because the directory may be a shared filesystem mount
             // @todo Check if dir is a mount and remove the entire directory if not
             $this->removePath("{$sharedPath}/*");
@@ -72,7 +58,7 @@ class ApplicationDestroyer implements LoggerAwareInterface
 
         $fileLayout = $application->getFileLayoutStrategy();
         $appRoot = $application->getAppRoot();
-        if (FileLayoutInterface::STRATEGY_BLUE_GREEN == $fileLayout
+        if (FileLayoutInterface::STRATEGY_BLUE_GREEN === $fileLayout
             && file_exists(
                 "$appRoot/" . FileLayoutInterface::PATH_CURRENT
             )) {
@@ -97,45 +83,35 @@ class ApplicationDestroyer implements LoggerAwareInterface
 
     /**
      * rmdir() will not remove the dir if it is not empty
-     *
-     * @param string $path
-     *
-     * @return void
      */
     private function removePath(string $path): void
     {
         if (false !== strpos($path, '*')) {
             $paths = glob($path);
+            /** @noinspection SuspiciousLoopInspection */
             foreach ($paths as $path) {
                 $this->removePath($path);
             }
-        } else {
-            if (is_dir($path)) {
-                $iterator = new \RecursiveDirectoryIterator($path);
-                $iterator = new \RecursiveIteratorIterator($iterator, \RecursiveIteratorIterator::CHILD_FIRST);
-                /** @var \SplFileInfo $file */
-                foreach ($iterator as $file) {
-                    if ('.' === $file->getBasename() || '..' === $file->getBasename()) {
-                        continue;
-                    }
-                    if ($file->isLink() || $file->isFile()) {
-                        unlink($file->getPathname());
-                    } else {
-                        rmdir($file->getPathname());
-                    }
+        } elseif (is_dir($path)) {
+            $iterator = new RecursiveDirectoryIterator($path);
+            $iterator = new RecursiveIteratorIterator($iterator, RecursiveIteratorIterator::CHILD_FIRST);
+            /** @var SplFileInfo $file */
+            foreach ($iterator as $file) {
+                if ('.' === $file->getBasename() || '..' === $file->getBasename()) {
+                    continue;
                 }
-                rmdir($path);
-            } else {
-                if (is_file($path)) {
-                    unlink($path);
+                if ($file->isLink() || $file->isFile()) {
+                    unlink($file->getPathname());
+                } else {
+                    rmdir($file->getPathname());
                 }
             }
+            rmdir($path);
+        } elseif (is_file($path)) {
+            unlink($path);
         }
     }
 
-    /**
-     * @inheritdoc
-     */
     public function setLogger(LoggerInterface $logger): void
     {
         $this->databaseAdapterManager->setLogger($logger);

@@ -4,7 +4,6 @@ namespace ConductorAppOrchestration\Build\Command;
 
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\Filesystem\MountManager\MountManagerAwareInterface;
-use League\Flysystem\FilesystemException;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -20,9 +19,6 @@ class SaveBuildCommand
         $this->logger = new NullLogger();
     }
 
-    /**
-     * @throws FilesystemException
-     */
     public function run(string $repoReference, string $buildId, string $savePath, array $options = null): ?string
     {
         $relativeFilename = "$buildId.tgz";

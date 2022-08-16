@@ -1,13 +1,9 @@
 <?php
-/**
- * @author Kirk Madera <kirk.madera@rmgmedia.com>
- */
 
 namespace ConductorAppOrchestration\Deploy;
 
-use ConductorAppOrchestration\Exception;
 use ConductorAppOrchestration\Config\ApplicationConfig;
-use ConductorAppOrchestration\FileLayoutInterface;
+use ConductorAppOrchestration\Exception;
 use ConductorCore\Database\DatabaseAdapterManager;
 use ConductorCore\Database\DatabaseImportExportAdapterInterface;
 use ConductorCore\Database\DatabaseImportExportAdapterManager;
@@ -16,70 +12,35 @@ use ConductorCore\Shell\Adapter\LocalShellAdapter;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use Symfony\Component\Console\Question\ConfirmationQuestion;
-use Symfony\Component\Console\Helper\QuestionHelper;
-use Symfony\Component\Console\Helper\HelperSet;
 use Symfony\Component\Console\Helper\FormatterHelper;
+use Symfony\Component\Console\Helper\HelperSet;
+use Symfony\Component\Console\Helper\QuestionHelper;
 use Symfony\Component\Console\Input\ArgvInput;
 use Symfony\Component\Console\Output\ConsoleOutput;
+use Symfony\Component\Console\Question\ConfirmationQuestion;
 
-/**
- * Class ApplicationDatabaseDeployer
- *
- * @package ConductorAppOrchestration
- */
 class ApplicationDatabaseDeployer implements LoggerAwareInterface
 {
-    /**
-     * @var ApplicationConfig
-     */
-    private $applicationConfig;
-    /**
-     * @var MountManager
-     */
-    protected $mountManager;
-    /**
-     * @var DatabaseImportExportAdapterManager
-     */
-    protected $databaseImportAdapterManager;
-    /**
-     * @var DatabaseAdapterManager
-     */
-    private $databaseAdapterManager;
-    /**
-     * @var LocalShellAdapter
-     */
-    private $shellAdapter;
-    /**
-     * @var LoggerInterface
-     */
-    protected $logger;
-
-    /**
-     * @pvar ArgvInput
-     */
-    protected $input;
-
-    /**
-     * @pvar ConsoleOutput
-     */
-    protected $output;
-
-    /**
-     * @pvar QuestionHelper
-     */
-    protected $questionHelper;
+    private ApplicationConfig $applicationConfig;
+    protected MountManager $mountManager;
+    protected DatabaseImportExportAdapterManager $databaseImportAdapterManager;
+    private DatabaseAdapterManager $databaseAdapterManager;
+    private LocalShellAdapter $shellAdapter;
+    protected LoggerInterface $logger;
+    protected ArgvInput $input;
+    protected ConsoleOutput $output;
+    protected QuestionHelper $questionHelper;
 
     public function __construct(
-        ApplicationConfig $applicationConfig,
-        MountManager $mountManager,
-        DatabaseAdapterManager $databaseAdapterManager,
+        ApplicationConfig                  $applicationConfig,
+        MountManager                       $mountManager,
+        DatabaseAdapterManager             $databaseAdapterManager,
         DatabaseImportExportAdapterManager $databaseImportAdapterManager,
-        LocalShellAdapter $localShellAdapter,
-        LoggerInterface $logger = null,
-        ArgvInput $input,
-        ConsoleOutput $output,
-        QuestionHelper $questionHelper
+        LocalShellAdapter                  $localShellAdapter,
+        LoggerInterface                    $logger = null,
+        ArgvInput                          $input,
+        ConsoleOutput                      $output,
+        QuestionHelper                     $questionHelper
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->mountManager = $mountManager;
@@ -97,17 +58,13 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
     }
 
     /**
-     * @param string      $snapshotPath
-     * @param string      $snapshotName
-     * @param array       $databases
-     *
      * @throws Exception\RuntimeException if app skeleton has not yet been installed
      */
     public function deployDatabases(
         string $snapshotPath,
         string $snapshotName,
-        array $databases,
-        bool  $force = false
+        array  $databases,
+        bool   $force = false
     ): void {
 
         if (!$databases) {
@@ -169,23 +126,8 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
         }
     }
 
-    /**
-     * @param $name
-     *
-     * @return string
-     */
-    private function sanitizeDatabaseName($name)
-    {
-        return strtolower(preg_replace('/[^a-z0-9]/i', '_', $name));
-    }
-
-    /**
-     * @param                   $filename
-     *
-     * @return string Filename
-     */
     private function applyStringReplacements(
-        $filename
+        string $filename
     ): string {
         $stringReplacements = [];
         if ($stringReplacements) {
@@ -203,15 +145,10 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
         return $filename;
     }
 
-    /**
-     * @param string $scriptFilename
-     *
-     * @return string
-     */
     private function findScript(string $scriptFilename): string
     {
         // @todo Make this a setting in config instead. This module shouldn't make assumptions on where it's installed
-        $conductorRoot = realpath(__DIR__ . '/../../../../..');
+        $conductorRoot = dirname(__DIR__, 5);
         $configRoot = "$conductorRoot/config/app";
         $environment = $this->applicationConfig->getCurrentEnvironment();
 
@@ -230,9 +167,6 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
         );
     }
 
-    /**
-     * @inheritdoc
-     */
     public function setLogger(LoggerInterface $logger): void
     {
         $this->mountManager->setLogger($logger);
@@ -244,9 +178,6 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
         $this->logger = $logger;
     }
 
-    /**
-     * @inheritdoc
-     */
     private function confirmDatabaseDrop($database)
     {
         $helperSet = new HelperSet([new FormatterHelper()]);

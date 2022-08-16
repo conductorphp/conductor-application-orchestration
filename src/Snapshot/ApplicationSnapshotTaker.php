@@ -1,7 +1,4 @@
 <?php
-/**
- * @author Kirk Madera <kirk.madera@rmgmedia.com>
- */
 
 namespace ConductorAppOrchestration\Snapshot;
 
@@ -14,66 +11,26 @@ use ConductorCore\Shell\Adapter\ShellAdapterInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
-/**
- * Class ApplicationSnapshotTaker
- *
- * @package App
- */
 class ApplicationSnapshotTaker
 {
-    /**
-     * @var ApplicationConfig
-     */
-    private $applicationConfig;
-    /**
-     * @var DatabaseImportExportAdapterManager
-     */
-    private $databaseImportExportAdapterManager;
-    /**
-     * @var MountManager
-     */
-    private $mountManager;
-    /**
-     * @var ShellAdapterInterface
-     */
-    private $localShellAdapter;
-    /**
-     * @var PlanRunner
-     */
-    private $planRunner;
-    /**
-     * @var string
-     */
-    private $planPath;
-    /**
-     * @var LoggerInterface
-     */
-    protected $logger;
+    private ApplicationConfig $applicationConfig;
+    private DatabaseImportExportAdapterManager $databaseImportExportAdapterManager;
+    private MountManager $mountManager;
+    private PlanRunner $planRunner;
+    private string $planPath;
+    protected LoggerInterface $logger;
 
-    /**
-     * ApplicationSnapshotTaker constructor.
-     *
-     * @param ApplicationConfig                  $applicationConfig
-     * @param DatabaseImportExportAdapterManager $databaseImportExportAdapterManager
-     * @param MountManager                       $mountManager
-     * @param ShellAdapterInterface              $localShellAdapter
-     * @param PlanRunner                         $planRunner
-     * @param string                             $planPath
-     * @param LoggerInterface|null               $logger
-     */
     public function __construct(
-        ApplicationConfig $applicationConfig,
+        ApplicationConfig                  $applicationConfig,
         DatabaseImportExportAdapterManager $databaseImportExportAdapterManager,
-        MountManager $mountManager,
-        ShellAdapterInterface $localShellAdapter,
-        PlanRunner $planRunner,
-        string $planPath = '/tmp/.conductor/snapshot',
-        LoggerInterface $logger = null
+        MountManager                       $mountManager,
+        PlanRunner                         $planRunner,
+        string                             $planPath = '/tmp/.conductor/snapshot',
+        ?LoggerInterface                    $logger = null
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->databaseImportExportAdapterManager = $databaseImportExportAdapterManager;
         $this->mountManager = $mountManager;
-        $this->localShellAdapter = $localShellAdapter;
         $this->planRunner = $planRunner;
         $this->planPath = $planPath;
         if (is_null($logger)) {
@@ -83,23 +40,17 @@ class ApplicationSnapshotTaker
     }
 
     /**
-     * @param string      $snapshotPlan
-     * @param string      $snapshotName
-     * @param string      $snapshotPath
-     * @param bool        $includeDatabases
-     * @param bool        $includeAssets
-     * @param bool        $replace
-     * @param array       $assetSyncConfig
+     * @throws \Exception
      */
     public function takeSnapshot(
         string $snapshotPlan,
         string $snapshotName,
         string $snapshotPath,
-        bool $includeDatabases = true,
-        bool $includeAssets = true,
-        bool $replace = false,
-        array $assetSyncConfig = []
-    ) {
+        bool   $includeDatabases = true,
+        bool   $includeAssets = true,
+        bool   $replace = false,
+        array  $assetSyncConfig = []
+    ): void {
         $snapshotPlans = $this->applicationConfig->getSnapshotConfig()->getPlans();
         $this->planRunner->setPlans($snapshotPlans);
         $this->planRunner->setPlanPath($this->planPath);
@@ -116,20 +67,16 @@ class ApplicationSnapshotTaker
             $snapshotPlan,
             $conditions,
             [
-                'snapshotName'     => $snapshotName,
-                'snapshotPath'     => $snapshotPath,
+                'snapshotName' => $snapshotName,
+                'snapshotPath' => $snapshotPath,
                 'includeDatabases' => $includeDatabases,
-                'includeAssets'    => $includeAssets,
-                'assetSyncConfig'  => $assetSyncConfig,
+                'includeAssets' => $includeAssets,
+                'assetSyncConfig' => $assetSyncConfig,
             ],
             $replace,
-            false
         );
     }
 
-    /**
-     * @param LoggerInterface $logger
-     */
     public function setLogger(LoggerInterface $logger): void
     {
         $this->databaseImportExportAdapterManager->setLogger($logger);
@@ -137,9 +84,6 @@ class ApplicationSnapshotTaker
         $this->logger = $logger;
     }
 
-    /**
-     * @param string $planPath
-     */
     public function setPlanPath(string $planPath): void
     {
         $this->planPath = $planPath;
