@@ -10,6 +10,7 @@ use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\PlanRunner;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\Shell\Adapter\ShellAdapterInterface;
+use Exception;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -46,12 +47,12 @@ class ApplicationBuilder
     private $planPath;
 
     public function __construct(
-        ApplicationConfig $applicationConfig,
-        PlanRunner $planRunner,
+        ApplicationConfig     $applicationConfig,
+        PlanRunner            $planRunner,
         ShellAdapterInterface $shellAdapter,
-        MountManager $mountManager,
-        string $planPath = '/tmp/.conductor/build',
-        LoggerInterface $logger = null
+        MountManager          $mountManager,
+        string                $planPath = '/tmp/.conductor/build',
+        LoggerInterface       $logger = null
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->shellAdapter = $shellAdapter;
@@ -70,7 +71,7 @@ class ApplicationBuilder
      * @param string $buildId
      * @param string $savePath
      *
-     * @throws \Exception
+     * @throws Exception
      */
     public function build(
         string $buildPlan,
@@ -87,8 +88,8 @@ class ApplicationBuilder
             [],
             [
                 'repoReference' => $repoReference,
-                'buildId'       => $buildId,
-                'savePath'      => $savePath,
+                'buildId' => $buildId,
+                'savePath' => $savePath,
             ],
             false, // @todo Any use for clean steps in build?
             false

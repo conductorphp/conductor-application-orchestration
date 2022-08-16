@@ -43,18 +43,18 @@ class AppBuildCommand extends Command
     /**
      * AppBuildCommand constructor.
      *
-     * @param ApplicationConfig    $applicationConfig
-     * @param ApplicationBuilder   $applicationBuilder
-     * @param MountManager         $mountManager
+     * @param ApplicationConfig $applicationConfig
+     * @param ApplicationBuilder $applicationBuilder
+     * @param MountManager $mountManager
      * @param LoggerInterface|null $logger
-     * @param string|null          $name
+     * @param string|null $name
      */
     public function __construct(
-        ApplicationConfig $applicationConfig,
+        ApplicationConfig  $applicationConfig,
         ApplicationBuilder $applicationBuilder,
-        MountManager $mountManager,
-        LoggerInterface $logger = null,
-        string $name = null
+        MountManager       $mountManager,
+        LoggerInterface    $logger = null,
+        string             $name = null
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->applicationBuilder = $applicationBuilder;

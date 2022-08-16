@@ -6,9 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [1.4.0] - Unreleased
+
 ### Added
+
 - Added support for PHP 8.0 and 8.1
-- Added logic to allow pushing build directly to build path without tarballing, respecting includes/excludes. 
+- Added logic to allow pushing build directly to build path without tarballing, respecting includes/excludes.
 
 ## [1.3.3] - 2022-07-13
 
