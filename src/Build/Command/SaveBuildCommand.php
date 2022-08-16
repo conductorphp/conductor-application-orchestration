@@ -2,6 +2,7 @@
 
 namespace ConductorAppOrchestration\Build\Command;
 
+use ConductorAppOrchestration\Exception;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\Filesystem\MountManager\MountManagerAwareInterface;
 use Psr\Log\LoggerAwareInterface;
@@ -35,15 +36,29 @@ class SaveBuildCommand
      */
     public function run(string $repoReference, string $buildId, string $savePath, array $options = null): ?string
     {
-        $tarFilename = "$buildId.tgz";
-        $filename = realpath($tarFilename);
-        $this->logger->info("Saving build to \"$savePath/$tarFilename\".");
-        $result = $this->mountManager->putFile("local://$filename", "$savePath/$tarFilename");
+        $relativeFilename = "$buildId.tgz";
+        $filename = realpath($relativeFilename);
+        if (false !== $filename) {
+            $this->logger->info("Saving build to \"$savePath/$relativeFilename\".");
+            $result = $this->mountManager->putFile("local://$filename", "$savePath/$relativeFilename");
+            if ($result === false) {
+                throw new Exception\RuntimeException(sprintf(
+                    'Failed to push code build "%s" to "%s".',
+                    $filename,
+                    "$savePath/$relativeFilename"
+                ));
+            }
+            return null;
+        }
+
+        $filename = realpath('.');
+        $this->logger->info("Saving build to \"$savePath\".");
+        $result = $this->mountManager->sync("local://$filename", $savePath, $options);
         if ($result === false) {
             throw new Exception\RuntimeException(sprintf(
                 'Failed to push code build "%s" to "%s".',
                 $filename,
-                "$savePath/$tarFilename"
+                $savePath
             ));
         }
         return null;
