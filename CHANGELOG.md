@@ -15,6 +15,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Removed support for PHP 8.0 and below
 
+## [1.4.0] - Unreleased
+
+- Added support for PHP 8.0 and 8.1
+- Added logic to allow pushing build directly to build path without tarballing, respecting includes/excludes.
+
 ## [1.3.3] - 2022-07-13
 
 ### Fixed

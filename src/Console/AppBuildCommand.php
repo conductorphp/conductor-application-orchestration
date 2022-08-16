@@ -138,6 +138,10 @@ class AppBuildCommand extends Command
         $buildId = $this->getBuildId($input, $repoReference, $buildPlan);
         $buildPath = $input->getOption('build-path');
 
+        $this->mountManager->setWorkingDirectory(getcwd());
+        [$prefix, $path] = $this->mountManager->getPrefixAndPath($buildPath);
+        $buildPath = "$prefix://$path";
+
         $appName = $this->applicationConfig->getAppName();
         $this->logger->info("Building application \"$appName\".");
         $this->applicationBuilder->build($buildPlan, $repoReference, $buildId, $buildPath);

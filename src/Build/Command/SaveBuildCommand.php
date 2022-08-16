@@ -25,10 +25,17 @@ class SaveBuildCommand
      */
     public function run(string $repoReference, string $buildId, string $savePath, array $options = null): ?string
     {
-        $tarFilename = "$buildId.tgz";
-        $filename = realpath($tarFilename);
-        $this->logger->info("Saving build to \"$savePath/$tarFilename\".");
-        $this->mountManager->copy("local://$filename", "$savePath/$tarFilename");
+        $relativeFilename = "$buildId.tgz";
+        $filename = realpath($relativeFilename);
+        if (false !== $filename) {
+            $this->logger->info("Saving build to \"$savePath/$relativeFilename\".");
+            $this->mountManager->copy("local://$filename", "$savePath/$relativeFilename");
+            return null;
+        }
+
+        $filename = realpath('.');
+        $this->logger->info("Saving build to \"$savePath\".");
+        $this->mountManager->sync("local://$filename", $savePath, $options);
         return null;
     }
 
