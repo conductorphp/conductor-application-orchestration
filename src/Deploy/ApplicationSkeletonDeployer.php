@@ -10,7 +10,10 @@ use ConductorCore\Shell\Adapter\LocalShellAdapter;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use RuntimeException;
 use Twig\Environment as TwigEnvironment;
+use Twig\Error\LoaderError;
+use Twig\Error\SyntaxError;
 use Twig\Extension\DebugExtension;
 use Twig\Loader\ArrayLoader as TwigArrayLoader;
 
@@ -44,7 +47,7 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
     public function prepareFileLayout(string $buildId = null): void
     {
         $this->prepareAppRootPath();
-        if (FileLayoutInterface::STRATEGY_BLUE_GREEN == $this->applicationConfig->getFileLayoutStrategy()) {
+        if (FileLayoutInterface::STRATEGY_BLUE_GREEN === $this->applicationConfig->getFileLayoutStrategy()) {
             $this->prepareLocalPath();
             $this->prepareSharedPath();
             if ($buildId) {
@@ -61,7 +64,7 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         if (!is_writable($appRoot)) {
             if (!is_dir($appRoot) && is_writable(dirname($appRoot))) {
                 if (!mkdir($appRoot, $defaultDirMode) && !is_dir($appRoot)) {
-                    throw new \RuntimeException(sprintf('Directory "%s" was not created', $appRoot));
+                    throw new RuntimeException(sprintf('Directory "%s" was not created', $appRoot));
                 }
             } else {
                 throw new Exception\RuntimeException("Project root \"$appRoot\" is not writable.");
@@ -77,7 +80,7 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         $codePath = $this->applicationConfig->getCodePath($buildId);
         if (!file_exists($codePath)) {
             if (!mkdir($codePath, $this->applicationConfig->getDefaultDirMode(), true) && !is_dir($codePath)) {
-                throw new \RuntimeException(sprintf('Directory "%s" was not created', $codePath));
+                throw new RuntimeException(sprintf('Directory "%s" was not created', $codePath));
             }
             $this->logger->debug("Created \"{$codePath}\".");
         } else {
@@ -90,7 +93,7 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         $localPath = $this->applicationConfig->getLocalPath();
         if (!file_exists($localPath)) {
             if (!mkdir($localPath, $this->applicationConfig->getDefaultDirMode(), true) && !is_dir($localPath)) {
-                throw new \RuntimeException(sprintf('Directory "%s" was not created', $localPath));
+                throw new RuntimeException(sprintf('Directory "%s" was not created', $localPath));
             }
             $this->logger->debug("Created \"{$localPath}\".");
         } else {
@@ -103,7 +106,7 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         $sharedPath = $this->applicationConfig->getSharedPath();
         if (!file_exists($sharedPath)) {
             if (!mkdir($sharedPath, $this->applicationConfig->getDefaultDirMode(), true) && !is_dir($sharedPath)) {
-                throw new \RuntimeException(sprintf('Directory "%s" was not created', $sharedPath));
+                throw new RuntimeException(sprintf('Directory "%s" was not created', $sharedPath));
             }
             $this->logger->debug("Created \"{$sharedPath}\".");
         } else {
@@ -227,11 +230,11 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         if (is_link($resolvedFilename) || is_file($resolvedFilename)) {
             unlink($resolvedFilename);
             if (!mkdir($resolvedFilename, $mode) && !is_dir($resolvedFilename)) {
-                throw new \RuntimeException(sprintf('Directory "%s" was not created', $resolvedFilename));
+                throw new RuntimeException(sprintf('Directory "%s" was not created', $resolvedFilename));
             }
         } elseif (!file_exists($resolvedFilename)) {
             if (!mkdir($resolvedFilename, $mode) && !is_dir($resolvedFilename)) {
-                throw new \RuntimeException(sprintf('Directory "%s" was not created', $resolvedFilename));
+                throw new RuntimeException(sprintf('Directory "%s" was not created', $resolvedFilename));
             }
         }
         chmod($resolvedFilename, $mode);
@@ -255,6 +258,10 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         }
     }
 
+    /**
+     * @throws SyntaxError
+     * @throws LoaderError
+     */
     private function installFile(
         string $resolvedFilename,
         string $filename,
@@ -331,6 +338,10 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         return $filename;
     }
 
+    /**
+     * @throws SyntaxError
+     * @throws LoaderError
+     */
     private function renderContent(array $fileInfo, array $globalTemplateVars): string
     {
         if (empty($fileInfo['source'])) {
@@ -350,14 +361,14 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
             $templateVars = $globalTemplateVars;
         }
 
-        if ($templateVars && '.twig' === substr($fileInfo['source'], -5)) {
+        if (str_ends_with($fileInfo['source'], '.twig')) {
             $twig = new TwigEnvironment(new TwigArrayLoader([]), [
                 'debug' => true,
             ]);
             $twig->addExtension(new DebugExtension());
             $twig->addExtension(new VarExportExtension());
             $template = $twig->createTemplate($content);
-            $content = $template->render($templateVars);
+            $content = $template->render($templateVars ?: ['data' => []]);
         }
 
         return $content;
@@ -393,16 +404,14 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
                 unlink($path);
             }
             if (!mkdir($path, $this->applicationConfig->getDefaultDirMode(), true) && !is_dir($path)) {
-                throw new \RuntimeException(sprintf('Directory "%s" was not created', $path));
+                throw new RuntimeException(sprintf('Directory "%s" was not created', $path));
             }
         }
     }
 
     public function setLogger(LoggerInterface $logger): void
     {
-        if ($this->shellAdapter instanceof LoggerAwareInterface) {
-            $this->shellAdapter->setLogger($logger);
-        }
+        $this->shellAdapter->setLogger($logger);
         $this->logger = $logger;
     }
 

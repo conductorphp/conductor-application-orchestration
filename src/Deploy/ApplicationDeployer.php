@@ -16,6 +16,7 @@ class ApplicationDeployer
     private ApplicationConfig $applicationConfig;
     private PlanRunner $planRunner;
     private string $planPath;
+    private LoggerInterface $logger;
 
     public function __construct(
         ApplicationConfig     $applicationConfig,
