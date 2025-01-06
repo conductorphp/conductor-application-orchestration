@@ -116,11 +116,16 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
                         $scriptFilename
                     );
 
-                    $this->logger->debug("Running post import script \"$scriptFilename\".");
-                    $databaseAdapter->run(
-                        file_get_contents($scriptFilename),
-                        $databaseAlias
-                    );
+                    $sql = file_get_contents($scriptFilename);
+                    if ($sql) {
+                        $this->logger->debug("Running post import script \"$scriptFilename\".");
+                        $databaseAdapter->run(
+                            $sql,
+                            $databaseAlias
+                        );
+                    } else {
+                        $this->logger->debug("Skipping post import script \"$scriptFilename\" because it is empty.");
+                    }
                 }
             }
         }
