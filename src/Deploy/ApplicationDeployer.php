@@ -66,6 +66,7 @@ class ApplicationDeployer
     public function deploy(
         string $deployPlan,
         bool   $skeletonOnly = false,
+        bool   $refresh = false,
         ?string $buildId = null,
         ?string $buildPath = null,
         ?string $repoReference = null,
@@ -109,7 +110,7 @@ class ApplicationDeployer
             $conditions[] = 'databases';
         }
 
-        if (empty($conditions)) {
+        if (empty($conditions) || $refresh) {
             $conditions[] = 'refresh';
         }
 

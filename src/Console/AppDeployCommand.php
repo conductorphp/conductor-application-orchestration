@@ -49,6 +49,18 @@ class AppDeployCommand extends Command
             ->setDescription('Deploy application build and/or snapshot or just run a deploy plan.')
             ->setHelp("This command deploys an application build and/or snapshot or just runs a deploy plan.")
             ->addOption(
+                'skeleton',
+                null,
+                InputOption::VALUE_NONE,
+                'Deploy the skeleton only.'
+            )
+            ->addOption(
+                'refresh',
+                null,
+                InputOption::VALUE_NONE,
+                'Trigger a refresh which redeploys skeleton, existing code, and triggers code-dependent scripts.'
+            )
+            ->addOption(
                 'plan',
                 null,
                 InputOption::VALUE_REQUIRED,
@@ -124,12 +136,6 @@ class AppDeployCommand extends Command
                 InputOption::VALUE_NONE,
                 'Allow for a full rollback. This will cause increased site downtime due to the need to '
                 . 'backup databases.'
-            )
-            ->addOption(
-                'skeleton',
-                null,
-                InputOption::VALUE_NONE,
-                'Deploy the skeleton only.'
             )
             ->addOption(
                 'clean',
@@ -226,6 +232,7 @@ class AppDeployCommand extends Command
             $this->applicationDeployer->deploy(
                 $input->getOption('plan'),
                 $input->getOption('skeleton'),
+                $input->getOption('refresh'),
                 $input->getOption('build-id'),
                 $input->getOption('build-path'),
                 $input->getOption('repo-reference'),
@@ -257,7 +264,7 @@ class AppDeployCommand extends Command
 
         if ($input->getOption('skeleton') && ($input->getOption('snapshot') || $input->getOption('build-id') || $input->getOption('repo-reference'))) {
             throw new Exception\RuntimeException(
-                'Options --snapshot, --build-id, and --repo-reference may not be set with --skeleton.'
+                'Options --snapshot, --build-id, and --repo-reference may not be set with --skeleton. Use --refresh instead.'
             );
         }
 
