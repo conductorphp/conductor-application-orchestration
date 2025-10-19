@@ -213,17 +213,22 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
 
         $mode = $this->applicationConfig->getDefaultDirMode();
         if (isset($fileInfo['mode'])) {
-            if (is_string($fileInfo['mode'])) {
-                /** @noinspection TypeUnsafeComparisonInspection */
-                if (decoct(octdec($fileInfo['mode'])) != $fileInfo['mode']) {
-                    $this->logger->notice(
-                        "File mode for file \"$filename\" must be an octal. \"{$fileInfo['mode']}\" given. Used default of \"$mode\"."
-                    );
-                }
-                $mode = octdec($fileInfo['mode']);
-            } else {
-                $mode = $fileInfo['mode'];
+            $modeValue = $fileInfo['mode'];
+
+            // Warn if value appears to be a YAML-parsed octal (unquoted leading 0)
+            // Common octals: 0644=420, 0755=493, 0775=509, 0777=511
+            if (is_int($modeValue) && $modeValue > 0 && $modeValue <= 511) {
+                $octalString = decoct($modeValue);
+                $this->logger->warning(
+                    "Mode value $modeValue for \"$filename\" appears to be a YAML-parsed octal. " .
+                    "If you wrote mode: 0$octalString, use mode: \"0$octalString\" (quoted) or mode: $octalString (unquoted, no leading 0) instead. " .
+                    "YAML treats unquoted leading 0 as octal prefix."
+                );
             }
+
+            // Always treat mode value as octal notation (like chmod)
+            // Supports: 755, "755", "0755" but NOT 0755 (YAML pre-parses leading 0 as octal)
+            $mode = octdec((string)$modeValue);
         }
         $modeAsString = base_convert((string)$mode, 10, 8);
 
@@ -280,17 +285,22 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         $globalTemplateVars = $this->applicationConfig->getTemplateVars();
         $mode = $this->applicationConfig->getDefaultDirMode();
         if (isset($fileInfo['mode'])) {
-            if (is_string($fileInfo['mode'])) {
-                /** @noinspection TypeUnsafeComparisonInspection */
-                if (decoct(octdec($fileInfo['mode'])) != $fileInfo['mode']) {
-                    $this->logger->notice(
-                        "File mode for file \"$filename\" must be an octal. \"{$fileInfo['mode']}\" given. Used default of \"$mode\"."
-                    );
-                }
-                $mode = octdec($fileInfo['mode']);
-            } else {
-                $mode = $fileInfo['mode'];
+            $modeValue = $fileInfo['mode'];
+
+            // Warn if value appears to be a YAML-parsed octal (unquoted leading 0)
+            // Common octals: 0644=420, 0755=493, 0775=509, 0777=511
+            if (is_int($modeValue) && $modeValue > 0 && $modeValue <= 511) {
+                $octalString = decoct($modeValue);
+                $this->logger->warning(
+                    "Mode value $modeValue for \"$filename\" appears to be a YAML-parsed octal. " .
+                    "If you wrote mode: 0$octalString, use mode: \"0$octalString\" (quoted) or mode: $octalString (unquoted, no leading 0) instead. " .
+                    "YAML treats unquoted leading 0 as octal prefix."
+                );
             }
+
+            // Always treat mode value as octal notation (like chmod)
+            // Supports: 755, "755", "0755" but NOT 0755 (YAML pre-parses leading 0 as octal)
+            $mode = octdec((string)$modeValue);
         }
         $modeAsString = base_convert((string)$mode, 10, 8);
 
