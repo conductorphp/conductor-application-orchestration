@@ -166,10 +166,11 @@ class AppDeployCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        $force = $input->getOption('force');
         $workingDir = $input->getOption('working-dir');
 
         // Confirm continue if working directory is not empty since it will be cleared
-        if (is_dir($workingDir) && (new FilesystemIterator($workingDir))->valid()) {
+        if (!$force && is_dir($workingDir) && (new FilesystemIterator($workingDir))->valid()) {
             $helper = $this->getHelper('question');
             $question = new ConfirmationQuestion(
                 sprintf(
@@ -189,7 +190,7 @@ class AppDeployCommand extends Command
         $this->applicationDeployer->setPlanPath($workingDir);
         $appName = $this->applicationConfig->getAppName();
 
-        if ($input->getOption('clean') && !$input->getOption('force')) {
+        if (!$force && $input->getOption('clean')) {
             $helper = $this->getHelper('question');
             $question = new ConfirmationQuestion(
                 '<comment>Running with --clean may be a destructive action. Are you sure you want to '
@@ -226,7 +227,7 @@ class AppDeployCommand extends Command
             $this->applicationDeployer->deploySkeleton(
                 $input->getOption('plan'),
                 $input->getOption('clean'),
-                $input->getOption('force')
+                $force,
             );
         } else {
             $this->applicationDeployer->deploy(
@@ -247,7 +248,7 @@ class AppDeployCommand extends Command
                 $input->getOption('allow-full-rollback'),
                 $input->getOption('clean'),
                 $input->getOption('rollback'),
-                $input->getOption('force')
+                $force,
             );
         }
         $this->logger->info("<info>Application \"$appName\" deployment completed!</info>");
