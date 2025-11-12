@@ -3,6 +3,7 @@
 namespace ConductorAppOrchestration\Deploy;
 
 use ConductorAppOrchestration\Config\ApplicationConfig;
+use ConductorAppOrchestration\Deploy\PostImportScriptInterface;
 use ConductorAppOrchestration\Exception;
 use ConductorCore\Database\DatabaseAdapterManager;
 use ConductorCore\Database\DatabaseImportExportAdapterInterface;
@@ -110,21 +111,76 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
 
             // @todo Deal with running environment scripts
             if (!empty($database['post_import_scripts'])) {
-                foreach ($database['post_import_scripts'] as $scriptFilename) {
-                    $scriptFilename = $this->findScript($scriptFilename);
-                    $scriptFilename = $this->applyStringReplacements(
-                        $scriptFilename
-                    );
+                foreach ($database['post_import_scripts'] as $scriptIdentifier) {
+                    $script = null;
+                    $scriptName = $scriptIdentifier;
 
-                    $sql = trim(file_get_contents($scriptFilename));
+                    // Check if this is a class name (contains backslash)
+                    if (str_contains($scriptIdentifier, '\\')) {
+                        $this->logger->debug("Instantiating post-import script class \"$scriptIdentifier\".");
+
+                        if (!class_exists($scriptIdentifier)) {
+                            throw new Exception\RuntimeException(
+                                "Post-import script class \"$scriptIdentifier\" does not exist."
+                            );
+                        }
+
+                        $script = new $scriptIdentifier();
+
+                        if (!($script instanceof PostImportScriptInterface)) {
+                            throw new Exception\RuntimeException(
+                                "Post-import script class \"$scriptIdentifier\" must implement " .
+                                PostImportScriptInterface::class
+                            );
+                        }
+                    } else {
+                        // It's a file path
+                        $scriptFilename = $this->findScript($scriptIdentifier);
+
+                        // Check if this is a PHP script that implements PostImportScriptInterface
+                        if (str_ends_with($scriptFilename, '.php')) {
+                            $this->logger->debug("Executing PHP script \"$scriptFilename\".");
+
+                            // Load the script and check if it returns an object implementing the interface
+                            $script = include $scriptFilename;
+
+                            if (!($script instanceof PostImportScriptInterface)) {
+                                throw new Exception\RuntimeException(
+                                    "PHP post-import script \"$scriptFilename\" must return an object implementing " .
+                                    PostImportScriptInterface::class
+                                );
+                            }
+                        } else {
+                            // Plain SQL file
+                            $scriptFilename = $this->applyStringReplacements(
+                                $scriptFilename
+                            );
+                            $sql = file_get_contents($scriptFilename);
+                        }
+
+                        $scriptName = $scriptFilename;
+                    }
+
+                    // If we have a script object (class or PHP file), execute it
+                    if ($script !== null) {
+                        $config = $this->applicationConfig->toArray();
+                        $sql = $script->execute(
+                            $databaseAdapter,
+                            $databaseAlias,
+                            $config,
+                            $this->logger
+                        );
+                    }
+
+                    $sql = trim($sql);
                     if ($sql) {
-                        $this->logger->debug("Running post import script \"$scriptFilename\".");
+                        $this->logger->debug("Running SQL from post import script \"$scriptName\".");
                         $databaseAdapter->run(
                             $sql,
                             $databaseAlias
                         );
                     } else {
-                        $this->logger->debug("Skipping post import script \"$scriptFilename\" because it is empty.");
+                        $this->logger->debug("Skipping post import script \"$scriptName\" because it generated no SQL.");
                     }
                 }
             }
