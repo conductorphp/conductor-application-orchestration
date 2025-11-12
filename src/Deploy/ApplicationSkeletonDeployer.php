@@ -1,7 +1,4 @@
 <?php
-/**
- * @author Kirk Madera <kirk.madera@rmgmedia.com>
- */
 
 namespace ConductorAppOrchestration\Deploy;
 
@@ -13,40 +10,23 @@ use ConductorCore\Shell\Adapter\LocalShellAdapter;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use RuntimeException;
 use Twig\Environment as TwigEnvironment;
+use Twig\Error\LoaderError;
+use Twig\Error\SyntaxError;
+use Twig\Extension\DebugExtension;
 use Twig\Loader\ArrayLoader as TwigArrayLoader;
 
-/**
- * Class ApplicationSkeletonDeployer
- *
- * @package ConductorAppOrchestration
- */
 class ApplicationSkeletonDeployer implements LoggerAwareInterface
 {
-    /**
-     * @var ApplicationConfig
-     */
-    private $applicationConfig;
-    /**
-     * @var LocalShellAdapter
-     */
-    private $shellAdapter;
-    /**
-     * @var LoggerInterface
-     */
-    protected $logger;
+    private ApplicationConfig $applicationConfig;
+    private LocalShellAdapter $shellAdapter;
+    protected LoggerInterface $logger;
 
-    /**
-     * ApplicationSkeletonDeployer constructor.
-     *
-     * @param ApplicationConfig    $applicationConfig
-     * @param LocalShellAdapter    $localShellAdapter
-     * @param LoggerInterface|null $logger
-     */
     public function __construct(
         ApplicationConfig $applicationConfig,
         LocalShellAdapter $localShellAdapter,
-        LoggerInterface $logger = null
+        LoggerInterface   $logger = null
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->shellAdapter = $localShellAdapter;
@@ -56,9 +36,6 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         $this->logger = $logger;
     }
 
-    /**
-     * @param string|null $buildId
-     */
     public function deploySkeleton(string $buildId = null): void
     {
         $origUmask = umask(0);
@@ -67,13 +44,10 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         umask($origUmask);
     }
 
-    /**
-     * @param string|null $buildId
-     */
     public function prepareFileLayout(string $buildId = null): void
     {
         $this->prepareAppRootPath();
-        if (FileLayoutInterface::STRATEGY_BLUE_GREEN == $this->applicationConfig->getFileLayoutStrategy()) {
+        if (FileLayoutInterface::STRATEGY_BLUE_GREEN === $this->applicationConfig->getFileLayoutStrategy()) {
             $this->prepareLocalPath();
             $this->prepareSharedPath();
             if ($buildId) {
@@ -89,7 +63,9 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
 
         if (!is_writable($appRoot)) {
             if (!is_dir($appRoot) && is_writable(dirname($appRoot))) {
-                mkdir($appRoot, $defaultDirMode);
+                if (!mkdir($appRoot, $defaultDirMode) && !is_dir($appRoot)) {
+                    throw new RuntimeException(sprintf('Directory "%s" was not created', $appRoot));
+                }
             } else {
                 throw new Exception\RuntimeException("Project root \"$appRoot\" is not writable.");
             }
@@ -103,7 +79,9 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
     {
         $codePath = $this->applicationConfig->getCodePath($buildId);
         if (!file_exists($codePath)) {
-            mkdir($codePath, $this->applicationConfig->getDefaultDirMode(), true);
+            if (!mkdir($codePath, $this->applicationConfig->getDefaultDirMode(), true) && !is_dir($codePath)) {
+                throw new RuntimeException(sprintf('Directory "%s" was not created', $codePath));
+            }
             $this->logger->debug("Created \"{$codePath}\".");
         } else {
             $this->logger->debug("Skipped creating \"{$codePath}\". Already exists.");
@@ -114,7 +92,9 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
     {
         $localPath = $this->applicationConfig->getLocalPath();
         if (!file_exists($localPath)) {
-            mkdir($localPath, $this->applicationConfig->getDefaultDirMode(), true);
+            if (!mkdir($localPath, $this->applicationConfig->getDefaultDirMode(), true) && !is_dir($localPath)) {
+                throw new RuntimeException(sprintf('Directory "%s" was not created', $localPath));
+            }
             $this->logger->debug("Created \"{$localPath}\".");
         } else {
             $this->logger->debug("Skipped creating \"{$localPath}\". Already exists.");
@@ -125,16 +105,15 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
     {
         $sharedPath = $this->applicationConfig->getSharedPath();
         if (!file_exists($sharedPath)) {
-            mkdir($sharedPath, $this->applicationConfig->getDefaultDirMode(), true);
+            if (!mkdir($sharedPath, $this->applicationConfig->getDefaultDirMode(), true) && !is_dir($sharedPath)) {
+                throw new RuntimeException(sprintf('Directory "%s" was not created', $sharedPath));
+            }
             $this->logger->debug("Created \"{$sharedPath}\".");
         } else {
             $this->logger->debug("Skipped creating \"{$sharedPath}\". Already exists.");
         }
     }
 
-    /**
-     * @param string|null $buildId
-     */
     public function makeBuildCurrent(string $buildId): void
     {
         $appRoot = $this->applicationConfig->getAppRoot();
@@ -146,38 +125,32 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
             $this->logger->debug(
                 "Created symlink \"$currentPath\" -> \"$relativeCodePath\"."
             );
-        } else {
-            if (realpath($currentPath) != $codePath) {
-                $previousPath = $this->applicationConfig->getPreviousPath();
-                $previousRelativeCodePath = substr(realpath($currentPath), strlen($appRoot) + 1);
-                if (file_exists($previousPath)) {
-                    unlink($previousPath);
-                }
-                symlink($previousRelativeCodePath, $previousPath);
-                $this->logger->debug(
-                    "Created symlink \"$previousPath\" -> \"$previousRelativeCodePath\"."
-                );
-
-                unlink($currentPath);
-                symlink($relativeCodePath, $currentPath);
-                $this->logger->debug(
-                    "Created symlink \"$currentPath\" -> \"$relativeCodePath\"."
-                );
-            } else {
-                $this->logger->debug(
-                    "Skipped creating symlink \"$currentPath\" -> \"$relativeCodePath\". Already exists."
-                );
+        } elseif (realpath($currentPath) !== $codePath) {
+            $previousPath = $this->applicationConfig->getPreviousPath();
+            $previousRelativeCodePath = substr(realpath($currentPath), strlen($appRoot) + 1);
+            if (file_exists($previousPath)) {
+                unlink($previousPath);
             }
+            symlink($previousRelativeCodePath, $previousPath);
+            $this->logger->debug(
+                "Created symlink \"$previousPath\" -> \"$previousRelativeCodePath\"."
+            );
+
+            unlink($currentPath);
+            symlink($relativeCodePath, $currentPath);
+            $this->logger->debug(
+                "Created symlink \"$currentPath\" -> \"$relativeCodePath\"."
+            );
+        } else {
+            $this->logger->debug(
+                "Skipped creating symlink \"$currentPath\" -> \"$relativeCodePath\". Already exists."
+            );
         }
     }
 
-    /**
-     * @param string|null $buildId
-     */
     public function installAppFiles(string $buildId = null): void
     {
-        if (FileLayoutInterface::STRATEGY_BLUE_GREEN == $this->applicationConfig->getFileLayoutStrategy()
-            && !$buildId
+        if (!$buildId && FileLayoutInterface::STRATEGY_BLUE_GREEN === $this->applicationConfig->getFileLayoutStrategy()
         ) {
             $currentPath = $this->applicationConfig->getCurrentPath();
             if (file_exists($currentPath)) {
@@ -202,9 +175,6 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         $this->installSymlinks($buildId);
     }
 
-    /**
-     * @param string|null $buildId
-     */
     private function installDirectories(string $buildId = null): void
     {
         $directories = $this->applicationConfig->getSkeletonConfig()->getDirectories();
@@ -226,17 +196,11 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         }
     }
 
-    /**
-     * @param string      $resolvedFilename
-     * @param string      $filename
-     * @param array       $fileInfo
-     * @param string|null $buildId
-     */
     private function installDirectory(
         string $resolvedFilename,
         string $filename,
-        array $fileInfo,
-        string $buildId = null
+        array  $fileInfo,
+        ?string $buildId = null
     ): void {
         if (!empty($fileInfo['auto_symlink'])) {
             $symlinkResolvedFilename = $this->resolveFilename($filename, 'code', $buildId);
@@ -249,24 +213,34 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
 
         $mode = $this->applicationConfig->getDefaultDirMode();
         if (isset($fileInfo['mode'])) {
-            if (is_string($fileInfo['mode'])) {
-                if (decoct(octdec($fileInfo['mode'])) != $fileInfo['mode']) {
-                    $this->logger->notice(
-                        "File mode for file \"$filename\" must be an octal. \"{$fileInfo['mode']}\" given. Used default of \"$mode\"."
-                    );
-                }
-                $mode = octdec($fileInfo['mode']);
-            } else {
-                $mode = $fileInfo['mode'];
+            $modeValue = $fileInfo['mode'];
+
+            // Warn if value appears to be a YAML-parsed octal (unquoted leading 0)
+            // Common octals: 0644=420, 0755=493, 0775=509, 0777=511
+            if (is_int($modeValue) && $modeValue > 0 && $modeValue <= 511) {
+                $octalString = decoct($modeValue);
+                $this->logger->warning(
+                    "Mode value $modeValue for \"$filename\" appears to be a YAML-parsed octal. " .
+                    "If you wrote mode: 0$octalString, use mode: \"0$octalString\" (quoted) or mode: $octalString (unquoted, no leading 0) instead. " .
+                    "YAML treats unquoted leading 0 as octal prefix."
+                );
             }
+
+            // Always treat mode value as octal notation (like chmod)
+            // Supports: 755, "755", "0755" but NOT 0755 (YAML pre-parses leading 0 as octal)
+            $mode = octdec((string)$modeValue);
         }
         $modeAsString = base_convert((string)$mode, 10, 8);
 
         if (is_link($resolvedFilename) || is_file($resolvedFilename)) {
             unlink($resolvedFilename);
-            mkdir($resolvedFilename, $mode);
+            if (!mkdir($resolvedFilename, $mode) && !is_dir($resolvedFilename)) {
+                throw new RuntimeException(sprintf('Directory "%s" was not created', $resolvedFilename));
+            }
         } elseif (!file_exists($resolvedFilename)) {
-            mkdir($resolvedFilename, $mode);
+            if (!mkdir($resolvedFilename, $mode) && !is_dir($resolvedFilename)) {
+                throw new RuntimeException(sprintf('Directory "%s" was not created', $resolvedFilename));
+            }
         }
         chmod($resolvedFilename, $mode);
         $this->logger->debug("Ensured \"$resolvedFilename\" is a directory and has permissions $modeAsString.");
@@ -290,16 +264,14 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
     }
 
     /**
-     * @param string      $resolvedFilename
-     * @param string      $filename
-     * @param array       $fileInfo
-     * @param string|null $buildId
+     * @throws SyntaxError
+     * @throws LoaderError
      */
     private function installFile(
         string $resolvedFilename,
         string $filename,
-        array $fileInfo,
-        string $buildId = null
+        array  $fileInfo,
+        ?string $buildId = null
     ): void {
         if (!empty($fileInfo['auto_symlink'])) {
             $symlinkResolvedFilename = $this->resolveFilename($filename, 'code', $buildId);
@@ -313,16 +285,22 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         $globalTemplateVars = $this->applicationConfig->getTemplateVars();
         $mode = $this->applicationConfig->getDefaultDirMode();
         if (isset($fileInfo['mode'])) {
-            if (is_string($fileInfo['mode'])) {
-                if (decoct(octdec($fileInfo['mode'])) != $fileInfo['mode']) {
-                    $this->logger->notice(
-                        "File mode for file \"$filename\" must be an octal. \"{$fileInfo['mode']}\" given. Used default of \"$mode\"."
-                    );
-                }
-                $mode = octdec($fileInfo['mode']);
-            } else {
-                $mode = $fileInfo['mode'];
+            $modeValue = $fileInfo['mode'];
+
+            // Warn if value appears to be a YAML-parsed octal (unquoted leading 0)
+            // Common octals: 0644=420, 0755=493, 0775=509, 0777=511
+            if (is_int($modeValue) && $modeValue > 0 && $modeValue <= 511) {
+                $octalString = decoct($modeValue);
+                $this->logger->warning(
+                    "Mode value $modeValue for \"$filename\" appears to be a YAML-parsed octal. " .
+                    "If you wrote mode: 0$octalString, use mode: \"0$octalString\" (quoted) or mode: $octalString (unquoted, no leading 0) instead. " .
+                    "YAML treats unquoted leading 0 as octal prefix."
+                );
             }
+
+            // Always treat mode value as octal notation (like chmod)
+            // Supports: 755, "755", "0755" but NOT 0755 (YAML pre-parses leading 0 as octal)
+            $mode = octdec((string)$modeValue);
         }
         $modeAsString = base_convert((string)$mode, 10, 8);
 
@@ -339,9 +317,6 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         $this->logger->debug("Ensured \"$resolvedFilename\" is file and has permissions $modeAsString.");
     }
 
-    /**
-     * @param string|null $buildId
-     */
     private function installSymlinks(string $buildId = null): void
     {
         $symlinks = $this->applicationConfig->getSkeletonConfig()->getSymlinks();
@@ -364,13 +339,6 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         }
     }
 
-    /**
-     * @param string      $filename
-     * @param string      $location
-     * @param string|null $buildId
-     *
-     * @return string
-     */
     private function resolveFilename(string $filename, string $location, string $buildId = null): string
     {
         $path = $this->applicationConfig->getPath($location, $buildId);
@@ -381,10 +349,8 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
     }
 
     /**
-     * @param array $fileInfo
-     * @param array $globalTemplateVars
-     *
-     * @return string
+     * @throws SyntaxError
+     * @throws LoaderError
      */
     private function renderContent(array $fileInfo, array $globalTemplateVars): string
     {
@@ -405,26 +371,22 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
             $templateVars = $globalTemplateVars;
         }
 
-        if ($templateVars && '.twig' == substr($fileInfo['source'], -5)) {
+        if (str_ends_with($fileInfo['source'], '.twig')) {
             $twig = new TwigEnvironment(new TwigArrayLoader([]), [
                 'debug' => true,
             ]);
-            $twig->addExtension(new \Twig\Extension\DebugExtension());
+            $twig->addExtension(new DebugExtension());
             $twig->addExtension(new VarExportExtension());
             $template = $twig->createTemplate($content);
-            $content = $template->render($templateVars);
+            $content = $template->render($templateVars ?: ['data' => []]);
         }
 
         return $content;
     }
 
-    /**
-     * @param string $resolvedFilename
-     * @param string $resolvedTargetFilename
-     */
     private function installSymlink(string $resolvedFilename, string $resolvedTargetFilename): void
     {
-        if ($resolvedFilename == $resolvedTargetFilename) {
+        if ($resolvedFilename === $resolvedTargetFilename) {
             return;
         }
 
@@ -445,27 +407,21 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         $this->logger->debug("Ensured \"$resolvedFilename\" is a symlink pointed to \"$resolvedTargetFilename\".");
     }
 
-    /**
-     * @param string $path
-     */
     private function ensureDirExists(string $path): void
     {
         if (!(is_dir($path))) {
             if (file_exists($path)) {
                 unlink($path);
             }
-            mkdir($path, $this->applicationConfig->getDefaultDirMode(), true);
+            if (!mkdir($path, $this->applicationConfig->getDefaultDirMode(), true) && !is_dir($path)) {
+                throw new RuntimeException(sprintf('Directory "%s" was not created', $path));
+            }
         }
     }
 
-    /**
-     * @inheritdoc
-     */
     public function setLogger(LoggerInterface $logger): void
     {
-        if ($this->shellAdapter instanceof LoggerAwareInterface) {
-            $this->shellAdapter->setLogger($logger);
-        }
+        $this->shellAdapter->setLogger($logger);
         $this->logger = $logger;
     }
 

@@ -1,7 +1,4 @@
 <?php
-/**
- * @author Kirk Madera <kirk.madera@rmgmedia.com>
- */
 
 namespace ConductorAppOrchestration\Deploy;
 
@@ -9,30 +6,17 @@ use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorCore\Database\DatabaseAdapterManager;
 
 /**
- * @todo    Update to consider multiple server environments
- *
- * Class DeploymentState
- *
- * @package ConductorAppOrchestration\Deploy
+ * @todo Update to consider multiple server environments
  */
 class DeploymentState
 {
-    /**
-     * @var ApplicationConfig
-     */
-    private $applicationConfig;
-    /**
-     * @var DatabaseAdapterManager
-     */
-    private $databaseAdapterManager;
-    /**
-     * @var CodeDeploymentStateInterface
-     */
-    private $codeDeploymentState;
+    private ApplicationConfig $applicationConfig;
+    private DatabaseAdapterManager $databaseAdapterManager;
+    private CodeDeploymentStateInterface $codeDeploymentState;
 
     public function __construct(
-        ApplicationConfig $applicationConfig,
-        DatabaseAdapterManager $databaseAdapterManager,
+        ApplicationConfig            $applicationConfig,
+        DatabaseAdapterManager       $databaseAdapterManager,
         CodeDeploymentStateInterface $codeDeploymentState
     ) {
         $this->applicationConfig = $applicationConfig;
@@ -40,9 +24,6 @@ class DeploymentState
         $this->codeDeploymentState = $codeDeploymentState;
     }
 
-    /**
-     * @return bool
-     */
     public function assetsDeployed(): bool
     {
         $assets = $this->applicationConfig->getSnapshotConfig()->getAssets();
@@ -57,17 +38,11 @@ class DeploymentState
         return true;
     }
 
-    /**
-     * @return bool
-     */
     public function codeDeployed(): bool
     {
         return $this->codeDeploymentState->codeDeployed();
     }
 
-    /**
-     * @return bool
-     */
     public function databasesDeployed(): bool
     {
         $databases = $this->applicationConfig->getDatabases();

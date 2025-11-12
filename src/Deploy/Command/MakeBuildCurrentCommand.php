@@ -9,45 +9,30 @@ use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
-/**
- * Class MakeBuildCurrentCommand
- *
- * @package ConductorAppOrchestration\Snapshot\Command
- */
 class MakeBuildCurrentCommand
     implements DeployCommandInterface, ApplicationSkeletonDeployerAwareInterface, LoggerAwareInterface
 {
-    /**
-     * @var ApplicationSkeletonDeployer
-     */
-    private $applicationSkeletonDeployer;
-    /**
-     * @var LoggerInterface
-     */
-    private $logger;
+    private ApplicationSkeletonDeployer $applicationSkeletonDeployer;
+    private LoggerInterface $logger;
 
     public function __construct()
     {
         $this->logger = new NullLogger();
     }
 
-    /**
-     * @inheritdoc
-     */
     public function run(
-        string $codeRoot,
-        string $buildId = null,
-        string $buildPath = null,
-        string $repoReference = null,
-        string $snapshotName = null,
-        string $snapshotPath = null,
-        bool $includeAssets = true,
-        array $assetSyncConfig = [],
-        bool $includeDatabases = true,
-        bool $allowFullRollback = false,
-        array $options = null
-    ): ?string
-    {
+        string  $codeRoot,
+        ?string $buildId = null,
+        ?string $buildPath = null,
+        ?string $repoReference = null,
+        ?string $snapshotName = null,
+        ?string $snapshotPath = null,
+        bool    $includeAssets = true,
+        array   $assetSyncConfig = [],
+        bool    $includeDatabases = true,
+        bool    $allowFullRollback = false,
+        ?array  $options = null
+    ): ?string {
         if (!isset($this->applicationSkeletonDeployer)) {
             throw new Exception\RuntimeException('$this->applicationSkeletonDeployer must be set.');
         }
@@ -57,17 +42,11 @@ class MakeBuildCurrentCommand
         return null;
     }
 
-    /**
-     * @inheritdoc
-     */
     public function setApplicationSkeletonDeployer(ApplicationSkeletonDeployer $applicationSkeletonDeployer): void
     {
         $this->applicationSkeletonDeployer = $applicationSkeletonDeployer;
     }
 
-    /**
-     * @inheritdoc
-     */
     public function setLogger(LoggerInterface $logger): void
     {
         $this->logger = $logger;

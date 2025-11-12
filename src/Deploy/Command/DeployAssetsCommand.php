@@ -11,36 +11,19 @@ use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
-/**
- * Class DeployAssetsCommand
- *
- * @package ConductorAppOrchestration\Snapshot\Command
- */
 class DeployAssetsCommand
     implements DeployCommandInterface, ApplicationAssetDeployerAwareInterface, LoggerAwareInterface,
-               ApplicationConfigAwareInterface
+    ApplicationConfigAwareInterface
 {
-    /**
-     * @var ApplicationAssetDeployer
-     */
-    private $applicationAssetDeployer;
-    /**
-     * @var ApplicationConfig
-     */
-    private $applicationConfig;
-    /**
-     * @var LoggerInterface
-     */
-    private $logger;
+    private ApplicationAssetDeployer $applicationAssetDeployer;
+    private ApplicationConfig $applicationConfig;
+    private LoggerInterface $logger;
 
     public function __construct()
     {
         $this->logger = new NullLogger();
     }
 
-    /**
-     * @inheritdoc
-     */
     public function run(
         string $codeRoot,
         string $buildId = null,
@@ -48,13 +31,12 @@ class DeployAssetsCommand
         string $repoReference = null,
         string $snapshotName = null,
         string $snapshotPath = null,
-        bool $includeAssets = true,
-        array $assetSyncConfig = [],
-        bool $includeDatabases = true,
-        bool $allowFullRollback = false,
-        array $options = null
-    ): ?string
-    {
+        bool   $includeAssets = true,
+        array  $assetSyncConfig = [],
+        bool   $includeDatabases = true,
+        bool   $allowFullRollback = false,
+        array  $options = null
+    ): ?string {
         if (!$includeAssets) {
             $this->logger->notice(
                 'Add condition "assets" to this step in your deployment plan. This step can only be run when deploying '
@@ -85,25 +67,16 @@ class DeployAssetsCommand
         return null;
     }
 
-    /**
-     * @inheritdoc
-     */
     public function setApplicationAssetDeployer(ApplicationAssetDeployer $applicationAssetDeployer): void
     {
         $this->applicationAssetDeployer = $applicationAssetDeployer;
     }
 
-    /**
-     * @inheritdoc
-     */
     public function setLogger(LoggerInterface $logger): void
     {
         $this->logger = $logger;
     }
 
-    /**
-     * @param ApplicationConfig $applicationConfig
-     */
     public function setApplicationConfig(ApplicationConfig $applicationConfig): void
     {
         $this->applicationConfig = $applicationConfig;

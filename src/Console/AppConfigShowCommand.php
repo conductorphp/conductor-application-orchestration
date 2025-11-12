@@ -1,7 +1,4 @@
 <?php
-/**
- * @author Kirk Madera <kirk.madera@rmgmedia.com>
- */
 
 namespace ConductorAppOrchestration\Console;
 
@@ -14,24 +11,15 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class AppConfigShowCommand extends Command
 {
-    /**
-     * @var ApplicationConfig
-     */
-    private $applicationConfig;
+    private ApplicationConfig $applicationConfig;
 
-    /**
-     * AppConfigShowCommand constructor.
-     *
-     * @param ApplicationConfig $applicationConfig
-     * @param null              $name
-     */
     public function __construct(ApplicationConfig $applicationConfig, $name = null)
     {
         $this->applicationConfig = $applicationConfig;
         parent::__construct($name);
     }
 
-    protected function configure()
+    protected function configure(): void
     {
         $this->setName('app:config:show')
             ->setDescription('Output application configuration.')
@@ -43,29 +31,23 @@ class AppConfigShowCommand extends Command
             );
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $this->applicationConfig->validate();
         $filter = $input->getArgument('filter');
         $outputTable = new Table($output);
         $outputTable
             ->setHeaders(['Key', 'Value']);
-        $this->expandToOutputRows(null, $this->applicationConfig->toArray(), $outputTable, $filter);
+        $this->expandToOutputRows($this->applicationConfig->toArray(), $outputTable, $filter);
         $outputTable->render();
-        return 0;
+        return self::SUCCESS;
     }
 
-    /**
-     * @param string|null $keyPrefix
-     * @param             $data
-     * @param Table       $outputTable
-     * @param string|null $filter
-     */
     private function expandToOutputRows(
-        string $keyPrefix = null,
         $data,
         Table $outputTable,
-        string $filter = null
+        string $filter = null,
+        string $keyPrefix = null,
     ): void {
         ksort($data);
         foreach ($data as $key => $value) {
@@ -78,7 +60,7 @@ class AppConfigShowCommand extends Command
                     $outputTable->addRow([$key, $value]);
                 }
             } else {
-                $this->expandToOutputRows($key, $value, $outputTable, $filter);
+                $this->expandToOutputRows($value, $outputTable, $filter, $key);
             }
         }
     }

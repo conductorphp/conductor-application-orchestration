@@ -13,9 +13,9 @@ use ConductorAppOrchestration\Deploy\ApplicationDatabaseDeployer;
 use ConductorAppOrchestration\Deploy\ApplicationDatabaseDeployerAwareInterface;
 use ConductorAppOrchestration\Deploy\ApplicationSkeletonDeployer;
 use ConductorAppOrchestration\Deploy\ApplicationSkeletonDeployerAwareInterface;
-use ConductorAppOrchestration\Deploy\DeploymentState;
 use ConductorAppOrchestration\Deploy\Command\DeployCommandInterface;
-use ConductorAppOrchestration\Exception\PlanPathNotEmptyException;
+use ConductorAppOrchestration\Deploy\DeploymentState;
+use ConductorAppOrchestration\Exception;
 use ConductorAppOrchestration\Maintenance\MaintenanceStrategyAwareInterface;
 use ConductorAppOrchestration\Maintenance\MaintenanceStrategyInterface;
 use ConductorCore\Database\DatabaseAdapterManager;
@@ -32,116 +32,47 @@ use FilesystemIterator;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
+use SplFileInfo;
 
 class PlanRunner implements LoggerAwareInterface
 {
-    /**
-     * @var ApplicationConfig
-     */
-    private $applicationConfig;
-    /**
-     * @var RepositoryAdapterInterface
-     */
-    private $repositoryAdapter;
-    /**
-     * @var ShellAdapterInterface
-     */
-    private $shellAdapter;
-    /**
-     * @var MountManager
-     */
-    private $mountManager;
-    /**
-     * @var MaintenanceStrategyInterface
-     */
-    private $maintenanceStrategy;
-    /**
-     * @var DatabaseAdapterManager
-     */
-    private $databaseAdapterManager;
-    /**
-     * @var DatabaseImportExportAdapterManager
-     */
-    private $databaseImportExportAdapterManager;
-    /**
-     * @var ApplicationSkeletonDeployer
-     */
-    private $applicationSkeletonDeployer;
-    /**
-     * @var ApplicationCodeDeployer
-     */
-    private $applicationCodeDeployer;
-    /**
-     * @var ApplicationAssetDeployer
-     */
-    private $applicationAssetDeployer;
-    /**
-     * @var ApplicationDatabaseDeployer
-     */
-    private $applicationDatabaseDeployer;
-    /**
-     * @var DeploymentState
-     */
-    private $deploymentState;
-    /**
-     * @var int
-     */
-    private $diskSpaceErrorThreshold;
-    /**
-     * @var int
-     */
-    private $diskSpaceWarningThreshold;
-    /**
-     * @var LoggerInterface
-     */
-    private $logger;
-    /**
-     * @var array
-     */
-    private $plans;
-    /**
-     * @var string
-     */
-    private $stepInterface;
-    /**
-     * @var string
-     */
-    private $planPath;
+    private ApplicationConfig $applicationConfig;
+    private RepositoryAdapterInterface $repositoryAdapter;
+    private ShellAdapterInterface $shellAdapter;
+    private MountManager $mountManager;
+    private MaintenanceStrategyInterface $maintenanceStrategy;
+    private DatabaseAdapterManager $databaseAdapterManager;
+    private DatabaseImportExportAdapterManager $databaseImportExportAdapterManager;
+    private ApplicationSkeletonDeployer $applicationSkeletonDeployer;
+    private ApplicationCodeDeployer $applicationCodeDeployer;
+    private ApplicationAssetDeployer $applicationAssetDeployer;
+    private ApplicationDatabaseDeployer $applicationDatabaseDeployer;
+    private DeploymentState $deploymentState;
+    private int $diskSpaceErrorThreshold;
+    private int $diskSpaceWarningThreshold;
+    private LoggerInterface $logger;
+    private array $plans;
+    private string $stepInterface;
+    private string $planPath;
 
-    /**
-     * PlanRunner constructor.
-     *
-     * @param ApplicationConfig                  $applicationConfig
-     * @param RepositoryAdapterInterface         $repositoryAdapter
-     * @param ShellAdapterInterface              $shellAdapter
-     * @param MountManager                       $mountManager
-     * @param MaintenanceStrategyInterface       $maintenanceStrategy
-     * @param DatabaseAdapterManager             $databaseAdapterManager
-     * @param DatabaseImportExportAdapterManager $databaseImportExportAdapterManager
-     * @param ApplicationSkeletonDeployer        $applicationSkeletonDeployer
-     * @param ApplicationCodeDeployer            $applicationCodeInstaller
-     * @param ApplicationAssetDeployer           $applicationAssetDeployer
-     * @param ApplicationDatabaseDeployer        $applicationDatabaseDeployer
-     * @param int                                $diskSpaceErrorThreshold
-     * @param int                                $diskSpaceWarningThreshold
-     * @param LoggerInterface|null               $logger
-     */
     public function __construct(
-        ApplicationConfig $applicationConfig,
-        RepositoryAdapterInterface $repositoryAdapter,
-        ShellAdapterInterface $shellAdapter,
-        MountManager $mountManager,
-        MaintenanceStrategyInterface $maintenanceStrategy,
-        DatabaseAdapterManager $databaseAdapterManager,
+        ApplicationConfig                  $applicationConfig,
+        RepositoryAdapterInterface         $repositoryAdapter,
+        ShellAdapterInterface              $shellAdapter,
+        MountManager                       $mountManager,
+        MaintenanceStrategyInterface       $maintenanceStrategy,
+        DatabaseAdapterManager             $databaseAdapterManager,
         DatabaseImportExportAdapterManager $databaseImportExportAdapterManager,
-        ApplicationSkeletonDeployer $applicationSkeletonDeployer,
-        ApplicationCodeDeployer $applicationCodeInstaller,
-        ApplicationAssetDeployer $applicationAssetDeployer,
-        ApplicationDatabaseDeployer $applicationDatabaseDeployer,
-        DeploymentState $deploymentState,
-        int $diskSpaceErrorThreshold = 52428800,
-        int $diskSpaceWarningThreshold = 104857600,
-        LoggerInterface $logger = null
+        ApplicationSkeletonDeployer        $applicationSkeletonDeployer,
+        ApplicationCodeDeployer            $applicationCodeInstaller,
+        ApplicationAssetDeployer           $applicationAssetDeployer,
+        ApplicationDatabaseDeployer        $applicationDatabaseDeployer,
+        DeploymentState                    $deploymentState,
+        int                                $diskSpaceErrorThreshold = 52428800,
+        int                                $diskSpaceWarningThreshold = 104857600,
+        ?LoggerInterface                    $logger = null
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->repositoryAdapter = $repositoryAdapter;
@@ -164,28 +95,23 @@ class PlanRunner implements LoggerAwareInterface
     }
 
     /**
-     * @todo Deal with user ctrl+c input and clear working directory before exiting
      * @see  http://php.net/manual/en/function.pcntl-signal.php
-     *
-     * @param string $planName
-     * @param array  $conditions
-     * @param array  $stepArguments
-     * @param bool   $clean
-     * @param bool   $rollback
+     * @todo Deal with user ctrl+c input and clear working directory before exiting
+     * @throws \Exception
      */
     public function runPlan(
         string $planName,
-        array $conditions,
-        array $stepArguments,
-        $clean = false,
-        $rollback = false
+        array  $conditions,
+        array  $stepArguments,
+               $clean = false,
+               $rollback = false
     ): void {
         $origWorkingDirectory = getcwd();
-        if (is_null($this->planPath)) {
+        if (!isset($this->planPath)) {
             $this->planPath = getcwd();
         }
 
-        if ($this->stepInterface == DeployCommandInterface::class) {
+        if ($this->stepInterface === DeployCommandInterface::class) {
             $this->logger->debug('Determining current deployment state.');
             $metDependencies = [];
             // Mark assets, code, and databases as met dependencies if they are deployed and we are not actively cleaning them
@@ -206,7 +132,7 @@ class PlanRunner implements LoggerAwareInterface
 
         try {
             $plan = $this->getPlan($planName);
-            $this->preparePlanPath($plan);
+            $this->preparePlanPath();
 
             if ($rollback) {
                 $rollbackPreflightSteps = $plan->getRollbackSteps();
@@ -284,7 +210,9 @@ class PlanRunner implements LoggerAwareInterface
 
             $this->logger->debug("Cleaning working directory \"{$this->planPath}\".");
             $this->removePath($this->planPath);
-            mkdir($this->planPath, 0700);
+            if (!mkdir($concurrentDirectory = $this->planPath, 0700) && !is_dir($concurrentDirectory)) {
+                throw new \RuntimeException(sprintf('Directory "%s" was not created', $concurrentDirectory));
+            }
 
         } catch (\Exception $e) {
             $this->logger->error("An error occurred running plan \"$planName\".");
@@ -293,27 +221,16 @@ class PlanRunner implements LoggerAwareInterface
         }
     }
 
-    /**
-     * @param array $plans
-     */
     public function setPlans(array $plans): void
     {
         $this->plans = $plans;
     }
 
-    /**
-     * @param string $className
-     */
     public function setStepInterface(string $className): void
     {
         $this->stepInterface = $className;
     }
 
-    /**
-     * @param string $name
-     *
-     * @return Plan
-     */
     private function getPlan(string $name): Plan
     {
         if (empty($this->plans[$name])) {
@@ -328,10 +245,7 @@ class PlanRunner implements LoggerAwareInterface
         return new Plan($name, $this->plans[$name], $this->stepInterface);
     }
 
-    /**
-     * @param Plan $plan
-     */
-    private function preparePlanPath(Plan $plan): void
+    private function preparePlanPath(): void
     {
         $this->logger->info('Preparing path "' . $this->planPath . '".');
         if (file_exists($this->planPath)) {
@@ -348,7 +262,9 @@ class PlanRunner implements LoggerAwareInterface
                 $isEmpty = !(new FilesystemIterator($this->planPath))->valid();
                 if (!$isEmpty) {
                     $this->removePath($this->planPath);
-                    mkdir($this->planPath, 0700);
+                    if (!mkdir($concurrentDirectory = $this->planPath, 0700) && !is_dir($concurrentDirectory)) {
+                        throw new \RuntimeException(sprintf('Directory "%s" was not created', $concurrentDirectory));
+                    }
                 }
             } else {
                 throw new Exception\RuntimeException(
@@ -360,7 +276,7 @@ class PlanRunner implements LoggerAwareInterface
             }
         } else {
             $parentDir = dirname($this->planPath);
-            while ('.' != $parentDir && !file_exists($parentDir)) {
+            while ('.' !== $parentDir && !file_exists($parentDir)) {
                 $parentDir = dirname($parentDir);
             }
 
@@ -373,7 +289,9 @@ class PlanRunner implements LoggerAwareInterface
                 );
             }
 
-            mkdir($this->planPath, 0700, true);
+            if (!mkdir($concurrentDirectory = $this->planPath, 0700, true) && !is_dir($concurrentDirectory)) {
+                throw new \RuntimeException(sprintf('Directory "%s" was not created', $concurrentDirectory));
+            }
         }
 
         $freeDiskSpace = disk_free_space($this->planPath);
@@ -398,21 +316,12 @@ class PlanRunner implements LoggerAwareInterface
         }
     }
 
-    /**
-     * @param string $name
-     * @param array  $step
-     * @param array  $conditions
-     * @param array  $metDependencies
-     * @param array  $stepArguments
-     *
-     * @return array $providedDependencies
-     */
     private function runStep(
         string $name,
-        array $step,
-        array $conditions,
-        array $metDependencies,
-        array $stepArguments
+        array  $step,
+        array  $conditions,
+        array  $metDependencies,
+        array  $stepArguments
     ): array {
 
         // If array, run commands in parallel
@@ -449,28 +358,26 @@ class PlanRunner implements LoggerAwareInterface
             return $providedDependencies;
         }
 
-        if (!empty($step['conditions'])) {
-            if (!array_intersect($conditions, $step['conditions'])) {
-                $this->logger->debug(
-                    sprintf(
-                        'Step: %s - skipped because run %s [%s] not met.',
-                        $name,
-                        (1 == count($step['conditions'])) ? 'condition' : 'conditions',
-                        implode(', ', $step['conditions'])
-                    )
-                );
-                return [];
-            }
+        if (!empty($step['conditions']) && !array_intersect($conditions, $step['conditions'])) {
+            $this->logger->debug(
+                sprintf(
+                    'Step: %s - skipped because run %s [%s] not met.',
+                    $name,
+                    (1 === count($step['conditions'])) ? 'condition' : 'conditions',
+                    implode(', ', $step['conditions'])
+                )
+            );
+            return [];
         }
 
         if (!empty($step['depends'])) {
-            $allDependenciesMet = count(array_intersect($metDependencies, $step['depends'])) == count($step['depends']);
+            $allDependenciesMet = count(array_intersect($metDependencies, $step['depends'])) === count($step['depends']);
             if (!$allDependenciesMet) {
                 $this->logger->debug(
                     sprintf(
                         'Step: %s - skipped because %s [%s] not deployed.',
                         $name,
-                        (1 == count($step['depends'])) ? 'dependency' : 'dependencies',
+                        (1 === count($step['depends'])) ? 'dependency' : 'dependencies',
                         implode(', ', $step['depends'])
                     )
                 );
@@ -590,17 +497,11 @@ class PlanRunner implements LoggerAwareInterface
         return $step['provides'] ?? [];
     }
 
-    /**
-     * @param string $planPath
-     */
     public function setPlanPath(string $planPath)
     {
         $this->planPath = $planPath;
     }
 
-    /**
-     * @inheritdoc
-     */
     public function setLogger(LoggerInterface $logger): void
     {
         $this->logger = $logger;
@@ -631,39 +532,32 @@ class PlanRunner implements LoggerAwareInterface
 
     /**
      * rmdir() will not remove the dir if it is not empty
-     *
-     * @param string $path
-     *
-     * @return void
      */
     private function removePath(string $path): void
     {
         if (false !== strpos($path, '*')) {
             $paths = glob($path);
+            /** @noinspection SuspiciousLoopInspection */
             foreach ($paths as $path) {
                 $this->removePath($path);
             }
-        } else {
-            if (is_dir($path)) {
-                $iterator = new \RecursiveDirectoryIterator($path);
-                $iterator = new \RecursiveIteratorIterator($iterator, \RecursiveIteratorIterator::CHILD_FIRST);
-                /** @var \SplFileInfo $file */
-                foreach ($iterator as $file) {
-                    if ('.' === $file->getBasename() || '..' === $file->getBasename()) {
-                        continue;
-                    }
-                    if ($file->isLink() || $file->isFile()) {
-                        unlink($file->getPathname());
-                    } else {
-                        rmdir($file->getPathname());
-                    }
+        } elseif (is_dir($path)) {
+            $iterator = new RecursiveDirectoryIterator($path);
+            $iterator = new RecursiveIteratorIterator($iterator, RecursiveIteratorIterator::CHILD_FIRST);
+            /** @var SplFileInfo $file */
+            foreach ($iterator as $file) {
+                if ('.' === $file->getBasename() || '..' === $file->getBasename()) {
+                    continue;
                 }
-                rmdir($path);
-            } else {
-                if (is_file($path)) {
-                    unlink($path);
+                if ($file->isLink() || $file->isFile()) {
+                    unlink($file->getPathname());
+                } else {
+                    rmdir($file->getPathname());
                 }
             }
+            rmdir($path);
+        } elseif (is_file($path)) {
+            unlink($path);
         }
     }
 }

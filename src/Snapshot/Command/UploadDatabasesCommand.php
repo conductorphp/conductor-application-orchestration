@@ -5,59 +5,37 @@ namespace ConductorAppOrchestration\Snapshot\Command;
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\Config\ApplicationConfigAwareInterface;
 use ConductorAppOrchestration\Exception;
-use ConductorAppOrchestration\FileLayoutInterface;
 use ConductorCore\Database\DatabaseImportExportAdapterManager;
 use ConductorCore\Database\DatabaseImportExportAdapterManagerAwareInterface;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\Filesystem\MountManager\MountManagerAwareInterface;
+use League\Flysystem\FilesystemException;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
-/**
- * Class UploadDatabasesCommand
- *
- * @package ConductorAppOrchestration\Snapshot\Command
- */
 class UploadDatabasesCommand
     implements SnapshotCommandInterface, ApplicationConfigAwareInterface, MountManagerAwareInterface,
-               DatabaseImportExportAdapterManagerAwareInterface, LoggerAwareInterface
+    DatabaseImportExportAdapterManagerAwareInterface, LoggerAwareInterface
 {
-    /**
-     * @var ApplicationConfig
-     */
-    private $applicationConfig;
-    /**
-     * @var MountManager
-     */
-    private $mountManager;
-    /**
-     * @var DatabaseImportExportAdapterManager
-     */
-    private $databaseImportExportAdapterManager;
-
-    /**
-     * @var LoggerInterface
-     */
-    private $logger;
+    private ApplicationConfig $applicationConfig;
+    private MountManager $mountManager;
+    private DatabaseImportExportAdapterManager $databaseImportExportAdapterManager;
+    private LoggerInterface $logger;
 
     public function __construct()
     {
         $this->logger = new NullLogger();
     }
 
-    /**
-     * @inheritdoc
-     */
     public function run(
         string $snapshotName,
         string $snapshotPath,
-        bool $includeDatabases = true,
-        bool $includeAssets = true,
-        array $assetSyncConfig = [],
-        array $options = null
-    ): ?string
-    {
+        bool   $includeDatabases = true,
+        bool   $includeAssets = true,
+        array  $assetSyncConfig = [],
+        ?array  $options = null
+    ): ?string {
         if (!$includeDatabases) {
             return null;
         }
@@ -101,48 +79,30 @@ class UploadDatabasesCommand
                 );
                 $targetPath = "$snapshotPath/$snapshotName/databases/$databaseName."
                     . $databaseImportExportAdapter::getFileExtension();
-                $result = $this->mountManager->putFile("local://$filename", $targetPath);
-                if ($result === false) {
-                    throw new Exception\RuntimeException(sprintf(
-                        'Failed to push database export "%s" to "%s".',
-                        $filename,
-                        $targetPath
-                    ));
-                }
+                $this->logger->debug("Copying to \"$targetPath\".");
+                $this->mountManager->copy("local://$filename", $targetPath);
             }
         }
 
         return null;
     }
 
-    /**
-     * @inheritdoc
-     */
     public function setApplicationConfig(ApplicationConfig $applicationConfig): void
     {
         $this->applicationConfig = $applicationConfig;
     }
 
-    /**
-     * @inheritdoc
-     */
     public function setMountManager(MountManager $mountManager): void
     {
         $this->mountManager = $mountManager;
     }
 
-    /**
-     * @inheritdoc
-     */
     public function setDatabaseImportExportAdapterManager(
         DatabaseImportExportAdapterManager $databaseImportExportAdapterManager
-    ) {
+    ): void {
         $this->databaseImportExportAdapterManager = $databaseImportExportAdapterManager;
     }
 
-    /**
-     * @inheritdoc
-     */
     public function setLogger(LoggerInterface $logger): void
     {
         $this->logger = $logger;

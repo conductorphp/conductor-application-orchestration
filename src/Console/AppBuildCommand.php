@@ -1,7 +1,4 @@
 <?php
-/**
- * @author Kirk Madera <kirk.madera@rmgmedia.com>
- */
 
 namespace ConductorAppOrchestration\Console;
 
@@ -23,38 +20,17 @@ class AppBuildCommand extends Command
 {
     use MonologConsoleHandlerAwareTrait;
 
-    /**
-     * @var ApplicationConfig
-     */
-    private $applicationConfig;
-    /**
-     * @var ApplicationBuilder
-     */
-    private $applicationBuilder;
-    /**
-     * @var MountManager
-     */
-    private $mountManager;
-    /**
-     * @var LoggerInterface
-     */
-    private $logger;
+    private ApplicationConfig $applicationConfig;
+    private ApplicationBuilder $applicationBuilder;
+    private MountManager $mountManager;
+    private LoggerInterface $logger;
 
-    /**
-     * AppBuildCommand constructor.
-     *
-     * @param ApplicationConfig    $applicationConfig
-     * @param ApplicationBuilder   $applicationBuilder
-     * @param MountManager         $mountManager
-     * @param LoggerInterface|null $logger
-     * @param string|null          $name
-     */
     public function __construct(
-        ApplicationConfig $applicationConfig,
+        ApplicationConfig  $applicationConfig,
         ApplicationBuilder $applicationBuilder,
-        MountManager $mountManager,
-        LoggerInterface $logger = null,
-        string $name = null
+        MountManager       $mountManager,
+        LoggerInterface    $logger = null,
+        string             $name = null
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->applicationBuilder = $applicationBuilder;
@@ -66,7 +42,7 @@ class AppBuildCommand extends Command
         parent::__construct($name);
     }
 
-    protected function configure()
+    protected function configure(): void
     {
         $filesystemPrefixes = $this->mountManager->getFilesystemPrefixes();
         $this->setName('app:build')
@@ -109,7 +85,7 @@ class AppBuildCommand extends Command
             );
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $workingDir = $input->getOption('working-dir');
 
@@ -124,7 +100,7 @@ class AppBuildCommand extends Command
             );
 
             if (!$helper->ask($input, $output, $question)) {
-                return;
+                return self::SUCCESS;
             }
         }
 
@@ -138,21 +114,19 @@ class AppBuildCommand extends Command
         $buildId = $this->getBuildId($input, $repoReference, $buildPlan);
         $buildPath = $input->getOption('build-path');
 
+        $this->mountManager->setWorkingDirectory(getcwd());
+        [$prefix, $path] = $this->mountManager->getPrefixAndPath($buildPath);
+        $buildPath = "$prefix://$path";
+
         $appName = $this->applicationConfig->getAppName();
         $this->logger->info("Building application \"$appName\".");
         $this->applicationBuilder->build($buildPlan, $repoReference, $buildId, $buildPath);
         $this->logger->info("<info>Application \"$appName\" build complete!</info>");
         $this->logger->info("Build ID: $buildId");
         $output->write($buildId);
-        return 0;
+        return self::SUCCESS;
     }
 
-    /**
-     * @param InputInterface $input
-     * @param string $repoReference
-     * @param string $buildPlan
-     * @return string
-     */
     private function getBuildId(InputInterface $input, string $repoReference, string $buildPlan): string
     {
         $buildId = $input->getArgument('build-id');
@@ -169,9 +143,7 @@ class AppBuildCommand extends Command
             . date('YmdHisO'); # 19 characters
 
         // Replace sets of characters outside of whitelist with a dash
-        $buildId = preg_replace('%[^a-z0-9+]+%i', '-', $buildId);
-
-        return $buildId;
+        return preg_replace('%[^a-z0-9+]+%i', '-', $buildId);
     }
 
 }

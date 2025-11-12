@@ -1,13 +1,9 @@
 <?php
-/**
- * @author Kirk Madera <kirk.madera@rmgmedia.com>
- */
 
 namespace ConductorAppOrchestration\Deploy;
 
-use ConductorAppOrchestration\Exception;
 use ConductorAppOrchestration\Config\ApplicationConfig;
-use ConductorAppOrchestration\FileLayoutInterface;
+use ConductorAppOrchestration\Exception;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\Repository\RepositoryAdapterInterface;
 use ConductorCore\Shell\Adapter\ShellAdapterInterface;
@@ -15,49 +11,20 @@ use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
-/**
- * Class ApplicationCodeDeployer
- *
- * @package ConductorAppOrchestration
- */
 class ApplicationCodeDeployer
 {
-    /**
-     * @var ApplicationConfig
-     */
-    private $applicationConfig;
-    /**
-     * @var RepositoryAdapterInterface
-     */
-    private $repositoryAdapter;
-    /**
-     * @var ShellAdapterInterface
-     */
-    private $shellAdapter;
-    /**
-     * @var MountManager
-     */
-    private $mountManager;
-    /**
-     * @var LoggerInterface
-     */
-    protected $logger;
+    private ApplicationConfig $applicationConfig;
+    private RepositoryAdapterInterface $repositoryAdapter;
+    private ShellAdapterInterface $shellAdapter;
+    private MountManager $mountManager;
+    protected LoggerInterface $logger;
 
-    /**
-     * ApplicationCodeDeployer constructor.
-     *
-     * @param ApplicationConfig          $applicationConfig
-     * @param RepositoryAdapterInterface $repositoryAdapter
-     * @param ShellAdapterInterface      $shellAdapter
-     * @param MountManager               $mountManager
-     * @param LoggerInterface|null       $logger
-     */
     public function __construct(
-        ApplicationConfig $applicationConfig,
+        ApplicationConfig          $applicationConfig,
         RepositoryAdapterInterface $repositoryAdapter,
-        ShellAdapterInterface $shellAdapter,
-        MountManager $mountManager,
-        LoggerInterface $logger = null
+        ShellAdapterInterface      $shellAdapter,
+        MountManager               $mountManager,
+        LoggerInterface            $logger = null
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->repositoryAdapter = $repositoryAdapter;
@@ -70,16 +37,12 @@ class ApplicationCodeDeployer
     }
 
     /**
-     * @param string $buildId
-     * @param string $buildPath
-     * @param string $repoReference
-     *
      * @throws Exception\RuntimeException if app skeleton has not yet been installed
      */
     public function deployCode(
-        string $buildId = null,
-        string $buildPath = null,
-        string $repoReference = null
+        ?string $buildId = null,
+        ?string $buildPath = null,
+        ?string $repoReference = null
     ): void {
         if (!($buildId || $repoReference)) {
             throw new Exception\BadMethodCallException('$buildId or $repoReference must be set.');
@@ -92,9 +55,6 @@ class ApplicationCodeDeployer
         }
     }
 
-    /**
-     * @param string $repoReference
-     */
     private function deployFromRepo(string $repoReference): void
     {
         $codePath = $this->applicationConfig->getCodePath();
@@ -107,10 +67,6 @@ class ApplicationCodeDeployer
         $this->repositoryAdapter->pull();
     }
 
-    /**
-     * @param string      $buildId
-     * @param string      $buildPath
-     */
     private function deployFromBuild(string $buildId, string $buildPath): void
     {
         if (!$buildPath) {
@@ -133,9 +89,6 @@ class ApplicationCodeDeployer
         $this->shellAdapter->runShellCommand($command);
     }
 
-    /**
-     * @inheritdoc
-     */
     public function setLogger(LoggerInterface $logger): void
     {
         $this->mountManager->setLogger($logger);

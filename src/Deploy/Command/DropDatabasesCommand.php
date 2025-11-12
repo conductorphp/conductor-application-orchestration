@@ -11,50 +11,32 @@ use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
-/**
- * Class DropDatabasesCommand
- *
- * @package ConductorAppOrchestration\Deploy\Command
- */
 class DropDatabasesCommand
     implements DeployCommandInterface, ApplicationConfigAwareInterface, DatabaseAdapterManagerAwareInterface,
-               LoggerAwareInterface
+    LoggerAwareInterface
 {
-    /**
-     * @var ApplicationConfig
-     */
-    private $applicationConfig;
-    /**
-     * @var DatabaseAdapterManager
-     */
-    private $databaseAdapterManager;
-    /**
-     * @var LoggerInterface
-     */
-    private $logger;
+    private ApplicationConfig $applicationConfig;
+    private DatabaseAdapterManager $databaseAdapterManager;
+    private LoggerInterface $logger;
 
     public function __construct()
     {
         $this->logger = new NullLogger();
     }
 
-    /**
-     * @inheritdoc
-     */
     public function run(
-        string $codeRoot,
-        string $buildId = null,
-        string $buildPath = null,
-        string $repoReference = null,
-        string $snapshotName = null,
-        string $snapshotPath = null,
-        bool $includeAssets = true,
-        array $assetSyncConfig = [],
-        bool $includeDatabases = true,
-        bool $allowFullRollback = false,
-        array $options = null
-    ): ?string
-    {
+        string  $codeRoot,
+        ?string $buildId = null,
+        ?string $buildPath = null,
+        ?string $repoReference = null,
+        ?string $snapshotName = null,
+        ?string $snapshotPath = null,
+        bool    $includeAssets = true,
+        array   $assetSyncConfig = [],
+        bool    $includeDatabases = true,
+        bool    $allowFullRollback = false,
+        ?array  $options = null
+    ): ?string {
         if (!$includeDatabases) {
             $this->logger->notice(
                 'Add condition "databases" to this step in your deployment plan. This step can only be run when deploying '
@@ -90,26 +72,17 @@ class DropDatabasesCommand
         return null;
     }
 
-    /**
-     * @inheritdoc
-     */
     public function setApplicationConfig(ApplicationConfig $applicationConfig): void
     {
         $this->applicationConfig = $applicationConfig;
     }
 
-    /**
-     * @inheritdoc
-     */
     public function setDatabaseAdapterManager(
         DatabaseAdapterManager $databaseAdapterManager
     ): void {
         $this->databaseAdapterManager = $databaseAdapterManager;
     }
 
-    /**
-     * @inheritdoc
-     */
     public function setLogger(LoggerInterface $logger): void
     {
         $this->logger = $logger;

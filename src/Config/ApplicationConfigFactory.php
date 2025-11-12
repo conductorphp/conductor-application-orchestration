@@ -3,35 +3,18 @@
 namespace ConductorAppOrchestration\Config;
 
 use ConductorAppOrchestration\Exception;
-use Interop\Container\ContainerInterface;
-use Interop\Container\Exception\ContainerException;
-use Laminas\ServiceManager\Exception\ServiceNotCreatedException;
-use Laminas\ServiceManager\Exception\ServiceNotFoundException;
 use Laminas\ServiceManager\Factory\FactoryInterface;
+use Psr\Container\ContainerInterface;
 
 class ApplicationConfigFactory implements FactoryInterface
 {
+    private const PLATFORM_CUSTOM = 'custom';
 
-    const PLATFORM_CUSTOM = 'custom';
-
-    /**
-     * Create an object
-     *
-     * @param  ContainerInterface $container
-     * @param  string             $requestedName
-     * @param  null|array         $options
-     *
-     * @return object
-     * @throws ServiceNotFoundException if unable to resolve the service.
-     * @throws ServiceNotCreatedException if an exception is raised when
-     *     creating a service.
-     * @throws ContainerException if any other error occurs
-     */
-    public function __invoke(ContainerInterface $container, $requestedName, array $options = null)
+    public function __invoke(ContainerInterface $container, $requestedName, ?array $options = null): ApplicationConfig
     {
         $config = $container->get('config');
 
-        $zendExpressiveRoot = realpath(__DIR__ . '/../../../../..');
+        $zendExpressiveRoot = dirname(__DIR__, 5);
         $environment = $config['environment'] ?? 'development';
         $sourceFilePathStack = [
             $zendExpressiveRoot . '/config/app/environments/' . $environment . '/files',
@@ -52,7 +35,7 @@ class ApplicationConfigFactory implements FactoryInterface
             unset($application['environments']);
 
             // Merge in platform config
-            if (self::PLATFORM_CUSTOM  != $application['platform']
+            if (self::PLATFORM_CUSTOM !== $application['platform']
                 && !isset($config['application_orchestration']['platforms'][$application['platform']])
             ) {
                 throw new Exception\RuntimeException(sprintf('Platform configured as "%s", but there '
@@ -86,6 +69,5 @@ class ApplicationConfigFactory implements FactoryInterface
 
         return new ApplicationConfig($applicationConfig);
     }
-
 }
 

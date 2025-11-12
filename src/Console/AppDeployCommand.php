@@ -1,16 +1,13 @@
 <?php
-/**
- * @author Kirk Madera <kirk.madera@rmgmedia.com>
- */
 
 namespace ConductorAppOrchestration\Console;
 
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\Deploy\ApplicationDeployer;
 use ConductorAppOrchestration\Exception;
-use ConductorAppOrchestration\FileLayoutInterface;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\MonologConsoleHandlerAwareTrait;
+use FilesystemIterator;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Console\Command\Command;
@@ -18,44 +15,22 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
-use FilesystemIterator;
 
 class AppDeployCommand extends Command
 {
     use MonologConsoleHandlerAwareTrait;
 
-    /**
-     * @var ApplicationConfig
-     */
-    private $applicationConfig;
-    /**
-     * @var ApplicationDeployer
-     */
-    private $applicationDeployer;
-    /**
-     * @var MountManager
-     */
-    private $mountManager;
-    /**
-     * @var LoggerInterface
-     */
-    private $logger;
+    private ApplicationConfig $applicationConfig;
+    private ApplicationDeployer $applicationDeployer;
+    private MountManager $mountManager;
+    private LoggerInterface $logger;
 
-    /**
-     * AppDeployCommand constructor.
-     *
-     * @param ApplicationConfig    $applicationConfig
-     * @param ApplicationDeployer  $applicationDeployer
-     * @param MountManager         $mountManager
-     * @param LoggerInterface|null $logger
-     * @param string|null          $name
-     */
     public function __construct(
-        ApplicationConfig $applicationConfig,
+        ApplicationConfig   $applicationConfig,
         ApplicationDeployer $applicationDeployer,
-        MountManager $mountManager,
-        LoggerInterface $logger = null,
-        string $name = null
+        MountManager        $mountManager,
+        LoggerInterface     $logger = null,
+        string              $name = null
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->applicationDeployer = $applicationDeployer;
@@ -67,12 +42,24 @@ class AppDeployCommand extends Command
         parent::__construct($name);
     }
 
-    protected function configure()
+    protected function configure(): void
     {
         $filesystemPrefixes = $this->mountManager->getFilesystemPrefixes();
         $this->setName('app:deploy')
             ->setDescription('Deploy application build and/or snapshot or just run a deploy plan.')
             ->setHelp("This command deploys an application build and/or snapshot or just runs a deploy plan.")
+            ->addOption(
+                'skeleton',
+                null,
+                InputOption::VALUE_NONE,
+                'Deploy the skeleton only.'
+            )
+            ->addOption(
+                'refresh',
+                null,
+                InputOption::VALUE_NONE,
+                'Trigger a refresh which redeploys skeleton, existing code, and triggers code-dependent scripts.'
+            )
             ->addOption(
                 'plan',
                 null,
@@ -151,12 +138,6 @@ class AppDeployCommand extends Command
                 . 'backup databases.'
             )
             ->addOption(
-                'skeleton',
-                null,
-                InputOption::VALUE_NONE,
-                'Deploy the skeleton only.'
-            )
-            ->addOption(
                 'clean',
                 null,
                 InputOption::VALUE_NONE,
@@ -183,12 +164,13 @@ class AppDeployCommand extends Command
             );
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        $force = $input->getOption('force');
         $workingDir = $input->getOption('working-dir');
 
         // Confirm continue if working directory is not empty since it will be cleared
-        if (is_dir($workingDir) && (new FilesystemIterator($workingDir))->valid()) {
+        if (!$force && is_dir($workingDir) && (new FilesystemIterator($workingDir))->valid()) {
             $helper = $this->getHelper('question');
             $question = new ConfirmationQuestion(
                 sprintf(
@@ -198,7 +180,7 @@ class AppDeployCommand extends Command
             );
 
             if (!$helper->ask($input, $output, $question)) {
-                return;
+                return self::SUCCESS;
             }
         }
 
@@ -208,7 +190,7 @@ class AppDeployCommand extends Command
         $this->applicationDeployer->setPlanPath($workingDir);
         $appName = $this->applicationConfig->getAppName();
 
-        if ($input->getOption('clean') && !$input->getOption('force')) {
+        if (!$force && $input->getOption('clean')) {
             $helper = $this->getHelper('question');
             $question = new ConfirmationQuestion(
                 '<comment>Running with --clean may be a destructive action. Are you sure you want to '
@@ -216,7 +198,7 @@ class AppDeployCommand extends Command
             );
 
             if (!$helper->ask($input, $output, $question)) {
-                return null;
+                return self::SUCCESS;
             }
         }
 
@@ -245,12 +227,13 @@ class AppDeployCommand extends Command
             $this->applicationDeployer->deploySkeleton(
                 $input->getOption('plan'),
                 $input->getOption('clean'),
-                $input->getOption('force')
+                $force,
             );
         } else {
             $this->applicationDeployer->deploy(
                 $input->getOption('plan'),
                 $input->getOption('skeleton'),
+                $input->getOption('refresh'),
                 $input->getOption('build-id'),
                 $input->getOption('build-path'),
                 $input->getOption('repo-reference'),
@@ -265,16 +248,13 @@ class AppDeployCommand extends Command
                 $input->getOption('allow-full-rollback'),
                 $input->getOption('clean'),
                 $input->getOption('rollback'),
-                $input->getOption('force')
+                $force,
             );
         }
         $this->logger->info("<info>Application \"$appName\" deployment completed!</info>");
-        return 0;
+        return self::SUCCESS;
     }
 
-    /**
-     * @param InputInterface $input
-     */
     private function validateInput(InputInterface $input): void
     {
         if ($input->getOption('build-id') && $input->getOption('repo-reference')) {
@@ -285,7 +265,7 @@ class AppDeployCommand extends Command
 
         if ($input->getOption('skeleton') && ($input->getOption('snapshot') || $input->getOption('build-id') || $input->getOption('repo-reference'))) {
             throw new Exception\RuntimeException(
-                'Options --snapshot, --build-id, and --repo-reference may not be set with --skeleton.'
+                'Options --snapshot, --build-id, and --repo-reference may not be set with --skeleton. Use --refresh instead.'
             );
         }
 
@@ -297,14 +277,7 @@ class AppDeployCommand extends Command
         }
     }
 
-    /**
-     * @param InputInterface $input
-     * @param                $includeAssets
-     * @param                $includeDatabases
-     *
-     * @return string
-     */
-    private function getDeploymentDescription(InputInterface $input, $includeAssets, $includeDatabases): string
+    private function getDeploymentDescription(InputInterface $input, bool $includeAssets, bool $includeDatabases): string
     {
         if ($input->getOption('skeleton')) {
             $message = 'Deploying skeleton only.';

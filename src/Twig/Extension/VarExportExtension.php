@@ -9,14 +9,14 @@ use Twig\TwigFilter;
 
 class VarExportExtension extends AbstractExtension
 {
-    public function getFilters()
+    public function getFilters(): array
     {
         return [
             new TwigFilter('var_export', [$this, 'varExport']),
         ];
     }
 
-    public function varExport($data)
+    public function varExport($data): ?string
     {
         return var_export($data, true);
     }
