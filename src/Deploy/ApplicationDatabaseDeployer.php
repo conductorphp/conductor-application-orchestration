@@ -113,6 +113,7 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
             if (!empty($database['post_import_scripts'])) {
                 foreach ($database['post_import_scripts'] as $scriptIdentifier) {
                     $script = null;
+                    $sql = '';
                     $scriptName = $scriptIdentifier;
 
                     // Check if this is a class name (contains backslash)
@@ -175,6 +176,7 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
                     $sql = trim($sql);
                     if ($sql) {
                         $this->logger->debug("Running SQL from post import script \"$scriptName\".");
+                        $this->logger->debug($sql);
                         $databaseAdapter->run(
                             $sql,
                             $databaseAlias
