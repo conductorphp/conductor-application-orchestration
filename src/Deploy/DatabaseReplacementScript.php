@@ -77,7 +77,10 @@ class DatabaseReplacementScript implements PostImportScriptInterface
      * - from: Pattern to search for
      * - to: Replacement value (supports ${VAR} interpolation)
      * - regex: Optional boolean for regex mode (default: false)
-     * - targets: Array of 'table.column' strings
+     * - targets: Array of target strings in one of these formats:
+     *   - 'table.column' - Replace in entire column
+     *   - 'table.column.json.path' - Replace in specific JSON field
+     *   - 'table.column.*.subfield' - Replace in JSON field across all wildcard keys
      *
      * Interpolates environment variables and flattens into array of operations.
      */
@@ -117,18 +120,37 @@ class DatabaseReplacementScript implements PostImportScriptInterface
                     continue;
                 }
 
-                // Split table.column
-                $parts = explode('.', $target, 2);
-                if (count($parts) !== 2) {
-                    $logger->warning("Invalid target format for replacement '{$replacementName}': '{$target}', expected 'table.column'");
+                // Split table.column or table.column.json.path
+                $parts = explode('.', $target);
+                if (count($parts) < 2) {
+                    $logger->warning("Invalid target format for replacement '{$replacementName}': '{$target}', expected 'table.column' or 'table.column.json.path'");
                     continue;
                 }
 
-                [$tableName, $columnName] = $parts;
+                $tableName = $parts[0];
+                $columnName = $parts[1];
+                $jsonPath = null;
+                $wildcardPosition = null;
+
+                // Check if this is a JSON path target (has more than 2 parts)
+                if (count($parts) > 2) {
+                    $jsonPathParts = array_slice($parts, 2);
+                    $jsonPath = implode('.', $jsonPathParts);
+
+                    // Check for wildcard in JSON path
+                    foreach ($jsonPathParts as $index => $part) {
+                        if ($part === '*') {
+                            $wildcardPosition = $index;
+                            break;
+                        }
+                    }
+                }
 
                 $operations[] = [
                     'table' => $tableName,
                     'column' => $columnName,
+                    'json_path' => $jsonPath,
+                    'wildcard_position' => $wildcardPosition,
                     'name' => $replacementName,
                     'from' => $config['from'],
                     'to' => $to,
@@ -177,13 +199,16 @@ class DatabaseReplacementScript implements PostImportScriptInterface
         foreach ($operations as $operation) {
             $tableName = $operation['table'];
             $columnName = $operation['column'];
+            $jsonPath = $operation['json_path'] ?? null;
+            $wildcardPosition = $operation['wildcard_position'] ?? null;
             $name = $operation['name'];
             $from = $operation['from'];
             $to = $operation['to'];
             $regex = $operation['regex'];
 
-            $logger->debug("Processing replacement: {$tableName}.{$columnName}.{$name}");
-            $sqlStatements[] = "-- Replacement: {$tableName}.{$columnName}.{$name}";
+            $targetDescription = $jsonPath ? "{$tableName}.{$columnName}.{$jsonPath}" : "{$tableName}.{$columnName}";
+            $logger->debug("Processing replacement: {$targetDescription}.{$name}");
+            $sqlStatements[] = "-- Replacement: {$targetDescription}.{$name}";
 
             // Validate table exists
             if (!$this->tableExists($databaseAdapter, $databaseName, $tableName)) {
@@ -201,7 +226,37 @@ class DatabaseReplacementScript implements PostImportScriptInterface
                 continue;
             }
 
-            // Generate appropriate SQL based on regex flag
+            // Handle JSON path replacements
+            if ($jsonPath !== null) {
+                if ($wildcardPosition !== null) {
+                    // Wildcard JSON path replacement
+                    $sql = $this->generateWildcardJsonReplacementSql(
+                        $tableName,
+                        $columnName,
+                        $jsonPath,
+                        $wildcardPosition,
+                        $from,
+                        $to,
+                        $regex
+                    );
+                } else {
+                    // Specific JSON path replacement
+                    $sql = $this->generateSpecificJsonReplacementSql(
+                        $tableName,
+                        $columnName,
+                        $jsonPath,
+                        $from,
+                        $to,
+                        $regex
+                    );
+                }
+                $sqlStatements[] = $sql;
+                $sqlStatements[] = "";
+                $generatedStatements++;
+                continue;
+            }
+
+            // Generate appropriate SQL based on regex flag for whole column replacement
             if ($regex) {
                 // Regex replacement using nested REGEXP_REPLACE to handle both plain and JSON-escaped values
                 // JSON-escaped pattern is processed first to avoid double-escaping issues
@@ -271,6 +326,162 @@ class DatabaseReplacementScript implements PostImportScriptInterface
         // So we'll just assume the column exists if the table exists
         // The SQL will fail gracefully if the column doesn't exist
         return true;
+    }
+
+    /**
+     * Generate SQL for specific JSON path replacement
+     * Example: blog_post.attributes_view.default.image_url
+     */
+    private function generateSpecificJsonReplacementSql(
+        string $tableName,
+        string $columnName,
+        string $jsonPath,
+        string $from,
+        string $to,
+        bool $regex
+    ): string {
+        // Convert dot notation to JSON path: "default.image_url" -> "$.default.image_url"
+        $mysqlJsonPath = '$.' . $jsonPath;
+
+        if ($regex) {
+            // Use REGEXP_REPLACE on the extracted JSON value
+            return sprintf(
+                "UPDATE `%s` SET `%s` = JSON_SET(`%s`, %s, REGEXP_REPLACE(JSON_UNQUOTE(JSON_EXTRACT(`%s`, %s)), %s, %s)) WHERE JSON_EXTRACT(`%s`, %s) IS NOT NULL AND JSON_UNQUOTE(JSON_EXTRACT(`%s`, %s)) REGEXP %s;",
+                $tableName,
+                $columnName,
+                $columnName,
+                $this->escapeString($mysqlJsonPath),
+                $columnName,
+                $this->escapeString($mysqlJsonPath),
+                $this->escapeString($from),
+                $this->escapeString($to),
+                $columnName,
+                $this->escapeString($mysqlJsonPath),
+                $columnName,
+                $this->escapeString($mysqlJsonPath),
+                $this->escapeString($from)
+            );
+        } else {
+            // Use REPLACE on the extracted JSON value
+            return sprintf(
+                "UPDATE `%s` SET `%s` = JSON_SET(`%s`, %s, REPLACE(JSON_UNQUOTE(JSON_EXTRACT(`%s`, %s)), %s, %s)) WHERE JSON_EXTRACT(`%s`, %s) IS NOT NULL AND JSON_UNQUOTE(JSON_EXTRACT(`%s`, %s)) LIKE %s;",
+                $tableName,
+                $columnName,
+                $columnName,
+                $this->escapeString($mysqlJsonPath),
+                $columnName,
+                $this->escapeString($mysqlJsonPath),
+                $this->escapeString($from),
+                $this->escapeString($to),
+                $columnName,
+                $this->escapeString($mysqlJsonPath),
+                $columnName,
+                $this->escapeString($mysqlJsonPath),
+                $this->escapeString("%{$from}%")
+            );
+        }
+    }
+
+    /**
+     * Generate SQL for wildcard JSON path replacement
+     * Example: blog_post.attributes_view.*.image_url
+     *
+     * Uses regex to match the field pattern within the JSON structure,
+     * treating the JSON column as a string. This is much faster than JSON_TABLE
+     * and works with any number of keys at the wildcard level.
+     */
+    private function generateWildcardJsonReplacementSql(
+        string $tableName,
+        string $columnName,
+        string $jsonPath,
+        int $wildcardPosition,
+        string $from,
+        string $to,
+        bool $regex
+    ): string {
+        // Split the path by wildcard
+        $pathParts = explode('.', $jsonPath);
+        $afterWildcard = array_slice($pathParts, $wildcardPosition + 1);
+
+        if (empty($afterWildcard)) {
+            // Wildcard at the end (e.g., attributes_view.*) - just match any value under that key
+            // This is rare, but we'll handle it by doing a whole column replacement
+            if ($regex) {
+                return sprintf(
+                    "UPDATE `%s` SET `%s` = REGEXP_REPLACE(`%s`, %s, %s) WHERE `%s` REGEXP %s;",
+                    $tableName,
+                    $columnName,
+                    $columnName,
+                    $this->escapeString($from),
+                    $this->escapeString($to),
+                    $columnName,
+                    $this->escapeString($from)
+                );
+            } else {
+                return sprintf(
+                    "UPDATE `%s` SET `%s` = REPLACE(`%s`, %s, %s) WHERE `%s` LIKE %s;",
+                    $tableName,
+                    $columnName,
+                    $columnName,
+                    $this->escapeString($from),
+                    $this->escapeString($to),
+                    $columnName,
+                    $this->escapeString("%{$from}%")
+                );
+            }
+        }
+
+        // Build the field name we're targeting (e.g., "render_markup" from "*.render_markup")
+        $targetField = $afterWildcard[0];
+
+        // Build a regex pattern that matches the field within JSON structure
+        // Matches: "render_markup"\s*:\s*"[^"]*<pattern>[^"]*"
+        // This will match the field regardless of which parent key it's under
+
+        if ($regex) {
+            // User's pattern is already a regex, we need to embed it within our JSON structure pattern
+            // Pattern: ("field"\s*:\s*"[^"]*)(user_pattern)([^"]*")
+            // Replacement: \1user_replacement\3
+            $jsonStructurePattern = sprintf(
+                '("%s"\\\\s*:\\\\s*"[^"]*?)(%s)([^"]*")',
+                preg_quote($targetField, '/'),
+                $from  // User's regex pattern
+            );
+
+            $jsonStructureReplacement = sprintf('\\1%s\\3', $to);
+
+            // Build WHERE clause to check if pattern exists in the JSON
+            $wherePattern = sprintf(
+                '"%s"\\\\s*:\\\\s*"[^"]*%s',
+                preg_quote($targetField, '/'),
+                $from
+            );
+
+            return sprintf(
+                "UPDATE `%s` SET `%s` = REGEXP_REPLACE(`%s`, %s, %s) WHERE `%s` REGEXP %s;",
+                $tableName,
+                $columnName,
+                $columnName,
+                $this->escapeString($jsonStructurePattern),
+                $this->escapeString($jsonStructureReplacement),
+                $columnName,
+                $this->escapeString($wherePattern)
+            );
+        } else {
+            // Simple string replacement within the JSON
+            // Just replace the literal string anywhere in the column
+            // Since it's within a JSON field, we know it will be properly scoped
+            return sprintf(
+                "UPDATE `%s` SET `%s` = REPLACE(`%s`, %s, %s) WHERE `%s` LIKE %s;",
+                $tableName,
+                $columnName,
+                $columnName,
+                $this->escapeString($from),
+                $this->escapeString($to),
+                $columnName,
+                $this->escapeString("%{$from}%")
+            );
+        }
     }
 
     private function escapeString(string $value): string
