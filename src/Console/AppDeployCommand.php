@@ -112,16 +112,17 @@ class AppDeployCommand extends Command
                 'Include assets when deploying a snapshot.'
             )
             ->addOption(
-                'asset-batch-size',
+                'asset-workers',
                 null,
                 InputOption::VALUE_REQUIRED,
-                'Batch size for asset sync when deploying a snapshot.',
-                100
-            )->addOption(
-                'asset-max-concurrency',
+                'Number of concurrent workers to process assets.',
+                4
+            )
+            ->addOption(
+                'asset-files-per-worker',
                 null,
                 InputOption::VALUE_REQUIRED,
-                'Max concurrency of assets to deploy at one time.',
+                'Maximum number of files each worker will process.',
                 10
             )
             ->addOption(
@@ -161,6 +162,20 @@ class AppDeployCommand extends Command
                 InputOption::VALUE_REQUIRED,
                 'The local working directory to use during deploy process.',
                 '/tmp/.conductor/deploy'
+            )
+            ->addOption(
+                'asset-batch-size',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Batch size for asset sync when deploying a snapshot. (Deprecated: use --asset-files-per-worker)',
+                100
+            )
+            ->addOption(
+                'asset-max-concurrency',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Max concurrency of assets to deploy at one time. (Deprecated: use --asset-workers)',
+                4
             );
     }
 
@@ -230,6 +245,14 @@ class AppDeployCommand extends Command
                 $force,
             );
         } else {
+            // Handle fallback from deprecated options to new options
+            $workers = $input->getOption('asset-workers')
+                ?? $input->getOption('asset-max-concurrency')
+                ?? 4;
+            $filesPerWorker = $input->getOption('asset-files-per-worker')
+                ?? $input->getOption('asset-batch-size')
+                ?? 10;
+
             $this->applicationDeployer->deploy(
                 $input->getOption('plan'),
                 $input->getOption('skeleton'),
@@ -241,8 +264,8 @@ class AppDeployCommand extends Command
                 $input->getOption('snapshot-path'),
                 $includeAssets,
                 [
-                    'batch_size' => $input->getOption('asset-batch-size'),
-                    'max_concurrency' => $input->getOption('asset-max-concurrency'),
+                    'workers' => $workers,
+                    'files_per_worker' => $filesPerWorker,
                 ],
                 $includeDatabases,
                 $input->getOption('allow-full-rollback'),
