@@ -123,7 +123,7 @@ class AppDeployCommand extends Command
                 null,
                 InputOption::VALUE_REQUIRED,
                 'Maximum number of files each worker will process.',
-                10
+                50
             )
             ->addOption(
                 'databases',
