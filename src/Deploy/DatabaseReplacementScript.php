@@ -229,6 +229,7 @@ class DatabaseReplacementScript implements PostImportScriptInterface
                 // First replace JSON-escaped version (e.g., https:\/\/), then plain version (e.g., https://)
                 $fromJsonEscaped = $this->escapeForJson($from);
                 $toJsonEscaped = $this->escapeForJson($to);
+                $fromJsonLike = $this->escapeForJsonLike($from);
 
                 $sqlStatements[] = sprintf(
                     "UPDATE `%s` SET `%s` = REPLACE(REPLACE(`%s`, %s, %s), %s, %s) WHERE `%s` LIKE %s OR `%s` LIKE %s;",
@@ -240,7 +241,7 @@ class DatabaseReplacementScript implements PostImportScriptInterface
                     $this->escapeString($from),
                     $this->escapeString($to),
                     $columnName,
-                    $this->escapeString("%{$fromJsonEscaped}%"),
+                    $this->escapeString("%{$fromJsonLike}%"),
                     $columnName,
                     $this->escapeString("%{$from}%")
                 );
@@ -282,12 +283,30 @@ class DatabaseReplacementScript implements PostImportScriptInterface
     }
 
     /**
-     * Convert a string to its JSON-escaped equivalent
+     * Convert a string to its JSON-escaped equivalent for REPLACE operations
      * Converts: https://domain.com -> https:\/\/domain.com
+     *
+     * Two backslashes are needed for REPLACE:
+     * - The SQL string literal needs \/ to represent a literal backslash-forward-slash
+     * - This matches the JSON-escaped format in the database
      */
     private function escapeForJson(string $value): string
     {
-        return str_replace('/', '\/', $value);
+        return str_replace('/', '\\/', $value);
+    }
+
+    /**
+     * Convert a string to its JSON-escaped equivalent for LIKE patterns
+     * Converts: https://domain.com -> https:\\/\\/domain.com
+     *
+     * Four backslashes are needed in the SQL string literal for LIKE:
+     * - Two backslashes for SQL string literal escaping (\\ becomes \)
+     * - Two backslashes for LIKE pattern escaping (\\ becomes \)
+     * Result: \\\\ in SQL string -> \\ after string parsing -> \ after LIKE parsing -> matches literal \
+     */
+    private function escapeForJsonLike(string $value): string
+    {
+        return str_replace('/', '\\\\\/', $value);
     }
 
     /**
