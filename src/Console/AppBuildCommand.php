@@ -135,15 +135,15 @@ class AppBuildCommand extends Command
         }
 
         // Assuming max allowed length of 255 for a filename, truncate for sanity check
-        // 200 + 1 + 34 + 1 + 19 = 255
+        // 200 + 1 + 34 + 1 + 14 = 250
         $buildId = substr($repoReference, 0, 200)
             . '-'
             . substr($buildPlan, 0, 34)
             . '-'
-            . date('YmdHisO'); # 19 characters
+            . gmdate('YmdHis'); # 14 characters, UTC
 
         // Replace sets of characters outside of whitelist with a dash
-        return preg_replace('%[^a-z0-9+]+%i', '-', $buildId);
+        return preg_replace('%[^a-z0-9]+%i', '-', $buildId);
     }
 
 }
