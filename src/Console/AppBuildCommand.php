@@ -134,11 +134,11 @@ class AppBuildCommand extends Command
             return $buildId;
         }
 
-        // Assuming max allowed length of 255 for a filename, truncate for sanity check
-        // 200 + 1 + 34 + 1 + 14 = 250
+        // Truncate to max allowed length of 255 for a filename
+        // 200 + 1 + 39 + 1 + 14 = 255
         $buildId = substr($repoReference, 0, 200)
             . '-'
-            . substr($buildPlan, 0, 34)
+            . substr($buildPlan, 0, 39)
             . '-'
             . gmdate('YmdHis'); # 14 characters, UTC
 
