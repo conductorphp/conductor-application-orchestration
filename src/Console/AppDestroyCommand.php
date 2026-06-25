@@ -26,8 +26,8 @@ class AppDestroyCommand extends Command
     public function __construct(
         ApplicationConfig    $applicationConfig,
         ApplicationDestroyer $applicationDestroyer,
-        LoggerInterface      $logger = null,
-        string               $name = null
+        ?LoggerInterface      $logger = null,
+        ?string               $name = null
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->applicationDestroyer = $applicationDestroyer;

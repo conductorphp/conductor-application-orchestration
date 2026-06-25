@@ -29,8 +29,8 @@ class AppDeployCommand extends Command
         ApplicationConfig   $applicationConfig,
         ApplicationDeployer $applicationDeployer,
         MountManager        $mountManager,
-        LoggerInterface     $logger = null,
-        string              $name = null
+        ?LoggerInterface     $logger = null,
+        ?string              $name = null
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->applicationDeployer = $applicationDeployer;

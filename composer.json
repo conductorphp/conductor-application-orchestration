@@ -1,57 +1,58 @@
 {
-    "name": "conductor/application-orchestration",
-    "description": "Conductor Application Orchestration",
-    "type": "library",
-    "homepage": "https://github.com/conductorphp/conductor-application-orchestration",
-    "license": "Apache-2.0",
-    "authors": [
-        {
-            "name": "Kirk Madera",
-            "email": "kirk.madera@rmgmedia.com",
-            "role": "Architect"
-        }
-    ],
-    "config": {
-        "sort-packages": true
-    },
-    "require": {
-        "php": "~8.1.0|~8.2.0",
-        "conductor/core": "^2.0",
-        "twig/twig": "^3.5.1"
-    },
-    "require-dev": {
-        "laminas/laminas-coding-standard": "^2.5.0",
-        "phpunit/phpunit": "^10.0.16"
-    },
-    "suggest": {
-        "conductor/drupal-platform-support": "Adds support for the Drupal platform.",
-        "conductor/magento-1-platform-support": "Adds support for the Magento 1 platform.",
-        "conductor/magento-2-platform-support": "Adds support for the Magento 2 platform.",
-        "conductor/wordpress-platform-support": "Adds support for the Wordpress platform."
-    },
-    "autoload": {
-        "psr-4": {
-            "ConductorAppOrchestration\\": "src/"
-        }
-    },
-    "autoload-dev": {
-        "psr-4": {
-            "ConductorAppOrchestrationTest\\": "test/"
-        }
-    },
-    "extra": {
-        "laminas": {
-            "config-provider": "ConductorAppOrchestration\\ConfigProvider"
-        }
-    },
-    "scripts": {
-        "check": [
-            "@cs-check",
-            "@test"
-        ],
-        "cs-check": "phpcs",
-        "cs-fix": "phpcbf",
-        "test": "phpunit --colors=always",
-        "test-coverage": "phpunit --colors=always --coverage-clover clover.xml"
+  "name": "conductor/application-orchestration",
+  "version": "2.0.1",
+  "description": "Conductor Application Orchestration",
+  "type": "library",
+  "homepage": "https://github.com/conductorphp/conductor-application-orchestration",
+  "license": "Apache-2.0",
+  "authors": [
+    {
+      "name": "Kirk Madera",
+      "email": "kirk.madera@rmgmedia.com",
+      "role": "Architect"
     }
+  ],
+  "config": {
+    "sort-packages": true
+  },
+  "require": {
+    "php": "~8.2.0|~8.3.0|~8.4.0|~8.5.0",
+    "conductor/core": "^2.0",
+    "twig/twig": "^3.5.1"
+  },
+  "require-dev": {
+    "laminas/laminas-coding-standard": "^2.5.0",
+    "phpunit/phpunit": "^10.0.16"
+  },
+  "suggest": {
+    "conductor/drupal-platform-support": "Adds support for the Drupal platform.",
+    "conductor/magento-1-platform-support": "Adds support for the Magento 1 platform.",
+    "conductor/magento-2-platform-support": "Adds support for the Magento 2 platform.",
+    "conductor/wordpress-platform-support": "Adds support for the Wordpress platform."
+  },
+  "autoload": {
+    "psr-4": {
+      "ConductorAppOrchestration\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "ConductorAppOrchestrationTest\\": "test/"
+    }
+  },
+  "extra": {
+    "laminas": {
+      "config-provider": "ConductorAppOrchestration\\ConfigProvider"
+    }
+  },
+  "scripts": {
+    "check": [
+      "@cs-check",
+      "@test"
+    ],
+    "cs-check": "phpcs",
+    "cs-fix": "phpcbf",
+    "test": "phpunit --colors=always",
+    "test-coverage": "phpunit --colors=always --coverage-clover clover.xml"
+  }
 }

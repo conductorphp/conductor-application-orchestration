@@ -24,7 +24,7 @@ class SaveBuildCommand
     /**
      * @throws FilesystemException
      */
-    public function run(string $repoReference, string $buildId, string $savePath, array $options = null): ?string
+    public function run(string $repoReference, string $buildId, string $savePath, ?array $options = null): ?string
     {
         $relativeFilename = "$buildId.tgz";
         $filename = realpath($relativeFilename);

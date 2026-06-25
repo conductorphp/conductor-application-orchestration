@@ -24,8 +24,8 @@ class AppMaintenanceCommand extends Command
     public function __construct(
         ApplicationConfig            $applicationConfig,
         MaintenanceStrategyInterface $maintenanceStrategy,
-        LoggerInterface              $logger = null,
-        string                       $name = null
+        ?LoggerInterface              $logger = null,
+        ?string                       $name = null
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->maintenanceStrategy = $maintenanceStrategy;

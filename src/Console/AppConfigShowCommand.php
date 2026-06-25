@@ -46,8 +46,8 @@ class AppConfigShowCommand extends Command
     private function expandToOutputRows(
         $data,
         Table $outputTable,
-        string $filter = null,
-        string $keyPrefix = null,
+        ?string $filter = null,
+        ?string $keyPrefix = null,
     ): void {
         ksort($data);
         foreach ($data as $key => $value) {

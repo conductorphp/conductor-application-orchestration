@@ -21,7 +21,7 @@ class ApplicationAssetDeployer
         ApplicationConfig $applicationConfig,
         LocalShellAdapter $localShellAdapter,
         MountManager      $mountManager,
-        LoggerInterface   $logger = null
+        ?LoggerInterface   $logger = null
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->shellAdapter = $localShellAdapter;

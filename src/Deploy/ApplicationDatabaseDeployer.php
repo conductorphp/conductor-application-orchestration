@@ -38,10 +38,10 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
         DatabaseAdapterManager             $databaseAdapterManager,
         DatabaseImportExportAdapterManager $databaseImportAdapterManager,
         LocalShellAdapter                  $localShellAdapter,
-        LoggerInterface                    $logger = null,
         ArgvInput                          $input,
         ConsoleOutput                      $output,
-        QuestionHelper                     $questionHelper
+        QuestionHelper                     $questionHelper,
+        ?LoggerInterface                   $logger = null
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->mountManager = $mountManager;

@@ -22,7 +22,7 @@ class ApplicationDestroyer implements LoggerAwareInterface
     public function __construct(
         ApplicationConfig      $applicationConfig,
         DatabaseAdapterManager $databaseAdapterManager,
-        LoggerInterface        $logger = null
+        ?LoggerInterface        $logger = null
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->databaseAdapterManager = $databaseAdapterManager;

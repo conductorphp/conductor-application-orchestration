@@ -24,7 +24,7 @@ class CloneRepoCommand
         $this->logger = new NullLogger();
     }
 
-    public function run(string $repoReference, string $buildId, string $savePath, array $options = null): ?string
+    public function run(string $repoReference, string $buildId, string $savePath, ?array $options = null): ?string
     {
         if (!isset($this->applicationConfig)) {
             throw new Exception\RuntimeException('$this->applicationConfig must be set.');

@@ -15,7 +15,7 @@ class ApplicationConfig
     private SkeletonConfig $skeletonConfig;
     private ?LoggerInterface $logger;
 
-    public function __construct(array $config, LoggerInterface $logger = null)
+    public function __construct(array $config, ?LoggerInterface $logger = null)
     {
         $this->buildConfig = new BuildConfig($config['build'] ?? []);
         $this->deployConfig = new DeployConfig($config['deploy'] ?? []);
@@ -235,7 +235,7 @@ class ApplicationConfig
         return $this->config['repo_url'];
     }
 
-    public function getDocumentRoot(string $buildId = null): ?string
+    public function getDocumentRoot(?string $buildId = null): ?string
     {
         $documentRoot = $this->getCodePath($buildId);
 
@@ -246,7 +246,7 @@ class ApplicationConfig
         return $documentRoot;
     }
 
-    public function getCodePath(string $buildId = null): string
+    public function getCodePath(?string $buildId = null): string
     {
         $appRoot = $this->getAppRoot();
         switch ($this->getFileLayoutStrategy()) {
@@ -319,7 +319,7 @@ class ApplicationConfig
         return $filename;
     }
 
-    public function getPath(string $type, string $buildId = null): string
+    public function getPath(string $type, ?string $buildId = null): string
     {
         return match ($type) {
             FileLayoutInterface::PATH_ABSOLUTE => '',

@@ -26,7 +26,7 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
     public function __construct(
         ApplicationConfig $applicationConfig,
         LocalShellAdapter $localShellAdapter,
-        LoggerInterface   $logger = null
+        ?LoggerInterface   $logger = null
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->shellAdapter = $localShellAdapter;
@@ -36,7 +36,7 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         $this->logger = $logger;
     }
 
-    public function deploySkeleton(string $buildId = null): void
+    public function deploySkeleton(?string $buildId = null): void
     {
         $origUmask = umask(0);
         $this->prepareFileLayout($buildId);
@@ -44,7 +44,7 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         umask($origUmask);
     }
 
-    public function prepareFileLayout(string $buildId = null): void
+    public function prepareFileLayout(?string $buildId = null): void
     {
         $this->prepareAppRootPath();
         if (FileLayoutInterface::STRATEGY_BLUE_GREEN === $this->applicationConfig->getFileLayoutStrategy()) {
@@ -148,7 +148,7 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         }
     }
 
-    public function installAppFiles(string $buildId = null): void
+    public function installAppFiles(?string $buildId = null): void
     {
         if (!$buildId && FileLayoutInterface::STRATEGY_BLUE_GREEN === $this->applicationConfig->getFileLayoutStrategy()
         ) {
@@ -175,7 +175,7 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         $this->installSymlinks($buildId);
     }
 
-    private function installDirectories(string $buildId = null): void
+    private function installDirectories(?string $buildId = null): void
     {
         $directories = $this->applicationConfig->getSkeletonConfig()->getDirectories();
         if ($directories) {
@@ -246,7 +246,7 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         $this->logger->debug("Ensured \"$resolvedFilename\" is a directory and has permissions $modeAsString.");
     }
 
-    private function installFiles(string $buildId = null): void
+    private function installFiles(?string $buildId = null): void
     {
         $files = $this->applicationConfig->getSkeletonConfig()->getFiles();
         if (!empty($files)) {
@@ -317,7 +317,7 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         $this->logger->debug("Ensured \"$resolvedFilename\" is file and has permissions $modeAsString.");
     }
 
-    private function installSymlinks(string $buildId = null): void
+    private function installSymlinks(?string $buildId = null): void
     {
         $symlinks = $this->applicationConfig->getSkeletonConfig()->getSymlinks();
         if (!empty($symlinks)) {
@@ -339,7 +339,7 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         }
     }
 
-    private function resolveFilename(string $filename, string $location, string $buildId = null): string
+    private function resolveFilename(string $filename, string $location, ?string $buildId = null): string
     {
         $path = $this->applicationConfig->getPath($location, $buildId);
         if ($path) {

@@ -1,3 +1,10 @@
+[2.0.1](https://github.com/conductorphp/conductor-application-orchestration/compare/2.0.0...2.0.1) (2026-06-25)
+
+### Bug Fixes
+* 8.2-8.5 support ([232cc48](https://github.com/conductorphp/conductor-application-orchestration/commit/232cc489e76d58d2ce6c5f4fa292cc61f8e63f15))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 # Changelog
 
 All notable changes to this project will be documented in this file.

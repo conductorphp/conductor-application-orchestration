@@ -29,8 +29,8 @@ class AppSnapshotCommand extends Command
         ApplicationConfig        $applicationConfig,
         ApplicationSnapshotTaker $applicationSnapshotTaker,
         MountManager             $mountManager,
-        LoggerInterface          $logger = null,
-        string                   $name = null
+        ?LoggerInterface          $logger = null,
+        ?string                   $name = null
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->applicationSnapshotTaker = $applicationSnapshotTaker;

@@ -24,7 +24,7 @@ class ApplicationCodeDeployer
         RepositoryAdapterInterface $repositoryAdapter,
         ShellAdapterInterface      $shellAdapter,
         MountManager               $mountManager,
-        LoggerInterface            $logger = null
+        ?LoggerInterface            $logger = null
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->repositoryAdapter = $repositoryAdapter;

@@ -29,8 +29,8 @@ class AppBuildCommand extends Command
         ApplicationConfig  $applicationConfig,
         ApplicationBuilder $applicationBuilder,
         MountManager       $mountManager,
-        LoggerInterface    $logger = null,
-        string             $name = null
+        ?LoggerInterface    $logger = null,
+        ?string             $name = null
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->applicationBuilder = $applicationBuilder;
@@ -134,16 +134,16 @@ class AppBuildCommand extends Command
             return $buildId;
         }
 
-        // Truncate to max allowed length of 255 for a filename
-        // 200 + 1 + 39 + 1 + 14 = 255
+        // Assuming max allowed length of 255 for a filename, truncate for sanity check
+        // 200 + 1 + 34 + 1 + 19 = 255
         $buildId = substr($repoReference, 0, 200)
             . '-'
-            . substr($buildPlan, 0, 39)
+            . substr($buildPlan, 0, 34)
             . '-'
-            . gmdate('YmdHis'); # 14 characters, UTC
+            . date('YmdHisO'); # 19 characters
 
         // Replace sets of characters outside of whitelist with a dash
-        return preg_replace('%[^a-z0-9]+%i', '-', $buildId);
+        return preg_replace('%[^a-z0-9+]+%i', '-', $buildId);
     }
 
 }

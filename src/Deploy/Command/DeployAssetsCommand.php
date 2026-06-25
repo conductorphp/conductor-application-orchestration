@@ -26,16 +26,16 @@ class DeployAssetsCommand
 
     public function run(
         string $codeRoot,
-        string $buildId = null,
-        string $buildPath = null,
-        string $repoReference = null,
-        string $snapshotName = null,
-        string $snapshotPath = null,
+        ?string $buildId = null,
+        ?string $buildPath = null,
+        ?string $repoReference = null,
+        ?string $snapshotName = null,
+        ?string $snapshotPath = null,
         bool   $includeAssets = true,
         array  $assetSyncConfig = [],
         bool   $includeDatabases = true,
         bool   $allowFullRollback = false,
-        array  $options = null
+        ?array  $options = null
     ): ?string {
         if (!$includeAssets) {
             $this->logger->notice(
