@@ -2,7 +2,6 @@
 
 namespace ConductorAppOrchestration;
 
-use Amp\Loop;
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\Config\ApplicationConfigAwareInterface;
 use ConductorAppOrchestration\Deploy\ApplicationAssetDeployer;
@@ -34,6 +33,7 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
+use Revolt\EventLoop;
 use SplFileInfo;
 
 class PlanRunner implements LoggerAwareInterface
@@ -328,7 +328,7 @@ class PlanRunner implements LoggerAwareInterface
         if (!empty($step['steps'])) {
             $providedDependencies = [];
             foreach ($step['steps'] as $parallelName => $parallelStep) {
-                Loop::delay(
+                EventLoop::delay(
                     0,
                     // Since these are run in parallel, they cannot provide dependencies for each other
                     function () use (
@@ -354,7 +354,7 @@ class PlanRunner implements LoggerAwareInterface
                 );
             }
 
-            Loop::run();
+            EventLoop::run();
             return $providedDependencies;
         }
 

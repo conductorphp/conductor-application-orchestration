@@ -1,3 +1,11 @@
+[3.1.0](https://github.com/conductorphp/conductor-application-orchestration/compare/3.0.0...3.1.0) (2026-08-10)
+
+### Features
+* PHP 8.4.1+ (CTAP-1224) ([8944077](https://github.com/conductorphp/conductor-application-orchestration/commit/89440775496129e58d6b201c7a9219dec3498133))
+* revolt/event-loop (CTAP-1223) ([71b60ec](https://github.com/conductorphp/conductor-application-orchestration/commit/71b60ec7367e3d13971e9bdc37e47300bea1372e))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [2.0.1](https://github.com/conductorphp/conductor-application-orchestration/compare/2.0.0...2.0.1) (2026-06-25)
 
 ### Bug Fixes
