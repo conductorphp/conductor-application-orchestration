@@ -1,3 +1,10 @@
+[3.1.1](https://github.com/conductorphp/conductor-application-orchestration/compare/3.1.0...3.1.1) (2026-08-11)
+
+### Bug Fixes
+* to phpunit 13 (CTAP-1226) ([fd3682b](https://github.com/conductorphp/conductor-application-orchestration/commit/fd3682b25d25d339aadf0c0d2e31351eb57ce6e0))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [3.1.0](https://github.com/conductorphp/conductor-application-orchestration/compare/3.0.0...3.1.0) (2026-08-10)
 
 ### Features
