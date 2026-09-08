@@ -1,3 +1,10 @@
+[3.2.0](https://github.com/conductorphp/conductor-application-orchestration/compare/3.1.1...3.2.0) (2026-09-08)
+
+### Features
+* post-import scripts read the schema instead of guessing it (CTAP-1628) ([e832642](https://github.com/conductorphp/conductor-application-orchestration/commit/e832642044c318bfa8ceb905c824ba826bdc833f))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [3.1.1](https://github.com/conductorphp/conductor-application-orchestration/compare/3.1.0...3.1.1) (2026-08-11)
 
 ### Bug Fixes
