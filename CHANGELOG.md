@@ -1,3 +1,8 @@
+[4.0.0](https://github.com/conductorphp/conductor-application-orchestration/compare/3.2.0...4.0.0) (2026-09-08)
+
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [3.2.0](https://github.com/conductorphp/conductor-application-orchestration/compare/3.1.1...3.2.0) (2026-09-08)
 
 ### Features

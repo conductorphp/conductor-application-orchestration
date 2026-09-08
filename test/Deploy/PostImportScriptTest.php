@@ -4,6 +4,8 @@ namespace ConductorAppOrchestrationTest\Deploy;
 
 use ConductorAppOrchestration\Deploy\PostImportScript;
 use ConductorAppOrchestration\Deploy\PostImportSupport;
+use ConductorAppOrchestrationTest\BuildsApplicationConfigTrait;
+use ConductorCore\Exception\InvalidConfigException;
 use ConductorCore\Database\DatabaseAdapterInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -23,12 +25,15 @@ use Psr\Log\LoggerInterface;
  */
 class PostImportScriptTest extends TestCase
 {
+    use BuildsApplicationConfigTrait;
+
+    /** @param array<string, mixed> $config Overrides merged into a valid application config. */
     private function support(array $config = [], ?LoggerInterface $logger = null): PostImportSupport
     {
         return new PostImportSupport(
             $this->createStub(DatabaseAdapterInterface::class),
             'some_database',
-            $config,
+            $this->applicationConfig($config),
             $logger ?? $this->collectingLogger(),
         );
     }
@@ -100,37 +105,54 @@ class PostImportScriptTest extends TestCase
         $this->assertStringNotContainsString('/*', $sql);
     }
 
-    #[DataProvider('environmentConfigs')]
-    public function testEnvironmentFallsBackToUnknownRatherThanEmptyString(array $config, string $expected): void
+    /**
+     * The environment now comes from a validated property, so there is no `'unknown'` sentinel.
+     *
+     * The old reader looked up `$config['current_environment']` and fell back to `'unknown'` when it
+     * was missing, non-string or empty. Nothing in conductor ever WROTE that key — the config carries
+     * `environment` — so the fallback fired every time and every script saw `'unknown'` (CTAP-1630).
+     */
+    public function testEnvironmentIsTheConfiguredEnvironment(): void
     {
-        // DatabaseReplacementScript compares this against 'production' to decide whether to skip, so
-        // an empty or non-string value must not read as a real environment name.
-        $this->assertSame($expected, $this->support($config)->environment());
+        $this->assertSame('uat', $this->support(['environment' => 'uat'])->environment());
     }
 
-    /** @return iterable<string, array{array<string, mixed>, string}> */
-    public static function environmentConfigs(): iterable
+    /** The cases the old fallback existed for are now impossible: config validation rejects them. */
+    #[DataProvider('invalidEnvironments')]
+    public function testAnUnusableEnvironmentIsRejectedAtConstructionInsteadOfDefaulted(mixed $environment): void
     {
-        yield 'set'        => [['current_environment' => 'qa'], 'qa'];
-        yield 'missing'    => [[], 'unknown'];
-        yield 'null'       => [['current_environment' => null], 'unknown'];
-        yield 'empty'      => [['current_environment' => ''], 'unknown'];
-        yield 'not string' => [['current_environment' => ['qa']], 'unknown'];
+        $this->expectException(InvalidConfigException::class);
+
+        $this->applicationConfig(['environment' => $environment]);
     }
 
-    #[DataProvider('environmentVarConfigs')]
-    public function testEnvironmentVarsAlwaysReturnsAnArray(array $config, array $expected): void
+    /** @return iterable<string, array{mixed}> */
+    public static function invalidEnvironments(): iterable
     {
-        $this->assertSame($expected, $this->support($config)->environmentVars());
+        yield 'null'       => [null];
+        yield 'empty'      => [''];
+        yield 'not string' => [['qa']];
     }
 
-    /** @return iterable<string, array{array<string, mixed>, array<string, mixed>}> */
-    public static function environmentVarConfigs(): iterable
+    public function testEnvironmentVarsAreTheConfiguredVars(): void
     {
-        yield 'set'       => [['environment_vars' => ['BASE_URL' => 'https://qa.test']], ['BASE_URL' => 'https://qa.test']];
-        yield 'missing'   => [[], []];
-        yield 'null'      => [['environment_vars' => null], []];
-        yield 'not array' => [['environment_vars' => 'BASE_URL=x'], []];
+        $this->assertSame(
+            ['BASE_URL' => 'https://qa.test'],
+            $this->support(['environment_vars' => ['BASE_URL' => 'https://qa.test']])->environmentVars(),
+        );
+    }
+
+    public function testEnvironmentVarsDefaultToAnEmptyArray(): void
+    {
+        $this->assertSame([], $this->support()->environmentVars());
+    }
+
+    /** A non-array `environment_vars` is a config error now, not something to shrug off at read time. */
+    public function testNonArrayEnvironmentVarsIsRejectedAtConstruction(): void
+    {
+        $this->expectException(InvalidConfigException::class);
+
+        $this->applicationConfig(['environment_vars' => 'BASE_URL=x']);
     }
 
     public function testSkipIsLoggedAsANoticeWithTheReason(): void
@@ -150,7 +172,7 @@ class PostImportScriptTest extends TestCase
     {
         $adapter = $this->createStub(DatabaseAdapterInterface::class);
         $logger  = $this->collectingLogger();
-        $support = new PostImportSupport($adapter, 'snapshot_db', [], $logger);
+        $support = new PostImportSupport($adapter, 'snapshot_db', $this->applicationConfig(), $logger);
 
         $this->assertSame('snapshot_db', $support->databaseName());
         $this->assertSame($adapter, $support->databaseAdapter());
@@ -171,7 +193,7 @@ class PostImportScriptTest extends TestCase
             $script->execute(
                 $this->createStub(DatabaseAdapterInterface::class),
                 'some_database',
-                [],
+                $this->applicationConfig(),
                 $this->collectingLogger(),
             ),
         );
@@ -187,7 +209,7 @@ class PostImportScriptTest extends TestCase
             $script->execute(
                 $this->createStub(DatabaseAdapterInterface::class),
                 'some_database',
-                [],
+                $this->applicationConfig(),
                 $this->collectingLogger(),
             ),
         );
@@ -220,7 +242,7 @@ class PostImportScriptTest extends TestCase
             $script->execute(
                 $this->createStub(DatabaseAdapterInterface::class),
                 'some_database',
-                [],
+                $this->applicationConfig(),
                 $this->collectingLogger(),
             ),
         );
@@ -236,7 +258,7 @@ class PostImportScriptTest extends TestCase
             $script->execute(
                 $this->createStub(DatabaseAdapterInterface::class),
                 'some_database',
-                [],
+                $this->applicationConfig(),
                 $this->collectingLogger(),
             ),
         );
@@ -262,7 +284,7 @@ class PostImportScriptTest extends TestCase
             $script->execute(
                 $this->createStub(DatabaseAdapterInterface::class),
                 'snapshot_db',
-                ['current_environment' => 'qa'],
+                $this->applicationConfig(['environment' => 'qa']),
                 $this->collectingLogger(),
             ),
         );

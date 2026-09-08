@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ConductorAppOrchestration\Deploy;
 
+use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorCore\Database\DatabaseAdapterInterface;
 use Closure;
 use Psr\Log\LoggerInterface;
@@ -80,11 +81,10 @@ final class PostImportScript implements PostImportScriptInterface
         $this->apply = $apply instanceof Closure ? $apply : $apply(...);
     }
 
-    /** @param array<string, mixed> $config */
     public function execute(
         DatabaseAdapterInterface $databaseAdapter,
         string $databaseName,
-        array $config,
+        ApplicationConfig $config,
         LoggerInterface $logger,
     ): string {
         $support = new PostImportSupport($databaseAdapter, $databaseName, $config, $logger);

@@ -5,6 +5,7 @@ namespace ConductorAppOrchestration\Config;
 use ConductorAppOrchestration\Exception;
 use Laminas\ServiceManager\Factory\FactoryInterface;
 use Psr\Container\ContainerInterface;
+use Psr\Log\LoggerInterface;
 
 class ApplicationConfigFactory implements FactoryInterface
 {
@@ -67,7 +68,12 @@ class ApplicationConfigFactory implements FactoryInterface
             $config['application_orchestration']['defaults']['source_file_paths']
         );
 
-        return new ApplicationConfig($applicationConfig);
+        // The logger is passed in rather than pushed in later with setLogger(): ApplicationConfig is
+        // readonly, and it needs a logger during construction to warn about deprecated snapshot keys.
+        return new ApplicationConfig(
+            $applicationConfig,
+            $container->has(LoggerInterface::class) ? $container->get(LoggerInterface::class) : null,
+        );
     }
 }
 

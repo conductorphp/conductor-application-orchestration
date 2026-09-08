@@ -40,11 +40,15 @@
  * SQL through. That package is not a dependency of this one, which is fine for a manual script
  * but is why this cannot become part of the normal suite as written.
  *
+ * Doubles as the integration check for DatabaseAdapterInterface::fetchAll() and quote()
+ * (CTAP-1629): the schema reads and the value quoting below all go through the real adapter.
+ *
  * Verified passing on PHP 8.4.22 and 8.5.7 against MySQL 8.0.46 and MariaDB 10.6.27.
  */
 
 declare(strict_types=1);
 
+use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\Deploy\PostImportScript;
 use ConductorAppOrchestration\Deploy\PostImportSupport;
 use ConductorMySqlSupport\Adapter\DatabaseAdapter;
@@ -145,16 +149,23 @@ $pdo->exec("INSERT INTO `payment_method` (code, attributes_global, attributes_we
 $pdo->exec("INSERT INTO `connector` (code, settings) VALUES
     ('magento', JSON_OBJECT('endpoint', 'https://prod.example/api', 'oauth', JSON_OBJECT('key', 'KEEPME')))");
 
-$config = [
-    'current_environment' => 'qa',
-    'environment_vars'    => ['BASE_URL' => 'https://qa.example'],
-    'database'            => ['adapters' => ['default' => ['arguments' => [
-        'host'     => $host,
-        'port'     => 3306,
-        'username' => $user,
-        'password' => $password,
-    ]]]],
-];
+// A real, validated ApplicationConfig since CTAP-1630 — the post-import interface takes the config
+// object, not an array.
+//
+// It deliberately carries NO database credentials: until CTAP-1629 PostImportSupport built its own
+// companion PDO connection from `database.adapters.default.arguments`, and it now reads through the
+// adapter, so leaving those out makes this a positive check that the second connection is really
+// gone — every schema read below would fail if anything still reached for it.
+//
+// Note `environment`, not `current_environment`. The old array form was read under a key nothing
+// ever wrote, so every script saw 'unknown' (CTAP-1630).
+$config = new ApplicationConfig([
+    'app_name'         => 'Post-import verification',
+    'app_root'         => '/app',
+    'repo_url'         => 'git@example.test:verification/app.git',
+    'environment'      => 'qa',
+    'environment_vars' => ['BASE_URL' => 'https://qa.example'],
+]);
 
 $logger  = new CollectingLogger();
 $adapter = new DatabaseAdapter($user, $password, $host, 3306);
@@ -262,6 +273,8 @@ $check('absent row logged a skip', str_contains($log, 'no row for "NO_SUCH_METHO
 $check('absent table logged a skip', str_contains($log, '`absent_table` is not in the snapshot'));
 $check('per-scope clear was logged', str_contains($log, 'dropping `payment_method`.login_id'));
 $check('no SQL comments emitted', ! str_contains($sql, '--') && ! str_contains($sql, '/*'));
+$check('environment reads through the typed config (not "unknown")', $support->environment() === 'qa');
+$check('environment vars read through the typed config', $support->environmentVars() === ['BASE_URL' => 'https://qa.example']);
 $check('no PHP warnings/notices raised', $phpWarnings === []);
 foreach ($phpWarnings as $wn) {
     echo "    ! $wn\n";

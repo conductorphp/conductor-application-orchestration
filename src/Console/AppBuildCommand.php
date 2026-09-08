@@ -104,8 +104,6 @@ class AppBuildCommand extends Command
             }
         }
 
-        $this->applicationConfig->validate();
-
         $this->injectOutputIntoLogger($output, $this->logger);
         $this->applicationBuilder->setLogger($this->logger);
         $this->applicationBuilder->setPlanPath($workingDir);

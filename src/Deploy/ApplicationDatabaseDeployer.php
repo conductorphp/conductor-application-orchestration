@@ -162,13 +162,15 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
                         $scriptName = $scriptFilename;
                     }
 
-                    // If we have a script object (class or PHP file), execute it
+                    // If we have a script object (class or PHP file), execute it.
+                    // The config object is passed straight through. It used to be flattened with
+                    // toArray() to satisfy the old `array $config` signature, after which every
+                    // script re-derived the types it needed by hand (CTAP-1630).
                     if ($script !== null) {
-                        $config = $this->applicationConfig->toArray();
                         $sql = $script->execute(
                             $databaseAdapter,
                             $databaseAlias,
-                            $config,
+                            $this->applicationConfig,
                             $this->logger
                         );
                     }

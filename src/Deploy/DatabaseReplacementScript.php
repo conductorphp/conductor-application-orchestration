@@ -1,344 +1,253 @@
 <?php
 
+declare(strict_types=1);
+
 namespace ConductorAppOrchestration\Deploy;
 
+use ConductorAppOrchestration\Config\ApplicationConfig;
+use ConductorAppOrchestration\Config\ReplacementConfig;
+use ConductorAppOrchestration\Config\ReplacementTarget;
 use ConductorCore\Database\DatabaseAdapterInterface;
 use Psr\Log\LoggerInterface;
 
+use function count;
+use function date;
+use function in_array;
+use function implode;
+use function preg_replace;
+use function sprintf;
+use function str_replace;
+
 /**
- * Database Replacement Script
+ * Performs find-and-replace on database columns after importing a snapshot.
  *
- * Performs find-and-replace operations on database columns after importing a snapshot.
- * Supports both simple string replacement and regex-based replacement with capture groups.
+ * Simple string replacement or regex with capture groups, per named replacement, with the target
+ * table/column pairs and the environment-specific `to` value coming from config.
  *
- * Features:
- * - Named replacements with per-replacement targets
- * - Environment-specific override of replacement values
- * - Regex support with capture groups (MySQL 8.0+)
- * - Validates tables and columns exist before generating SQL
+ * ## What changed in 4.0 (CTAP-1630)
+ *
+ * Config parsing left this class. It used to hand-validate the replacement tree — around forty lines
+ * of `is_array()` / `isset()` / `is_string()` / `count(explode())` checks, each arm logging a warning
+ * and skipping that one entry, so a config with three mistakes took three deploys to find. That shape
+ * is now declared once as a schema on {@see \ConductorAppOrchestration\Config\DeployConfig}, which
+ * reports every problem at once and hands over typed {@see ReplacementConfig} objects.
+ *
+ * The production guard also works now. It compared `$config['current_environment']`, a key nothing in
+ * conductor ever wrote — the config carries `environment` — so the comparison always saw `'unknown'`
+ * and **replacements ran in production**, which is the one thing this guard exists to prevent.
  */
 class DatabaseReplacementScript implements PostImportScriptInterface
 {
+    /** Environment names that must never be rewritten. */
+    private const PROTECTED_ENVIRONMENTS = ['production', 'prod'];
+
     public function execute(
         DatabaseAdapterInterface $databaseAdapter,
         string $databaseName,
-        array $config,
+        ApplicationConfig $config,
         LoggerInterface $logger
     ): string {
-        // Get current environment
-        $environment = $config['current_environment'] ?? 'unknown';
+        $environment = $config->environment;
 
-        // Skip in production environment
-        if ($environment === 'production' || $environment === 'prod') {
-            $logger->info("Skipping database replacements in production environment");
+        if (in_array($environment, self::PROTECTED_ENVIRONMENTS, true)) {
+            $logger->info("Skipping database replacements in \"$environment\" environment.");
+
             return '';
         }
 
-        // Get environment variables for interpolation
-        $environmentVars = $config['environment_vars'] ?? [];
+        $replacements = $config->deployConfig->getReplacements($databaseName);
+        if ($replacements === []) {
+            $logger->info("No replacements configured for database \"$databaseName\", skipping.");
 
-        // Get replacements configuration for this specific database
-        $databaseConfig = $config['deploy']['databases'][$databaseName] ?? [];
-        $replacements = $databaseConfig['replacements'] ?? [];
-
-        if (empty($replacements)) {
-            $logger->info("No replacements configured for database '{$databaseName}', skipping");
             return '';
         }
 
-        // Parse and flatten the hierarchical replacement structure
-        $flatReplacements = $this->parseReplacements($replacements, $environmentVars, $logger);
+        $logger->debug(sprintf(
+            'Starting database replacements for database "%s", environment "%s": %d replacement(s).',
+            $databaseName,
+            $environment,
+            count($replacements),
+        ));
 
-        if (empty($flatReplacements)) {
-            $logger->info("No valid replacements after parsing, skipping");
-            return '';
-        }
-
-        $logger->debug("Starting database replacements for database: {$databaseName}, environment: {$environment}");
-        $logger->debug("Total replacement operations: " . count($flatReplacements));
-
-        // Use the provided database adapter for introspection
-        $sql = $this->generateReplacementSql(
+        return $this->generateReplacementSql(
             $databaseAdapter,
             $databaseName,
-            $flatReplacements,
-            $logger
+            $replacements,
+            $config->environmentVars,
+            $logger,
         );
-
-        return $sql;
     }
 
     /**
-     * Parse flattened replacement structure
-     *
-     * Structure: {name: {from: ..., to: ..., regex: ..., targets: [table.column, ...]}}
-     *
-     * Each replacement has:
-     * - from: Pattern to search for
-     * - to: Replacement value (supports ${VAR} interpolation)
-     * - regex: Optional boolean for regex mode (default: false)
-     * - targets: Array of 'table.column' strings - replaces in entire column
-     *
-     * Interpolates environment variables and flattens into array of operations.
-     */
-    private function parseReplacements(array $replacements, array $environmentVars, LoggerInterface $logger): array
-    {
-        $operations = [];
-
-        foreach ($replacements as $replacementName => $config) {
-            if (!is_array($config)) {
-                $logger->warning("Invalid replacement config for '{$replacementName}', expected array");
-                continue;
-            }
-
-            // Validate required fields
-            if (!isset($config['from'])) {
-                $logger->warning("Replacement '{$replacementName}' missing 'from' field, skipping");
-                continue;
-            }
-
-            if (!isset($config['to'])) {
-                $logger->debug("Replacement '{$replacementName}' has no 'to' value, skipping");
-                continue;
-            }
-
-            if (!isset($config['targets']) || !is_array($config['targets']) || empty($config['targets'])) {
-                $logger->warning("Replacement '{$replacementName}' missing or empty 'targets' array, skipping");
-                continue;
-            }
-
-            // Interpolate environment variables in 'to' value
-            $to = $this->interpolateVariables($config['to'], $environmentVars);
-
-            // Process each target
-            foreach ($config['targets'] as $target) {
-                if (!is_string($target)) {
-                    $logger->warning("Invalid target for replacement '{$replacementName}', expected string, got " . gettype($target));
-                    continue;
-                }
-
-                // Split table.column (ignore any additional parts)
-                $parts = explode('.', $target);
-                if (count($parts) < 2) {
-                    $logger->warning("Invalid target format for replacement '{$replacementName}': '{$target}', expected 'table.column'");
-                    continue;
-                }
-
-                $tableName = $parts[0];
-                $columnName = $parts[1];
-
-                $operations[] = [
-                    'table' => $tableName,
-                    'column' => $columnName,
-                    'name' => $replacementName,
-                    'from' => $config['from'],
-                    'to' => $to,
-                    'regex' => $config['regex'] ?? false,
-                ];
-            }
-        }
-
-        return $operations;
-    }
-
-    /**
-     * Interpolate ${VAR_NAME} variables with environment values
-     * If no variables provided, returns value as-is (variable interpolation is optional)
-     */
-    private function interpolateVariables(string $value, array $environmentVars): string
-    {
-        // If no environment vars or no variables in string, return as-is
-        if (empty($environmentVars) || !str_contains($value, '${')) {
-            return $value;
-        }
-
-        return preg_replace_callback('/\$\{([A-Z_]+)\}/', function ($matches) use ($environmentVars) {
-            $varName = $matches[1];
-            return $environmentVars[$varName] ?? $matches[0]; // Return original if variable not found
-        }, $value);
-    }
-
-    /**
-     * Generate SQL replacement statements
+     * @param list<ReplacementConfig> $replacements
+     * @param array<string, string>   $environmentVars
      */
     private function generateReplacementSql(
         DatabaseAdapterInterface $databaseAdapter,
         string $databaseName,
-        array $operations,
+        array $replacements,
+        array $environmentVars,
         LoggerInterface $logger
     ): string {
-        $sqlStatements = [];
-        $sqlStatements[] = "-- Database Replacement Script";
-        $sqlStatements[] = "-- Generated: " . date('Y-m-d H:i:s');
-        $sqlStatements[] = "-- Database: {$databaseName}";
-        $sqlStatements[] = "";
+        $sqlStatements = [
+            '-- Database Replacement Script',
+            '-- Generated: ' . date('Y-m-d H:i:s'),
+            "-- Database: $databaseName",
+            '',
+        ];
 
         $generatedStatements = 0;
+        $operations          = 0;
 
-        foreach ($operations as $operation) {
-            $tableName = $operation['table'];
-            $columnName = $operation['column'];
-            $name = $operation['name'];
-            $from = $operation['from'];
-            $to = $operation['to'];
-            $regex = $operation['regex'];
-
-            $targetDescription = "{$tableName}.{$columnName}";
-            $logger->debug("Processing replacement: {$targetDescription}.{$name}");
-            $sqlStatements[] = "-- Replacement: {$targetDescription}.{$name}";
-
-            // Validate table exists
-            if (!$this->tableExists($databaseAdapter, $databaseName, $tableName)) {
-                $logger->debug("Table {$tableName} does not exist, skipping");
-                $sqlStatements[] = "-- SKIPPED: Table does not exist";
-                $sqlStatements[] = "";
+        foreach ($replacements as $replacement) {
+            // No `to` means the replacement is switched off for this environment — declared in
+            // shared config, left unset where it should not run. Not a misconfiguration.
+            if (! $replacement->isEnabled()) {
+                $logger->debug("Replacement \"{$replacement->name}\" has no 'to' value, skipping.");
                 continue;
             }
 
-            // Validate column exists
-            if (!$this->columnExists($databaseAdapter, $databaseName, $tableName, $columnName)) {
-                $logger->debug("Column {$tableName}.{$columnName} does not exist, skipping");
-                $sqlStatements[] = "-- SKIPPED: Column does not exist";
-                $sqlStatements[] = "";
-                continue;
+            $to = (string) $replacement->resolvedTo($environmentVars);
+
+            foreach ($replacement->targets as $target) {
+                $operations++;
+                $description = "$target.{$replacement->name}";
+                $logger->debug("Processing replacement: $description");
+                $sqlStatements[] = "-- Replacement: $description";
+
+                $skipReason = $this->skipReason($databaseAdapter, $databaseName, $target);
+                if ($skipReason !== null) {
+                    $logger->debug("$target does not exist, skipping.");
+                    $sqlStatements[] = "-- SKIPPED: $skipReason";
+                    $sqlStatements[] = '';
+                    continue;
+                }
+
+                $sqlStatements[] = $replacement->regex
+                    ? $this->regexReplacement($databaseAdapter, $target, $replacement->from, $to)
+                    : $this->stringReplacement($databaseAdapter, $target, $replacement->from, $to);
+                $sqlStatements[] = '';
+                $generatedStatements++;
             }
-
-            // Generate appropriate SQL based on regex flag for whole column replacement
-            if ($regex) {
-                // Regex replacement - handle both JSON-escaped and plain versions
-                // First replace JSON-escaped version (e.g., https:\/\/), then plain version (e.g., https://)
-                $fromJsonPattern = $this->regexPatternForJson($from);
-                $toJsonReplacement = $this->regexReplacementForJson($to);
-
-                $sqlStatements[] = sprintf(
-                    "UPDATE `%s` SET `%s` = REGEXP_REPLACE(REGEXP_REPLACE(`%s`, %s, %s), %s, %s) WHERE `%s` REGEXP %s OR `%s` REGEXP %s;",
-                    $tableName,
-                    $columnName,
-                    $columnName,
-                    $this->escapeString($fromJsonPattern),
-                    $this->escapeString($toJsonReplacement),
-                    $this->escapeString($from),
-                    $this->escapeString($to),
-                    $columnName,
-                    $this->escapeString($fromJsonPattern),
-                    $columnName,
-                    $this->escapeString($from)
-                );
-            } else {
-                // String replacement - handle both JSON-escaped and plain versions
-                // First replace JSON-escaped version (e.g., https:\/\/), then plain version (e.g., https://)
-                $fromJsonEscaped = $this->escapeForJson($from);
-                $toJsonEscaped = $this->escapeForJson($to);
-                $fromJsonLike = $this->escapeForJsonLike($from);
-
-                $sqlStatements[] = sprintf(
-                    "UPDATE `%s` SET `%s` = REPLACE(REPLACE(`%s`, %s, %s), %s, %s) WHERE `%s` LIKE %s OR `%s` LIKE %s;",
-                    $tableName,
-                    $columnName,
-                    $columnName,
-                    $this->escapeString($fromJsonEscaped),
-                    $this->escapeString($toJsonEscaped),
-                    $this->escapeString($from),
-                    $this->escapeString($to),
-                    $columnName,
-                    $this->escapeString("%{$fromJsonLike}%"),
-                    $columnName,
-                    $this->escapeString("%{$from}%")
-                );
-            }
-
-            $sqlStatements[] = "";
-            $generatedStatements++;
         }
 
-        // Add summary
-        $sqlStatements[] = "-- Replacement Summary";
-        $sqlStatements[] = "-- Operations processed: " . count($operations);
-        $sqlStatements[] = "-- SQL statements generated: {$generatedStatements}";
+        $sqlStatements[] = '-- Replacement Summary';
+        $sqlStatements[] = "-- Operations processed: $operations";
+        $sqlStatements[] = "-- SQL statements generated: $generatedStatements";
 
-        $logger->debug("Database replacements complete: {$generatedStatements} statements generated");
+        $logger->debug("Database replacements complete: $generatedStatements statement(s) generated.");
 
         return implode("\n", $sqlStatements);
     }
 
-    private function tableExists(DatabaseAdapterInterface $databaseAdapter, string $dbName, string $tableName): bool
-    {
-        $tables = $databaseAdapter->getTableMetadata($dbName);
-        return isset($tables[$tableName]);
-    }
+    /** Why this target cannot be rewritten, or null when it can. */
+    private function skipReason(
+        DatabaseAdapterInterface $databaseAdapter,
+        string $databaseName,
+        ReplacementTarget $target
+    ): ?string {
+        $tables = $databaseAdapter->getTableMetadata($databaseName);
+        if (! isset($tables[$target->table])) {
+            return 'Table does not exist';
+        }
 
-    private function columnExists(DatabaseAdapterInterface $databaseAdapter, string $dbName, string $tableName, string $columnName): bool
-    {
-        // We can't easily check columns with the available interface methods
-        // So we'll just assume the column exists if the table exists
-        // The SQL will fail gracefully if the column doesn't exist
-        return true;
-    }
+        // Before conductor/core 4.0 the interface could not return a result, so this check did not
+        // exist: columnExists() returned true unconditionally and a replacement naming a dropped
+        // column produced an UPDATE that failed mid-deploy (CTAP-1629).
+        $columns = $databaseAdapter->fetchAll(
+            'SELECT 1 FROM information_schema.COLUMNS '
+            . 'WHERE TABLE_SCHEMA = :database AND TABLE_NAME = :table AND COLUMN_NAME = :column LIMIT 1',
+            $databaseName,
+            [':database' => $databaseName, ':table' => $target->table, ':column' => $target->column],
+        );
 
-
-    private function escapeString(string $value): string
-    {
-        // Manual escaping since DatabaseAdapter doesn't expose quote()
-        return "'" . addslashes($value) . "'";
+        return $columns === [] ? 'Column does not exist' : null;
     }
 
     /**
-     * Convert a string to its JSON-escaped equivalent for REPLACE operations
-     * Converts: https://domain.com -> https:\/\/domain.com
+     * Replace both the plain and the JSON-escaped spelling of `$from`.
      *
-     * Two backslashes are needed for REPLACE:
-     * - The SQL string literal needs \/ to represent a literal backslash-forward-slash
-     * - This matches the JSON-escaped format in the database
+     * Snapshot content holds URLs both ways — `https://example.com` in a text column and
+     * `https:\/\/example.com` inside a JSON one — so a replacement that handled only the plain form
+     * would leave every JSON-embedded copy behind.
      */
+    private function stringReplacement(
+        DatabaseAdapterInterface $databaseAdapter,
+        ReplacementTarget $target,
+        string $from,
+        string $to
+    ): string {
+        return sprintf(
+            'UPDATE `%s` SET `%s` = REPLACE(REPLACE(`%s`, %s, %s), %s, %s) WHERE `%s` LIKE %s OR `%s` LIKE %s;',
+            $target->table,
+            $target->column,
+            $target->column,
+            $databaseAdapter->quote($this->escapeForJson($from)),
+            $databaseAdapter->quote($this->escapeForJson($to)),
+            $databaseAdapter->quote($from),
+            $databaseAdapter->quote($to),
+            $target->column,
+            $databaseAdapter->quote('%' . $this->escapeForJsonLike($from) . '%'),
+            $target->column,
+            $databaseAdapter->quote("%$from%"),
+        );
+    }
+
+    private function regexReplacement(
+        DatabaseAdapterInterface $databaseAdapter,
+        ReplacementTarget $target,
+        string $from,
+        string $to
+    ): string {
+        $fromJsonPattern   = $this->regexPatternForJson($from);
+        $toJsonReplacement = $this->regexReplacementForJson($to);
+
+        return sprintf(
+            'UPDATE `%s` SET `%s` = REGEXP_REPLACE(REGEXP_REPLACE(`%s`, %s, %s), %s, %s) '
+            . 'WHERE `%s` REGEXP %s OR `%s` REGEXP %s;',
+            $target->table,
+            $target->column,
+            $target->column,
+            $databaseAdapter->quote($fromJsonPattern),
+            $databaseAdapter->quote($toJsonReplacement),
+            $databaseAdapter->quote($from),
+            $databaseAdapter->quote($to),
+            $target->column,
+            $databaseAdapter->quote($fromJsonPattern),
+            $target->column,
+            $databaseAdapter->quote($from),
+        );
+    }
+
+    /** `https://domain.com` -> `https:\/\/domain.com`, the JSON-escaped spelling. */
     private function escapeForJson(string $value): string
     {
         return str_replace('/', '\\/', $value);
     }
 
     /**
-     * Convert a string to its JSON-escaped equivalent for LIKE patterns
-     * Converts: https://domain.com -> https:\\/\\/domain.com
+     * The JSON-escaped spelling as a LIKE pattern.
      *
-     * Four backslashes are needed in the SQL string literal for LIKE:
-     * - Two backslashes for SQL string literal escaping (\\ becomes \)
-     * - Two backslashes for LIKE pattern escaping (\\ becomes \)
-     * Result: \\\\ in SQL string -> \\ after string parsing -> \ after LIKE parsing -> matches literal \
+     * Four backslashes in the SQL literal: two survive SQL string parsing, two more survive LIKE
+     * pattern parsing, leaving the one literal backslash that matches the stored `\/`.
      */
     private function escapeForJsonLike(string $value): string
     {
         return str_replace('/', '\\\\\/', $value);
     }
 
-    /**
-     * Convert a regex pattern to match JSON-escaped forward slashes
-     * Converts: https://(www\.)? -> https:\\/\\/(www\.)?
-     * In SQL string: 'https:\\/\\/' matches the regex pattern https:\/ which matches the literal https:\/
-     */
+    /** A regex pattern rewritten to match JSON-escaped forward slashes. */
     private function regexPatternForJson(string $pattern): string
     {
-        // For each forward slash in the pattern, we need to match the JSON-escaped version \/
-        // In regex: \/ matches literal \/
-        // In SQL string: '\\/' becomes \/ in regex
-        // So we replace / with \\/ in the SQL string
         return str_replace('/', '\\\\/', $pattern);
     }
 
-    /**
-     * Convert a regex replacement to output JSON-escaped forward slashes
-     * Converts: https://domain.com -> https:\/\/domain.com
-     * Preserves capture group references like \1, \2
-     */
+    /** A regex replacement rewritten to emit JSON-escaped slashes, preserving `\1` capture refs. */
     private function regexReplacementForJson(string $replacement): string
     {
-        // Temporarily protect capture groups
         $replacement = preg_replace('/\\\\(\d+)/', '<<<CAPTURE$1>>>', $replacement);
+        $replacement = str_replace('/', '\\/', (string) $replacement);
 
-        // Escape forward slashes for JSON
-        $replacement = str_replace('/', '\\/', $replacement);
-
-        // Restore capture groups
-        $replacement = preg_replace('/<<<CAPTURE(\d+)>>>/', '\\\\$1', $replacement);
-
-        return $replacement;
+        return (string) preg_replace('/<<<CAPTURE(\d+)>>>/', '\\\\$1', $replacement);
     }
 }

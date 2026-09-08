@@ -48,7 +48,6 @@ class AppMaintenanceCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $this->applicationConfig->validate();
         $this->injectOutputIntoLogger($output, $this->logger);
         if ($this->maintenanceStrategy instanceof LoggerAwareInterface) {
             $this->maintenanceStrategy->setLogger($this->logger);

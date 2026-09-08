@@ -199,7 +199,6 @@ class AppDeployCommand extends Command
             }
         }
 
-        $this->applicationConfig->validate();
         $this->injectOutputIntoLogger($output, $this->logger);
         $this->applicationDeployer->setLogger($this->logger);
         $this->applicationDeployer->setPlanPath($workingDir);

@@ -142,7 +142,6 @@ class AppSnapshotCommand extends Command
             }
         }
 
-        $this->applicationConfig->validate();
         $this->injectOutputIntoLogger($output, $this->logger);
         $this->applicationSnapshotTaker->setLogger($this->logger);
         $this->applicationSnapshotTaker->setPlanPath($workingDir);

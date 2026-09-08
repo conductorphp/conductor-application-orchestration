@@ -521,7 +521,6 @@ class PlanRunner implements LoggerAwareInterface
             $this->maintenanceStrategy->setLogger($logger);
         }
 
-        $this->applicationConfig->setLogger($logger);
         $this->applicationCodeDeployer->setLogger($logger);
         $this->applicationDatabaseDeployer->setLogger($logger);
         $this->applicationAssetDeployer->setLogger($logger);

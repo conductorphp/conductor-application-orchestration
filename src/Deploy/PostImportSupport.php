@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace ConductorAppOrchestration\Deploy;
 
-use ConductorAppOrchestration\Exception;
+use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorCore\Database\DatabaseAdapterInterface;
-use PDO;
-use PDOStatement;
 use Psr\Log\LoggerInterface;
 
 use function array_key_exists;
@@ -18,7 +16,6 @@ use function is_array;
 use function is_bool;
 use function is_float;
 use function is_int;
-use function is_string;
 use function json_decode;
 use function json_encode;
 use function rtrim;
@@ -49,14 +46,16 @@ use const JSON_THROW_ON_ERROR;
  * This class reads the live snapshot's schema and picks the predicate itself, so a consumer script
  * describes *what* it wants changed and never carries a "flip this once the source deploys" note.
  *
- * ## Why it opens its own connection
+ * ## How it reads the schema
  *
- * {@see DatabaseAdapterInterface} exposes only `run(): void` — no result set — so a post-import
- * script cannot read the schema through it. The adapter's credentials are in the application config
- * (`database.adapters.default.arguments`), which {@see PostImportScriptInterface::execute()}
- * receives, so this builds a read-only companion connection from the same credentials. There is
- * nothing extra to configure per project. Table and column existence both come from one
- * `information_schema` query on that connection.
+ * Through the deployer's own {@see DatabaseAdapterInterface}, via `fetchAll()`. Table and column
+ * existence both come from one `information_schema` query. Values that have to become part of SQL
+ * TEXT — the emitted statements are handed to `run()` as a string, so there is no placeholder to
+ * bind to — go through the adapter's `quote()`.
+ *
+ * Until conductor/core 4.0 the interface exposed only `run(): void`, with no way to return a result,
+ * so this class opened its own companion PDO connection built from
+ * `database.adapters.default.arguments` in the application config (CTAP-1629 removed that).
  *
  * ## What post-import is NOT for
  *
@@ -108,13 +107,10 @@ final class PostImportSupport
     /** @var array<string, list<string>>|null */
     private ?array $columns = null;
 
-    private ?PDO $pdo = null;
-
-    /** @param array<string, mixed> $config */
     public function __construct(
         private readonly DatabaseAdapterInterface $databaseAdapter,
         private readonly string $databaseName,
-        private readonly array $config,
+        private readonly ApplicationConfig $config,
         private readonly LoggerInterface $logger,
     ) {
     }
@@ -149,20 +145,22 @@ final class PostImportSupport
         return $this->databaseName;
     }
 
-    /** The environment being deployed, e.g. `qa`. */
+    /**
+     * The environment being deployed, e.g. `qa`.
+     *
+     * This used to read `$config['current_environment']` and fall back to the string `'unknown'`. No
+     * code anywhere ever wrote that key — the config carries `environment` — so it returned
+     * `'unknown'` every time (CTAP-1630).
+     */
     public function environment(): string
     {
-        $environment = $this->config['current_environment'] ?? null;
-
-        return is_string($environment) && $environment !== '' ? $environment : 'unknown';
+        return $this->config->environment;
     }
 
-    /** @return array<string, mixed> */
+    /** @return array<string, string> */
     public function environmentVars(): array
     {
-        $vars = $this->config['environment_vars'] ?? [];
-
-        return is_array($vars) ? $vars : [];
+        return $this->config->environmentVars;
     }
 
     // ------------------------------------------------------------------ schema introspection
@@ -228,8 +226,7 @@ final class PostImportSupport
 
     public function rowExists(string $table, string $predicate): bool
     {
-        return $this->query(sprintf('SELECT 1 FROM `%s` WHERE %s LIMIT 1', $table, $predicate))
-            ->fetchColumn() !== false;
+        return $this->fetchAll(sprintf('SELECT 1 FROM `%s` WHERE %s LIMIT 1', $table, $predicate)) !== [];
     }
 
     // ------------------------------------------------------------------ mutations
@@ -451,7 +448,8 @@ final class PostImportSupport
         $sql  = sprintf('SELECT `%s` FROM `%s` WHERE %s', $column, $table, $predicate);
         $held = [];
 
-        foreach ($this->query($sql)->fetchAll(PDO::FETCH_COLUMN) as $json) {
+        foreach ($this->fetchAll($sql) as $row) {
+            $json = $row[$column] ?? null;
             if (! is_string($json) || $json === '') {
                 continue;
             }
@@ -495,60 +493,25 @@ final class PostImportSupport
 
         $this->columns = [];
         $sql           = 'SELECT TABLE_NAME, COLUMN_NAME FROM information_schema.COLUMNS '
-            . 'WHERE TABLE_SCHEMA = ' . $this->quote($this->databaseName)
-            . ' ORDER BY TABLE_NAME, ORDINAL_POSITION';
+            . 'WHERE TABLE_SCHEMA = :schema ORDER BY TABLE_NAME, ORDINAL_POSITION';
 
-        foreach ($this->query($sql)->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        foreach ($this->fetchAll($sql, [':schema' => $this->databaseName]) as $row) {
             $this->columns[(string) $row['TABLE_NAME']][] = (string) $row['COLUMN_NAME'];
         }
     }
 
-    private function query(string $sql): PDOStatement
-    {
-        $statement = $this->pdo()->query($sql);
-        if ($statement === false) {
-            throw new Exception\RuntimeException("Failed to run post-import introspection query: $sql");
-        }
-
-        return $statement;
-    }
-
     /**
-     * Read-only companion connection, built from the same credentials conductor gives its own
-     * database adapter.
+     * @param array<string, mixed>|null $parameters
+     * @return list<array<string, mixed>>
      */
-    private function pdo(): PDO
+    private function fetchAll(string $sql, ?array $parameters = null): array
     {
-        if ($this->pdo !== null) {
-            return $this->pdo;
-        }
-
-        $arguments = $this->config['database']['adapters']['default']['arguments'] ?? null;
-        if (! is_array($arguments)) {
-            throw new Exception\RuntimeException(
-                'Cannot inspect the snapshot schema: database.adapters.default.arguments is missing '
-                . 'from the application config.',
-            );
-        }
-
-        $this->pdo = new PDO(
-            sprintf(
-                'mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',
-                (string) ($arguments['host'] ?? 'localhost'),
-                (int) ($arguments['port'] ?? 3306),
-                $this->databaseName,
-            ),
-            (string) ($arguments['username'] ?? ''),
-            (string) ($arguments['password'] ?? ''),
-            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION],
-        );
-
-        return $this->pdo;
+        return $this->databaseAdapter->fetchAll($sql, $this->databaseName, $parameters);
     }
 
     private function quote(string $value): string
     {
-        return $this->pdo()->quote($value);
+        return $this->databaseAdapter->quote($value);
     }
 
     /** A PHP value as a SQL literal that JSON_SET stores with the right JSON type. */
