@@ -1,3 +1,10 @@
+[4.0.1](https://github.com/conductorphp/conductor-application-orchestration/compare/4.0.0...4.0.1) (2026-09-09)
+
+### Bug Fixes
+* null config values in app:config:show instead of fataling (CTAP-1634) ([5fbf1f1](https://github.com/conductorphp/conductor-application-orchestration/commit/5fbf1f1d5577ceaccaa1ac5c057bc3fd3934e35f))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [4.0.0](https://github.com/conductorphp/conductor-application-orchestration/compare/3.2.0...4.0.0) (2026-09-08)
 
 

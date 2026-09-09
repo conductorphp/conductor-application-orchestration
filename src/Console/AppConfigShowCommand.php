@@ -42,8 +42,11 @@ class AppConfigShowCommand extends Command
         return self::SUCCESS;
     }
 
+    /**
+     * @param array<array-key, mixed> $data
+     */
     private function expandToOutputRows(
-        $data,
+        array $data,
         Table $outputTable,
         ?string $filter = null,
         ?string $keyPrefix = null,
@@ -54,14 +57,31 @@ class AppConfigShowCommand extends Command
                 $key = "$keyPrefix/$key";
             }
 
-            if (is_scalar($value)) {
-                if (!$filter || fnmatch($filter, $key)) {
-                    $outputTable->addRow([$key, $value]);
-                }
-            } else {
+            // Branch on is_array, not on !is_scalar: null is not scalar, and recursing into it
+            // put it straight into ksort() (CTAP-1634).
+            if (is_array($value) && [] !== $value) {
                 $this->expandToOutputRows($value, $outputTable, $filter, $key);
+                continue;
+            }
+
+            if (!$filter || fnmatch($filter, $key)) {
+                $outputTable->addRow([$key, $this->formatValue($value)]);
             }
         }
     }
 
+    /**
+     * A config dump is read to answer "what is this set to?", so an unset value has to be
+     * distinguishable from a set one. null and false both rendered as an empty cell before.
+     */
+    private function formatValue(mixed $value): string
+    {
+        return match (true) {
+            null === $value => '',
+            is_bool($value) => $value ? 'true' : 'false',
+            [] === $value => '[]',
+            is_scalar($value), $value instanceof \Stringable => (string) $value,
+            default => '<' . get_debug_type($value) . '>',
+        };
+    }
 }
