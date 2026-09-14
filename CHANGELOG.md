@@ -1,3 +1,10 @@
+[4.1.0](https://github.com/conductorphp/conductor-application-orchestration/compare/4.0.1...4.1.0) (2026-09-14)
+
+### Features
+* conductor/core ^5.0 (CTAP-1712) ([d9274ed](https://github.com/conductorphp/conductor-application-orchestration/commit/d9274edd8d59d3fe7274ad4e564f3d3688e9a750))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [4.0.1](https://github.com/conductorphp/conductor-application-orchestration/compare/4.0.0...4.0.1) (2026-09-09)
 
 ### Bug Fixes
