@@ -15,3 +15,33 @@ composer require conductor/application-orchestration
 
 <!-- @todo Add basic usage -->
 
+## Configuration from environment variables
+
+Any string in the application configuration may carry `${VAR}` placeholders, filled at config load
+from the process environment and then `application.environment_vars`. Skeleton `template_vars` are
+the usual place:
+
+```yaml
+# config/app/environments/production/config.yaml
+application_orchestration:
+  application:
+    skeleton:
+      files:
+        config/autoload/doctrine.local.php:
+          location: local
+          source: doctrine.local.php.twig
+          template_vars:
+            data:
+              doctrine:
+                connection:
+                  orm_default:
+                    params:
+                      url: "mysql://prod:${MYSQL_PASSWORD}@${MYSQL_HOST}/app"
+```
+
+Register `ConductorAppOrchestration\Config\EnvVarInterpolationPostProcessor` as a `ConfigAggregator`
+post-processor in `config/config.php` to turn it on. An undefined variable fails the load, naming the
+variable and the config path; `$${VAR}` writes a literal; plan steps are left to the shell. Skeleton
+templates get a `b64decode` filter so a multi-line value such as a PEM key can travel as one base64
+environment variable. The full rules, the `.env.dist` convention and the `config.php` scaffold are in
+the [conductor/core documentation](https://github.com/conductorphp/conductor-core/blob/master/docs/index.md#environment-variables-in-configuration).

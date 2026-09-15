@@ -39,6 +39,12 @@ final readonly class ReplacementConfig
      * An unknown variable is left as written rather than blanked, so a typo shows up in the
      * generated SQL instead of quietly replacing content with an empty string.
      *
+     * This predates config-wide interpolation. A project that wires
+     * {@see EnvVarInterpolationPostProcessor} into its `config.php` has every placeholder resolved
+     * — or rejected — at config load, and `$to` arrives here with none left, so this is a no-op
+     * there. It stays for projects that have not adopted the post-processor, whose replacements
+     * keep behaving exactly as before.
+     *
      * @param array<string, mixed> $environmentVars
      */
     public function resolvedTo(array $environmentVars): ?string

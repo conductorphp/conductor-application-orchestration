@@ -5,6 +5,7 @@ namespace ConductorAppOrchestration\Deploy;
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\Exception;
 use ConductorAppOrchestration\FileLayoutInterface;
+use ConductorAppOrchestration\Twig\Extension\Base64Extension;
 use ConductorAppOrchestration\Twig\Extension\VarExportExtension;
 use ConductorCore\Shell\Adapter\LocalShellAdapter;
 use Psr\Log\LoggerAwareInterface;
@@ -372,11 +373,16 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         }
 
         if (str_ends_with($fileInfo['source'], '.twig')) {
+            // Skeleton files are PHP, INI, PEM — never HTML. Twig's default `html` autoescaping
+            // turned a `'` in a var_export'd value into `&#039;` and a `&` in a DSN into `&amp;`,
+            // which is a broken config file, not a safer one. Values are written verbatim.
             $twig = new TwigEnvironment(new TwigArrayLoader([]), [
-                'debug' => true,
+                'debug'      => true,
+                'autoescape' => false,
             ]);
             $twig->addExtension(new DebugExtension());
             $twig->addExtension(new VarExportExtension());
+            $twig->addExtension(new Base64Extension());
             $template = $twig->createTemplate($content);
             $content = $template->render($templateVars ?: ['data' => []]);
         }

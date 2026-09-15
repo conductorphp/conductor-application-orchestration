@@ -1,3 +1,10 @@
+[4.2.0](https://github.com/conductorphp/conductor-application-orchestration/compare/4.1.0...4.2.0) (2026-09-15)
+
+### Features
+* interpolation across merged config (CTAP-1724) ([66cce7a](https://github.com/conductorphp/conductor-application-orchestration/commit/66cce7a83287ccb4f75559f7c8be31324fef6083))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [4.1.0](https://github.com/conductorphp/conductor-application-orchestration/compare/4.0.1...4.1.0) (2026-09-14)
 
 ### Features
