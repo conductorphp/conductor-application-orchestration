@@ -41,7 +41,8 @@ application_orchestration:
 
 Register `ConductorAppOrchestration\Config\EnvVarInterpolationPostProcessor` as a `ConfigAggregator`
 post-processor in `config/config.php` to turn it on. An undefined variable fails the load, naming the
-variable and the config path; `$${VAR}` writes a literal; plan steps are left to the shell. Skeleton
-templates get a `b64decode` filter so a multi-line value such as a PEM key can travel as one base64
-environment variable. The full rules, the `.env.dist` convention and the `config.php` scaffold are in
+variable and the config path; `$${VAR}` writes a literal; plan steps are left to the shell. A
+multi-line value such as a PEM key travels as one base64 environment variable and is decoded at the
+placeholder, `'${AMAZON_PAY_PRIVATE_KEY|b64decode}'`, which works through the shared
+`var-export.php.twig`; a template the project owns can use the same `b64decode` as a Twig filter. The full rules, the `.env.dist` convention and the `config.php` scaffold are in
 the [conductor/core documentation](https://github.com/conductorphp/conductor-core/blob/master/docs/index.md#environment-variables-in-configuration).

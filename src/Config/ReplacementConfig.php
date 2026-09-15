@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace ConductorAppOrchestration\Config;
 
-use function preg_replace_callback;
+use ConductorCore\Config\EnvVarInterpolator;
+
 use function str_contains;
 
 /**
@@ -39,26 +40,31 @@ final readonly class ReplacementConfig
      * An unknown variable is left as written rather than blanked, so a typo shows up in the
      * generated SQL instead of quietly replacing content with an empty string.
      *
+     * The filling is done by {@see EnvVarInterpolator} in its lenient mode, so what counts as a
+     * placeholder — the name characters, the `$${VAR}` escape, a `|filter` — is decided in exactly
+     * one place. This used to run its own `/\$\{([A-Z_]+)\}/`, which meant `${DOMAIN2}` or
+     * `${frontend_domain}` was a placeholder to the post-processor and literal text here (CTAP-1728).
+     * Two things follow from sharing the engine: an empty environment var now counts as unset and is
+     * left as written rather than substituted with nothing, and a bad `|filter` is an error.
+     *
      * This predates config-wide interpolation. A project that wires
      * {@see EnvVarInterpolationPostProcessor} into its `config.php` has every placeholder resolved
      * — or rejected — at config load, and `$to` arrives here with none left, so this is a no-op
-     * there. It stays for projects that have not adopted the post-processor, whose replacements
-     * keep behaving exactly as before.
+     * there. It stays for projects that have not adopted the post-processor.
      *
      * @param array<string, mixed> $environmentVars
+     * @throws \ConductorCore\Exception\InvalidPlaceholderException On an unknown filter or a rejected value.
      */
     public function resolvedTo(array $environmentVars): ?string
     {
-        if ($this->to === null || $environmentVars === [] || ! str_contains($this->to, '${')) {
+        if ($this->to === null || ! str_contains($this->to, '${')) {
             return $this->to;
         }
 
-        return preg_replace_callback(
-            '/\$\{([A-Z_]+)\}/',
-            static fn(array $matches): string => isset($environmentVars[$matches[1]])
-                ? (string) $environmentVars[$matches[1]]
-                : $matches[0],
+        return (new EnvVarInterpolator($environmentVars))->interpolateString(
             $this->to,
+            "replacements.{$this->name}.to",
+            failOnUndefined: false,
         );
     }
 }

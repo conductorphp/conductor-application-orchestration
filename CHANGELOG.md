@@ -1,3 +1,10 @@
+[4.2.1](https://github.com/conductorphp/conductor-application-orchestration/compare/4.2.0...4.2.1) (2026-09-15)
+
+### Bug Fixes
+* placeholder parser for replacements (CTAP-1728) ([31f4558](https://github.com/conductorphp/conductor-application-orchestration/commit/31f455864fae2df3583fe0288e44147a00f72d46))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [4.2.0](https://github.com/conductorphp/conductor-application-orchestration/compare/4.1.0...4.2.0) (2026-09-15)
 
 ### Features
