@@ -27,6 +27,7 @@ use ConductorCore\Repository\RepositoryAdapterAwareInterface;
 use ConductorCore\Repository\RepositoryAdapterInterface;
 use ConductorCore\Shell\Adapter\ShellAdapterAwareInterface;
 use ConductorCore\Shell\Adapter\ShellAdapterInterface;
+use ConductorCore\Shell\ChildProcessVerbosity;
 use FilesystemIterator;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
@@ -395,8 +396,10 @@ class PlanRunner implements LoggerAwareInterface
             : $this->planPath;
 
         if (!empty($step['command'])) {
+            // Conductor's own SHELL_VERBOSITY is not the step's: below -vvv the child runs at its
+            // default. A step that sets the variable itself has asked for that level and keeps it.
             $environmentVariables = array_replace(
-                getenv(),
+                ChildProcessVerbosity::forChild(getenv()),
                 $stepArguments,
                 $step['environment_variables'] ?? []
             );

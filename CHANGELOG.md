@@ -1,3 +1,10 @@
+[4.3.0](https://github.com/conductorphp/conductor-application-orchestration/compare/4.2.1...4.3.0) (2026-09-16)
+
+### Features
+* steps run at their default verbosity below -vvv (CTAP-1736) ([99089d9](https://github.com/conductorphp/conductor-application-orchestration/commit/99089d9688142913af79823aefd5507cd8fc71d0))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [4.2.1](https://github.com/conductorphp/conductor-application-orchestration/compare/4.2.0...4.2.1) (2026-09-15)
 
 ### Bug Fixes
