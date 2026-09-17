@@ -1,3 +1,10 @@
+[4.4.1](https://github.com/conductorphp/conductor-application-orchestration/compare/4.4.0...4.4.1) (2026-09-17)
+
+### Bug Fixes
+* a writable app root only when the deploy writes there (CTAP-1752) ([bcec4cf](https://github.com/conductorphp/conductor-application-orchestration/commit/bcec4cf46e3b7cf5231b3a308956dbd1dce44ebd))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [4.4.0](https://github.com/conductorphp/conductor-application-orchestration/compare/4.3.0...4.4.0) (2026-09-16)
 
 ### Features

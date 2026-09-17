@@ -57,19 +57,38 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
         }
     }
 
+    /**
+     * The app root only has to be writable when something is about to be written into it: it does
+     * not exist yet, or the layout is blue/green (local/, shared/, releases/ and the current
+     * symlink all land there). The default layout writes nothing to the app root itself; every
+     * skeleton entry renders into the directory it owns and fails there, naming the exact path,
+     * if that is not writable. So a read-only code root (image-baked, root-owned) with writable
+     * skeleton targets is a valid deploy target. CTAP-1752.
+     */
     private function prepareAppRootPath(): void
     {
         $appRoot = $this->applicationConfig->getAppRoot();
-        $defaultDirMode = $this->applicationConfig->getDefaultDirMode();
 
-        if (!is_writable($appRoot)) {
-            if (!is_dir($appRoot) && is_writable(dirname($appRoot))) {
-                if (!mkdir($appRoot, $defaultDirMode) && !is_dir($appRoot)) {
-                    throw new RuntimeException(sprintf('Directory "%s" was not created', $appRoot));
-                }
-            } else {
-                throw new Exception\RuntimeException("Project root \"$appRoot\" is not writable.");
+        if (!is_dir($appRoot)) {
+            if (file_exists($appRoot)) {
+                throw new Exception\RuntimeException("Project root \"$appRoot\" is not a directory.");
             }
+            if (!is_writable(dirname($appRoot))) {
+                throw new Exception\RuntimeException(
+                    "Project root \"$appRoot\" does not exist and its parent directory is not writable."
+                );
+            }
+            $defaultDirMode = $this->applicationConfig->getDefaultDirMode();
+            if (!mkdir($appRoot, $defaultDirMode) && !is_dir($appRoot)) {
+                throw new RuntimeException(sprintf('Directory "%s" was not created', $appRoot));
+            }
+            return;
+        }
+
+        if (FileLayoutInterface::STRATEGY_BLUE_GREEN === $this->applicationConfig->getFileLayoutStrategy()
+            && !is_writable($appRoot)
+        ) {
+            throw new Exception\RuntimeException("Project root \"$appRoot\" is not writable.");
         }
     }
 
@@ -313,7 +332,11 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
             $this->shellAdapter->runShellCommand($command);
         }
 
-        file_put_contents($resolvedFilename, $content);
+        // Unchecked, a refused write is a PHP warning and the deploy carries on as a success. This is
+        // the per-path check a read-only app root relies on, so it has to fail, naming the path.
+        if (false === file_put_contents($resolvedFilename, $content)) {
+            throw new Exception\RuntimeException(sprintf('Skeleton file "%s" could not be written.', $resolvedFilename));
+        }
         chmod($resolvedFilename, $mode);
         $this->logger->debug("Ensured \"$resolvedFilename\" is file and has permissions $modeAsString.");
     }
@@ -409,7 +432,11 @@ class ApplicationSkeletonDeployer implements LoggerAwareInterface
             $this->shellAdapter->runShellCommand($command);
         }
 
-        symlink($resolvedTargetFilename, $resolvedFilename);
+        if (!symlink($resolvedTargetFilename, $resolvedFilename)) {
+            throw new Exception\RuntimeException(
+                sprintf('Skeleton symlink "%s" -> "%s" could not be created.', $resolvedFilename, $resolvedTargetFilename)
+            );
+        }
         $this->logger->debug("Ensured \"$resolvedFilename\" is a symlink pointed to \"$resolvedTargetFilename\".");
     }
 
