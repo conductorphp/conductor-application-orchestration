@@ -1,3 +1,8 @@
+[4.4.2](https://github.com/conductorphp/conductor-application-orchestration/compare/4.4.1...4.4.2) (2026-09-27)
+
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [4.4.1](https://github.com/conductorphp/conductor-application-orchestration/compare/4.4.0...4.4.1) (2026-09-17)
 
 ### Bug Fixes

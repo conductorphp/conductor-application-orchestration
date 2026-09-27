@@ -6,6 +6,7 @@ namespace ConductorAppOrchestrationTest\Config;
 
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\Config\EnvVarInterpolationPostProcessor;
+use ConductorCore\Exception\InvalidPlaceholderException;
 use ConductorCore\Exception\UndefinedVariableException;
 use PHPUnit\Framework\TestCase;
 
@@ -17,7 +18,7 @@ use function putenv;
  */
 class EnvVarInterpolationPostProcessorTest extends TestCase
 {
-    private const VARS = ['CT_MYSQL_PASSWORD', 'CT_MYSQL_HOST', 'CT_FRONTEND_DOMAIN', 'CT_REGION'];
+    private const VARS = ['CT_MYSQL_PASSWORD', 'CT_MYSQL_HOST', 'CT_MYSQL_PORT', 'CT_FRONTEND_DOMAIN', 'CT_REGION'];
 
     protected function tearDown(): void
     {
@@ -252,5 +253,42 @@ class EnvVarInterpolationPostProcessorTest extends TestCase
         ]));
 
         $this->assertSame('echo ${HOME}', $config['application_orchestration']['application']['template_vars']['shell_snippet']);
+    }
+
+    // ------------------------------------------------------------------ defaults (CTAP-1984)
+
+    /**
+     * The clicktap case: `DATABASE_PORT: '${CT_MYSQL_PORT:-3306}'` in `global.yaml` gets its stock
+     * default on a host that does not run the compose file, while a plan step's `${VAR:-}` stays the
+     * shell's business.
+     */
+    public function testADefaultFillsOutsidePlanStepsAndIsLeftAloneInsideThem(): void
+    {
+        putenv('CT_MYSQL_HOST=db.internal');
+        $steps = ['key' => 'test -n "${CONDUCTOR_CRYPT_KEY:-}"', 'x' => ['command' => 'echo ${CT_MYSQL_PORT:-3306}']];
+
+        $config = (new EnvVarInterpolationPostProcessor())($this->mergedConfig('qa', [
+            'environment_vars' => ['DATABASE_HOST' => '${CT_MYSQL_HOST:-localhost}', 'DATABASE_PORT' => '${CT_MYSQL_PORT:-3306}'],
+            'deploy'           => ['plans' => ['default' => ['steps' => $steps]]],
+        ], [
+            'database' => ['adapters' => ['default' => ['arguments' => ['host' => '${DATABASE_HOST}', 'port' => '${DATABASE_PORT}']]]],
+        ]));
+
+        $this->assertSame(
+            ['host' => 'db.internal', 'port' => '3306'],
+            $config['database']['adapters']['default']['arguments'],
+        );
+        $this->assertSame($steps, $config['application_orchestration']['application']['deploy']['plans']['default']['steps']);
+    }
+
+    /** What used to pass through silently now stops the load, naming where it sits. */
+    public function testAShellOperatorOutsidePlanStepsFailsTheLoad(): void
+    {
+        $this->expectException(InvalidPlaceholderException::class);
+        $this->expectExceptionMessage('"${CT_MYSQL_PORT:=3306}" for variable "CT_MYSQL_PORT" at "database.adapters.default.arguments.port"');
+
+        (new EnvVarInterpolationPostProcessor())($this->mergedConfig('qa', [], [
+            'database' => ['adapters' => ['default' => ['arguments' => ['port' => '${CT_MYSQL_PORT:=3306}']]]],
+        ]));
     }
 }
