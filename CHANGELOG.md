@@ -1,3 +1,10 @@
+[4.4.3](https://github.com/conductorphp/conductor-application-orchestration/compare/4.4.2...4.4.3) (2026-09-28)
+
+### Bug Fixes
+* a failed command step's output at ERROR (CTAP-2006) ([86ebba5](https://github.com/conductorphp/conductor-application-orchestration/commit/86ebba5e85a93e167ef2c587c3a7d44e6ea5ce49))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [4.4.2](https://github.com/conductorphp/conductor-application-orchestration/compare/4.4.1...4.4.2) (2026-09-27)
 
 

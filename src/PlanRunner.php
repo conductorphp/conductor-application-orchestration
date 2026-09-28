@@ -21,6 +21,7 @@ use ConductorCore\Database\DatabaseAdapterManager;
 use ConductorCore\Database\DatabaseAdapterManagerAwareInterface;
 use ConductorCore\Database\DatabaseImportExportAdapterManager;
 use ConductorCore\Database\DatabaseImportExportAdapterManagerAwareInterface;
+use ConductorCore\Exception\ShellCommandFailedException;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\Filesystem\MountManager\MountManagerAwareInterface;
 use ConductorCore\Repository\RepositoryAdapterAwareInterface;
@@ -411,13 +412,22 @@ class PlanRunner implements LoggerAwareInterface
                 }
             }
 
-            $output = $this->shellAdapter->runShellCommand(
-                $step['command'],
-                $commandWorkingDirectory,
-                $stringEnvironmentVariables,
-                $step['run_priority'] ?? ShellAdapterInterface::PRIORITY_NORMAL,
-                $step['options'] ?? null
-            );
+            try {
+                $output = $this->shellAdapter->runShellCommand(
+                    $step['command'],
+                    $commandWorkingDirectory,
+                    $stringEnvironmentVariables,
+                    $step['run_priority'] ?? ShellAdapterInterface::PRIORITY_NORMAL,
+                    $step['options'] ?? null
+                );
+            } catch (ShellCommandFailedException $e) {
+                // At ERROR so it shows at default verbosity, and through the logger so it lands on
+                // the same stream as the rest of the log. The exception's own rendering goes to
+                // stderr at the console's discretion, and a wrapper that captures stdout alone
+                // never saw the step's output (CTAP-2006).
+                $this->logger->error($this->describeFailedCommandStep($name, $step['command'], $e));
+                throw $e;
+            }
 
             // @todo Allow callable? Not sure where this could be more useful than creating a class that implements the
             //       correct interface and this could cause confusion
@@ -498,6 +508,32 @@ class PlanRunner implements LoggerAwareInterface
         }
 
         return $step['provides'] ?? [];
+    }
+
+    /**
+     * The step name, the command and the exit status on the first line, then whatever the command
+     * wrote to stdout and stderr, each as its own block. A stream the command left empty is
+     * omitted rather than shown as an empty block.
+     */
+    private function describeFailedCommandStep(string $name, string $command, ShellCommandFailedException $e): string
+    {
+        $message = sprintf('Step "%s" failed with exit status %d.', $name, $e->getExitStatus());
+        $message .= "\nCommand:" . $this->asBlock($command);
+        foreach (['stdout' => $e->getStdout(), 'stderr' => $e->getStderr()] as $stream => $content) {
+            if ('' !== trim($content)) {
+                $message .= "\n" . ucfirst($stream) . ':' . $this->asBlock($content);
+            }
+        }
+
+        return $message;
+    }
+
+    /** A single line stays on the label's line; anything longer starts on a line of its own. */
+    private function asBlock(string $content): string
+    {
+        $content = trim($content);
+
+        return str_contains($content, "\n") ? "\n$content" : " $content";
     }
 
     public function setPlanPath(string $planPath)
