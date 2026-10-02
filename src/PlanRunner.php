@@ -17,6 +17,8 @@ use ConductorAppOrchestration\Deploy\DeploymentState;
 use ConductorAppOrchestration\Exception;
 use ConductorAppOrchestration\Maintenance\MaintenanceStrategyAwareInterface;
 use ConductorAppOrchestration\Maintenance\MaintenanceStrategyInterface;
+use ConductorAppOrchestration\Wait\UrlWait;
+use ConductorAppOrchestration\Wait\UrlWaiter;
 use ConductorCore\Database\DatabaseAdapterManager;
 use ConductorCore\Database\DatabaseAdapterManagerAwareInterface;
 use ConductorCore\Database\DatabaseImportExportAdapterManager;
@@ -60,6 +62,7 @@ class PlanRunner implements LoggerAwareInterface
     private string $planPath;
     /** @var list<array{step: string, notice: string}> */
     private array $notices = [];
+    private ?UrlWaiter $urlWaiter = null;
 
     public function __construct(
         ApplicationConfig                  $applicationConfig,
@@ -417,6 +420,10 @@ class PlanRunner implements LoggerAwareInterface
             $this->notices[] = ['step' => (string) $name, 'notice' => $notice];
         }
 
+        if (isset($step['wait'])) {
+            $this->waitForUrl($name, $step, $stepArguments);
+        }
+
         if (!empty($step['command'])) {
             try {
                 $output = $this->shellAdapter->runShellCommand(
@@ -441,7 +448,7 @@ class PlanRunner implements LoggerAwareInterface
 //            chdir($commandWorkingDirectory);
 //            $output = call_user_func_array($step['callable'], $step['arguments'] ?? []);
         } elseif (empty($step['class'])) {
-            // A notice-only step has nothing to run
+            // A notice-only or wait-only step has nothing to run
             $output = null;
         } else {
             chdir($commandWorkingDirectory);
@@ -517,6 +524,39 @@ class PlanRunner implements LoggerAwareInterface
         }
 
         return $step['provides'] ?? [];
+    }
+
+    /**
+     * Blocks until the step's `wait:` URL is ready. The URL, body and header values resolve their
+     * variables the way a `notice:` does; the request is made in-process, never through a shell.
+     */
+    private function waitForUrl(string $name, array $step, array $stepArguments): void
+    {
+        $environment = $this->stepEnvironment($step, $stepArguments);
+        $config = $step['wait'];
+        foreach (['url', 'body'] as $key) {
+            if (isset($config[$key]) && is_string($config[$key])) {
+                $config[$key] = $this->expandVariables($config[$key], $environment);
+            }
+        }
+        foreach ($config['headers'] ?? [] as $headerName => $headerValue) {
+            if (is_string($headerValue)) {
+                $config['headers'][$headerName] = $this->expandVariables($headerValue, $environment);
+            }
+        }
+
+        try {
+            $this->urlWaiter ??= new UrlWaiter();
+            $this->urlWaiter->wait(UrlWait::fromConfig($name, $config), $this->logger);
+        } catch (Exception\RuntimeException $e) {
+            $this->logger->error(sprintf('Step "%s" failed. %s', $name, $e->getMessage()));
+            throw $e;
+        }
+    }
+
+    public function setUrlWaiter(UrlWaiter $urlWaiter): void
+    {
+        $this->urlWaiter = $urlWaiter;
     }
 
     /**

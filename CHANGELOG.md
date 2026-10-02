@@ -1,3 +1,10 @@
+[4.6.0](https://github.com/conductorphp/conductor-application-orchestration/compare/4.5.0...4.6.0) (2026-10-02)
+
+### Features
+* step wait: polls a URL until ready (CTAP-2145) ([e85c0b9](https://github.com/conductorphp/conductor-application-orchestration/commit/e85c0b912e35e4379445e46db8ac0440f551fb57))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [4.5.0](https://github.com/conductorphp/conductor-application-orchestration/compare/4.4.3...4.5.0) (2026-10-02)
 
 ### Features

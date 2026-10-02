@@ -2,6 +2,8 @@
 
 namespace ConductorAppOrchestration;
 
+use ConductorAppOrchestration\Wait\UrlWait;
+
 class Plan
 {
     private string $name;
@@ -98,8 +100,8 @@ class Plan
             }
         } else {
             $numMatchedStepTypes = count(array_intersect(['class', 'command', 'callable', 'steps'], array_keys($step)));
-            // A step with a "notice" and nothing to run is a notice-only step, not a parallel group
-            if (0 === $numMatchedStepTypes && !array_key_exists('notice', $step)) {
+            // A step with a "notice" or "wait" and nothing to run is a step of its own, not a parallel group
+            if (0 === $numMatchedStepTypes && !array_key_exists('notice', $step) && !array_key_exists('wait', $step)) {
                 if (0 === $depth) {
                     $depth++;
                     // Assume this is an array of commands to be run in parallel
@@ -122,7 +124,8 @@ class Plan
                 } else {
                     // Do not allow multiple levels of steps
                     throw new Exception\RuntimeException(
-                        'Step "' . $name . '" must include one of the keys "class", "callable", "command", or "notice".'
+                        'Step "' . $name
+                        . '" must include one of the keys "class", "callable", "command", "notice", or "wait".'
                     );
                 }
             } elseif ($numMatchedStepTypes > 1) {
@@ -143,6 +146,26 @@ class Plan
                     'Step "' . $name . '" may not include "notice" with "steps". Put the notice on a step of its own.'
                 );
             }
+        }
+
+        if (array_key_exists('wait', $step)) {
+            if (!empty($step['steps'])) {
+                throw new Exception\RuntimeException(
+                    'Step "' . $name . '" may not include "wait" with "steps". Put the wait in a step before the group.'
+                );
+            }
+
+            if ($depth > 0) {
+                // A wait blocks the event loop the group's steps share, so it would hold them all up
+                throw new Exception\RuntimeException(
+                    'Step "' . $name . '" may not include "wait" inside a parallel group. Put the wait in a step '
+                    . 'before the group.'
+                );
+            }
+
+            // Validated here so a mistyped key fails the plan before any step runs; placeholders are
+            // resolved when the step runs
+            UrlWait::fromConfig((string) $name, $step['wait']);
         }
 
         // @todo Maybe remove this if we move to Yaml config
