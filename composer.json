@@ -1,6 +1,6 @@
 {
   "name": "conductor/application-orchestration",
-  "version": "4.6.0",
+  "version": "4.6.1",
   "description": "Conductor Application Orchestration",
   "type": "library",
   "homepage": "https://github.com/conductorphp/conductor-application-orchestration",
@@ -27,6 +27,7 @@
     "phpunit/phpunit": "^13.0"
   },
   "suggest": {
+    "conductor/clicktap-platform-support": "Adds support for the Clicktap middleware platform.",
     "conductor/drupal-platform-support": "Adds support for the Drupal platform.",
     "conductor/magento-1-platform-support": "Adds support for the Magento 1 platform.",
     "conductor/magento-2-platform-support": "Adds support for the Magento 2 platform.",
