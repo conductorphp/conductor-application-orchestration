@@ -274,7 +274,25 @@ class AppDeployCommand extends Command
             );
         }
         $this->logger->info("<info>Application \"$appName\" deployment completed!</info>");
+        $this->repeatNotices();
         return self::SUCCESS;
+    }
+
+    /**
+     * A notice prints when its step runs, which on a long deploy is far above the last line. Say each
+     * one again where the operator is looking.
+     */
+    private function repeatNotices(): void
+    {
+        $notices = $this->applicationDeployer->getNotices();
+        if (!$notices) {
+            return;
+        }
+
+        $this->logger->notice(sprintf('%d %s from this deployment:', count($notices), 1 === count($notices) ? 'notice' : 'notices'));
+        foreach ($notices as $notice) {
+            $this->logger->notice(sprintf('- %s: %s', $notice['step'], $notice['notice']));
+        }
     }
 
     private function validateInput(InputInterface $input): void

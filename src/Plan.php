@@ -98,7 +98,8 @@ class Plan
             }
         } else {
             $numMatchedStepTypes = count(array_intersect(['class', 'command', 'callable', 'steps'], array_keys($step)));
-            if (0 === $numMatchedStepTypes) {
+            // A step with a "notice" and nothing to run is a notice-only step, not a parallel group
+            if (0 === $numMatchedStepTypes && !array_key_exists('notice', $step)) {
                 if (0 === $depth) {
                     $depth++;
                     // Assume this is an array of commands to be run in parallel
@@ -121,13 +122,25 @@ class Plan
                 } else {
                     // Do not allow multiple levels of steps
                     throw new Exception\RuntimeException(
-                        'Step "' . $name . '" must include one of the keys "class", "callable", or "command".'
+                        'Step "' . $name . '" must include one of the keys "class", "callable", "command", or "notice".'
                     );
                 }
             } elseif ($numMatchedStepTypes > 1) {
                 throw new Exception\RuntimeException(
                     'Step "' . $name
                     . '" may only include one of the keys "class", "callable", "command", or "steps".'
+                );
+            }
+        }
+
+        if (array_key_exists('notice', $step)) {
+            if (!is_string($step['notice']) || '' === trim($step['notice'])) {
+                throw new Exception\RuntimeException('Step "' . $name . '" key "notice" must be a non-empty string.');
+            }
+
+            if (!empty($step['steps'])) {
+                throw new Exception\RuntimeException(
+                    'Step "' . $name . '" may not include "notice" with "steps". Put the notice on a step of its own.'
                 );
             }
         }

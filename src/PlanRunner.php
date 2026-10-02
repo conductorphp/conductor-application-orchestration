@@ -58,6 +58,8 @@ class PlanRunner implements LoggerAwareInterface
     private array $plans;
     private string $stepInterface;
     private string $planPath;
+    /** @var list<array{step: string, notice: string}> */
+    private array $notices = [];
 
     public function __construct(
         ApplicationConfig                  $applicationConfig,
@@ -109,6 +111,7 @@ class PlanRunner implements LoggerAwareInterface
                $rollback = false
     ): void {
         $origWorkingDirectory = getcwd();
+        $this->notices = [];
         if (!isset($this->planPath)) {
             $this->planPath = getcwd();
         }
@@ -221,6 +224,17 @@ class PlanRunner implements LoggerAwareInterface
             chdir($origWorkingDirectory);
             throw $e;
         }
+    }
+
+    /**
+     * The `notice:` text of every step that ran in the last plan, in the order they fired, for the
+     * caller to repeat once the plan has finished.
+     *
+     * @return list<array{step: string, notice: string}>
+     */
+    public function getNotices(): array
+    {
+        return $this->notices;
     }
 
     public function setPlans(array $plans): void
@@ -396,27 +410,19 @@ class PlanRunner implements LoggerAwareInterface
             ? $stepArguments['codePath']
             : $this->planPath;
 
+        if (isset($step['notice'])) {
+            // At NOTICE so it shows at default verbosity, where "Step: …" and a step's own output do not
+            $notice = $this->expandVariables($step['notice'], $this->stepEnvironment($step, $stepArguments));
+            $this->logger->notice($notice);
+            $this->notices[] = ['step' => (string) $name, 'notice' => $notice];
+        }
+
         if (!empty($step['command'])) {
-            // Conductor's own SHELL_VERBOSITY is not the step's: below -vvv the child runs at its
-            // default. A step that sets the variable itself has asked for that level and keeps it.
-            $environmentVariables = array_replace(
-                ChildProcessVerbosity::forChild(getenv()),
-                $stepArguments,
-                $step['environment_variables'] ?? []
-            );
-
-            $stringEnvironmentVariables = [];
-            foreach ($environmentVariables as $key => $value) {
-                if (is_string($value)) {
-                    $stringEnvironmentVariables[$key] = $value;
-                }
-            }
-
             try {
                 $output = $this->shellAdapter->runShellCommand(
                     $step['command'],
                     $commandWorkingDirectory,
-                    $stringEnvironmentVariables,
+                    $this->stepEnvironment($step, $stepArguments),
                     $step['run_priority'] ?? ShellAdapterInterface::PRIORITY_NORMAL,
                     $step['options'] ?? null
                 );
@@ -434,6 +440,9 @@ class PlanRunner implements LoggerAwareInterface
 //        } elseif (!empty($step['callable'])) {
 //            chdir($commandWorkingDirectory);
 //            $output = call_user_func_array($step['callable'], $step['arguments'] ?? []);
+        } elseif (empty($step['class'])) {
+            // A notice-only step has nothing to run
+            $output = null;
         } else {
             chdir($commandWorkingDirectory);
             $stepObject = new $step['class']();
@@ -508,6 +517,61 @@ class PlanRunner implements LoggerAwareInterface
         }
 
         return $step['provides'] ?? [];
+    }
+
+    /**
+     * The environment a `command:` step runs with: conductor's own, then the step arguments, then the
+     * step's `environment_variables`. Only string values survive; a shell has no other kind.
+     *
+     * @return array<string, string>
+     */
+    private function stepEnvironment(array $step, array $stepArguments): array
+    {
+        // Conductor's own SHELL_VERBOSITY is not the step's: below -vvv the child runs at its
+        // default. A step that sets the variable itself has asked for that level and keeps it.
+        $environmentVariables = array_replace(
+            ChildProcessVerbosity::forChild(getenv()),
+            $stepArguments,
+            $step['environment_variables'] ?? []
+        );
+
+        $stringEnvironmentVariables = [];
+        foreach ($environmentVariables as $key => $value) {
+            if (is_string($value)) {
+                $stringEnvironmentVariables[$key] = $value;
+            }
+        }
+
+        return $stringEnvironmentVariables;
+    }
+
+    /**
+     * Expands variables in a `notice:` the way bash expands them in a `command:` run with the same
+     * environment, without handing the text to a shell: a notice is prose, and the backticks it
+     * quotes a command in must stay literal rather than run it.
+     *
+     * `$NAME`, `${NAME}` and `${NAME:-default}` are expanded; an unset or (for `:-`) empty variable
+     * becomes the empty string or the default, as in bash. `\$` is a literal `$`. Nothing else is
+     * special.
+     *
+     * @param array<string, string> $environment
+     */
+    private function expandVariables(string $text, array $environment): string
+    {
+        return preg_replace_callback(
+            '/(?<escaped>\\\\\$)|\$\{(?<braced>[A-Za-z_][A-Za-z0-9_]*)(?::-(?<default>[^}]*))?\}|\$(?<bare>[A-Za-z_][A-Za-z0-9_]*)/',
+            static function (array $match) use ($environment): string {
+                if (null !== $match['escaped']) {
+                    return '$';
+                }
+
+                $value = $environment[$match['braced'] ?? $match['bare']] ?? '';
+
+                return ('' === $value && null !== $match['default']) ? $match['default'] : $value;
+            },
+            $text,
+            flags: PREG_UNMATCHED_AS_NULL
+        );
     }
 
     /**

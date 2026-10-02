@@ -9,6 +9,7 @@ return [
         AppDeployCommand::class,
         AppDestroyCommand::class,
         AppMaintenanceCommand::class,
+        AppPlansCommand::class,
         AppSnapshotCommand::class,
     ],
 ];

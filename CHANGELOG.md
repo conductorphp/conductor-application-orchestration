@@ -1,3 +1,10 @@
+[4.5.0](https://github.com/conductorphp/conductor-application-orchestration/compare/4.4.3...4.5.0) (2026-10-02)
+
+### Features
+* step notices and app:plans (CTAP-2143) ([f6958cd](https://github.com/conductorphp/conductor-application-orchestration/commit/f6958cd0f3264f8b633e7ef0efdd37e80c0f284f))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [4.4.3](https://github.com/conductorphp/conductor-application-orchestration/compare/4.4.2...4.4.3) (2026-09-28)
 
 ### Bug Fixes

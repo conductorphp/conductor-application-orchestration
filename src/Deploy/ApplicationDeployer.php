@@ -146,4 +146,13 @@ class ApplicationDeployer
         $this->planPath = $planPath;
     }
 
+    /**
+     * @return list<array{step: string, notice: string}>
+     * @see PlanRunner::getNotices()
+     */
+    public function getNotices(): array
+    {
+        return $this->planRunner->getNotices();
+    }
+
 }
