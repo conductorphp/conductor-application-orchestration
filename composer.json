@@ -1,6 +1,6 @@
 {
   "name": "conductor/application-orchestration",
-  "version": "4.6.1",
+  "version": "4.7.0",
   "description": "Conductor Application Orchestration",
   "type": "library",
   "homepage": "https://github.com/conductorphp/conductor-application-orchestration",

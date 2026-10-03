@@ -4,15 +4,20 @@ declare(strict_types=1);
 
 namespace ConductorAppOrchestration\Config;
 
+use ArrayObject;
 use ConductorAppOrchestration\Exception;
 use ConductorCore\Config\ParsesConfigTrait;
 use ConductorCore\Config\Schema\SchemaBuilder;
 use ConductorCore\Config\Schema\SchemaInterface;
+use Psr\Log\LoggerInterface;
 
 use function array_keys;
 use function array_merge;
+use function array_unique;
+use function array_values;
 use function implode;
 use function sort;
+use function sprintf;
 use function stripos;
 use function str_starts_with;
 use function substr;
@@ -43,8 +48,22 @@ final readonly class SnapshotConfig
     /** @var array<string, list<string>> */
     public array $databaseTableGroups;
 
+    /**
+     * Groups a platform package keeps for compatibility but wants plans to stop using, each with the
+     * message telling them what to use instead (CTAP-2161).
+     *
+     * @var array<string, string>
+     */
+    public array $deprecatedAssetGroups;
+
+    /** @var array<string, string> */
+    public array $deprecatedDatabaseTableGroups;
+
+    /** The deprecated groups already warned about, so each is reported once per run. */
+    private ArrayObject $warnedDeprecatedGroups;
+
     /** @param array<string, mixed>|null $config */
-    public function __construct(?array $config)
+    public function __construct(?array $config, private ?LoggerInterface $logger = null)
     {
         $parsed = $this->parseConfig($config, $this->schema(), self::CONFIG_KEY);
 
@@ -54,6 +73,9 @@ final readonly class SnapshotConfig
         $this->databases           = $parsed['databases'] ?? [];
         $this->assetGroups         = $parsed['asset_groups'] ?? [];
         $this->databaseTableGroups = $parsed['database_table_groups'] ?? [];
+        $this->deprecatedAssetGroups         = $parsed['deprecated_asset_groups'] ?? [];
+        $this->deprecatedDatabaseTableGroups = $parsed['deprecated_database_table_groups'] ?? [];
+        $this->warnedDeprecatedGroups        = new ArrayObject();
     }
 
     private function schema(): SchemaInterface
@@ -71,6 +93,10 @@ final readonly class SnapshotConfig
             'databases'             => $sb->collection($sb->raw())->default([]),
             'asset_groups'          => $sb->collection($group)->default([]),
             'database_table_groups' => $sb->collection($group)->default([]),
+            // Group name => what to use instead. Older versions ignore these keys, which is what lets
+            // a platform package ship them without requiring this version.
+            'deprecated_asset_groups'          => $sb->collection($sb->string()->notEmpty())->default([]),
+            'deprecated_database_table_groups' => $sb->collection($sb->string()->notEmpty())->default([]),
         ]);
     }
 
@@ -116,6 +142,8 @@ final readonly class SnapshotConfig
      */
     public function expandAssetGroups(array $assetGroups): array
     {
+        $this->warnAboutDeprecatedGroups($assetGroups, $this->deprecatedAssetGroups, 'asset group');
+
         return $this->expand($assetGroups, $this->assetGroups, 'asset group');
     }
 
@@ -126,6 +154,12 @@ final readonly class SnapshotConfig
      */
     public function expandDatabaseTableGroups(array $databaseTableGroups): array
     {
+        $this->warnAboutDeprecatedGroups(
+            $databaseTableGroups,
+            $this->deprecatedDatabaseTableGroups,
+            'database table group'
+        );
+
         return $this->expand($databaseTableGroups, $this->databaseTableGroups, 'database table group');
     }
 
@@ -163,10 +197,37 @@ final readonly class SnapshotConfig
             $expanded[] = $this->expand($groups[$group], $groups, $noun);
         }
 
-        $expanded = $expanded === [] ? [] : array_merge(...$expanded);
+        // Groups may overlap (a table can be both scratch and personal data), so a name can arrive
+        // more than once
+        $expanded = $expanded === [] ? [] : array_values(array_unique(array_merge(...$expanded)));
         sort($expanded);
 
         return $expanded;
+    }
+
+    /**
+     * Warns about the deprecated groups a plan names itself. A group referenced only from inside
+     * another group is not the plan's choice, so it is not reported.
+     *
+     * @param list<string>          $names
+     * @param array<string, string> $deprecated
+     */
+    private function warnAboutDeprecatedGroups(array $names, array $deprecated, string $noun): void
+    {
+        foreach ($names as $name) {
+            $group = substr((string) $name, 1);
+            if (! str_starts_with((string) $name, '@') || ! isset($deprecated[$group])) {
+                continue;
+            }
+
+            $key = "$noun:$group";
+            if (isset($this->warnedDeprecatedGroups[$key])) {
+                continue;
+            }
+
+            $this->warnedDeprecatedGroups[$key] = true;
+            $this->logger?->warning(sprintf('The %s "@%s" is deprecated. %s', $noun, $group, $deprecated[$group]));
+        }
     }
 
     /**
@@ -195,6 +256,8 @@ final readonly class SnapshotConfig
             'databases'             => $this->databases,
             'asset_groups'          => $this->assetGroups,
             'database_table_groups' => $this->databaseTableGroups,
+            'deprecated_asset_groups'          => $this->deprecatedAssetGroups,
+            'deprecated_database_table_groups' => $this->deprecatedDatabaseTableGroups,
         ];
     }
 }

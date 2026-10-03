@@ -147,7 +147,7 @@ readonly class ApplicationConfig
     {
         $this->buildConfig    = new BuildConfig($config['build'] ?? null);
         $this->deployConfig   = new DeployConfig($config['deploy'] ?? null);
-        $this->snapshotConfig = new SnapshotConfig($config['snapshot'] ?? null);
+        $this->snapshotConfig = new SnapshotConfig($config['snapshot'] ?? null, $logger);
         $this->skeletonConfig = new SkeletonConfig($config['skeleton'] ?? null);
 
         unset($config['build'], $config['deploy'], $config['snapshot'], $config['skeleton']);

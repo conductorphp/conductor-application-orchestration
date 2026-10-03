@@ -1,3 +1,10 @@
+[4.7.0](https://github.com/conductorphp/conductor-application-orchestration/compare/4.6.1...4.7.0) (2026-10-03)
+
+### Features
+* snapshot groups warn; expansion drops duplicates (CTAP-2161) ([5157865](https://github.com/conductorphp/conductor-application-orchestration/commit/51578658ca8e5f05c5766e07123551324a0cfe25))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [4.6.1](https://github.com/conductorphp/conductor-application-orchestration/compare/4.6.0...4.6.1) (2026-10-02)
 
 
