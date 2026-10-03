@@ -99,6 +99,29 @@ class CurlHttpProbeTest extends TestCase
         $this->assertStringStartsWith('Failed to connect to 127.0.0.1', (string) $result->error);
     }
 
+    /** CTAP-2150: errors retrying cannot fix are marked permanent; a refused connection is not. */
+    public function testAMalformedUrlIsPermanent(): void
+    {
+        $result = (new CurlHttpProbe())->probe('GET', 'https://${MAGENTO_BASE_URL:?x}/rest', [], null, 5, true);
+
+        $this->assertNull($result->status);
+        $this->assertTrue($result->permanent, (string) $result->error);
+    }
+
+    public function testAnUnsupportedProtocolIsPermanent(): void
+    {
+        $result = (new CurlHttpProbe())->probe('GET', 'ftp://127.0.0.1/', [], null, 5, true);
+
+        $this->assertTrue($result->permanent, (string) $result->error);
+    }
+
+    public function testARefusedConnectionIsNotPermanent(): void
+    {
+        $result = (new CurlHttpProbe())->probe('GET', 'http://127.0.0.1:' . self::freePort() . '/', [], null, 5, true);
+
+        $this->assertFalse($result->permanent);
+    }
+
     private function url(string $path): string
     {
         return 'http://127.0.0.1:' . self::$port . $path;

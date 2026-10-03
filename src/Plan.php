@@ -106,21 +106,26 @@ class Plan
                     $depth++;
                     // Assume this is an array of commands to be run in parallel
                     $parallelSteps = [];
-                    foreach ($step as $parallelName => $parallelStep) {
-                        [$parallelName, $parallelStep] = $this->validateAndNormalizeStep(
-                            $parallelName,
-                            $parallelStep
-                        );
-                        if (!is_null($parallelName)) {
-                            $parallelSteps[$parallelName] = $parallelStep;
-                        } else {
-                            $parallelSteps[] = $parallelStep;
+                    try {
+                        foreach ($step as $parallelName => $parallelStep) {
+                            [$parallelName, $parallelStep] = $this->validateAndNormalizeStep(
+                                $parallelName,
+                                $parallelStep
+                            );
+                            if (!is_null($parallelName)) {
+                                $parallelSteps[$parallelName] = $parallelStep;
+                            } else {
+                                $parallelSteps[] = $parallelStep;
+                            }
                         }
+                    } finally {
+                        // $depth is static: a step in the group that fails validation must not leave
+                        // every later plan in this process looking as if it were inside a group
+                        $depth--;
                     }
                     $step = [
                         'steps' => $parallelSteps,
                     ];
-                    $depth--;
                 } else {
                     // Do not allow multiple levels of steps
                     throw new Exception\RuntimeException(
@@ -166,6 +171,7 @@ class Plan
             // Validated here so a mistyped key fails the plan before any step runs; placeholders are
             // resolved when the step runs
             UrlWait::fromConfig((string) $name, $step['wait']);
+            UrlWait::assertExpandable((string) $name, $step['wait']);
         }
 
         // @todo Maybe remove this if we move to Yaml config

@@ -8,6 +8,17 @@ namespace ConductorAppOrchestration\Wait;
  */
 final class CurlHttpProbe implements HttpProbeInterface
 {
+    /**
+     * curl errors that the next poll would hit again: the URL or the TLS setup is wrong, not the
+     * server late. Waiting out the timeout on them only hides the mistake (CTAP-2150).
+     */
+    private const PERMANENT_ERRORS = [
+        CURLE_UNSUPPORTED_PROTOCOL,
+        CURLE_URL_MALFORMAT,
+        CURLE_BAD_FUNCTION_ARGUMENT,
+        CURLE_SSL_CACERT_BADFILE,
+    ];
+
     public function probe(
         string $method,
         string $url,
@@ -41,7 +52,10 @@ final class CurlHttpProbe implements HttpProbeInterface
 
         $responseBody = curl_exec($handle);
         if (false === $responseBody) {
-            return HttpProbeResult::transportError(curl_error($handle) ?: 'no response');
+            return HttpProbeResult::transportError(
+                curl_error($handle) ?: 'no response',
+                in_array(curl_errno($handle), self::PERMANENT_ERRORS, true)
+            );
         }
 
         return new HttpProbeResult((int) curl_getinfo($handle, CURLINFO_RESPONSE_CODE), (string) $responseBody);

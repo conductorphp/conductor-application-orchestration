@@ -3,6 +3,7 @@
 namespace ConductorAppOrchestration\Wait;
 
 use ConductorAppOrchestration\Exception;
+use ConductorAppOrchestration\VariableExpander;
 
 /**
  * A plan step's `wait:` block: poll a URL until it answers with an accepted status, and a body that
@@ -48,6 +49,37 @@ final class UrlWait
         public readonly int $requestTimeout,
         public readonly bool $verifyTls,
     ) {
+    }
+
+    /**
+     * Rejects variable expressions the step could not expand, so a literal `${` never reaches the
+     * request (CTAP-2150). Run on the plan as written, before variables are expanded.
+     *
+     * @throws Exception\RuntimeException naming the step, the key and the expression
+     */
+    public static function assertExpandable(string $stepName, mixed $config): void
+    {
+        if (! is_array($config)) {
+            return;
+        }
+
+        $values = ['url' => $config['url'] ?? null, 'body' => $config['body'] ?? null];
+        foreach (is_array($config['headers'] ?? null) ? $config['headers'] : [] as $header => $value) {
+            $values["header \"$header\""] = $value;
+        }
+
+        foreach ($values as $key => $value) {
+            $unsupported = is_string($value) ? VariableExpander::unsupported($value) : [];
+            if ($unsupported) {
+                throw new Exception\RuntimeException(sprintf(
+                    'Step "%s" key "wait" %s uses %s, which is not supported. Use $NAME, ${NAME}, '
+                    . '${NAME:-default}, ${NAME-default}, ${NAME:?message} or ${NAME?message}.',
+                    $stepName,
+                    $key,
+                    implode(', ', $unsupported)
+                ));
+            }
+        }
     }
 
     /**

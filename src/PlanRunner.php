@@ -534,18 +534,50 @@ class PlanRunner implements LoggerAwareInterface
     {
         $environment = $this->stepEnvironment($step, $stepArguments);
         $config = $step['wait'];
+        $problems = [];
+        $expand = static function (string $key, string $text) use ($environment, &$problems): string {
+            $expanded = VariableExpander::expand($text, $environment, $found);
+            foreach ($found as $problem) {
+                $problems[] = "$key: $problem";
+            }
+
+            return $expanded;
+        };
         foreach (['url', 'body'] as $key) {
             if (isset($config[$key]) && is_string($config[$key])) {
-                $config[$key] = $this->expandVariables($config[$key], $environment);
+                $config[$key] = $expand($key, $config[$key]);
             }
         }
         foreach ($config['headers'] ?? [] as $headerName => $headerValue) {
             if (is_string($headerValue)) {
-                $config['headers'][$headerName] = $this->expandVariables($headerValue, $environment);
+                $config['headers'][$headerName] = $expand("header \"$headerName\"", $headerValue);
             }
         }
 
         try {
+            // A command step runs under bash -u, where an unset variable fails at once; so does this,
+            // before the first poll, rather than polling a URL with a hole in it until the timeout
+            // (CTAP-2150). The variables come from the conductor's own environment, the step
+            // arguments and the step's environment_variables, never application.environment_vars.
+            if ($problems) {
+                throw new Exception\RuntimeException(sprintf(
+                    'Step "%s" key "wait" cannot be resolved: %s.',
+                    $name,
+                    implode('; ', $problems)
+                ));
+            }
+
+            $url = parse_url($config['url']);
+            if (! is_array($url) || ! in_array(strtolower($url['scheme'] ?? ''), ['http', 'https'], true)
+                || '' === ($url['host'] ?? '')
+            ) {
+                throw new Exception\RuntimeException(sprintf(
+                    'Step "%s" key "wait" url resolves to "%s", which is not an http(s) URL with a host.',
+                    $name,
+                    $config['url']
+                ));
+            }
+
             $this->urlWaiter ??= new UrlWaiter();
             $this->urlWaiter->wait(UrlWait::fromConfig($name, $config), $this->logger);
         } catch (Exception\RuntimeException $e) {
@@ -586,32 +618,14 @@ class PlanRunner implements LoggerAwareInterface
     }
 
     /**
-     * Expands variables in a `notice:` the way bash expands them in a `command:` run with the same
-     * environment, without handing the text to a shell: a notice is prose, and the backticks it
-     * quotes a command in must stay literal rather than run it.
-     *
-     * `$NAME`, `${NAME}` and `${NAME:-default}` are expanded; an unset or (for `:-`) empty variable
-     * becomes the empty string or the default, as in bash. `\$` is a literal `$`. Nothing else is
-     * special.
+     * Expands variables in a `notice:` with {@see VariableExpander}. A notice is prose, so an unset
+     * variable becomes the empty string rather than failing the plan.
      *
      * @param array<string, string> $environment
      */
     private function expandVariables(string $text, array $environment): string
     {
-        return preg_replace_callback(
-            '/(?<escaped>\\\\\$)|\$\{(?<braced>[A-Za-z_][A-Za-z0-9_]*)(?::-(?<default>[^}]*))?\}|\$(?<bare>[A-Za-z_][A-Za-z0-9_]*)/',
-            static function (array $match) use ($environment): string {
-                if (null !== $match['escaped']) {
-                    return '$';
-                }
-
-                $value = $environment[$match['braced'] ?? $match['bare']] ?? '';
-
-                return ('' === $value && null !== $match['default']) ? $match['default'] : $value;
-            },
-            $text,
-            flags: PREG_UNMATCHED_AS_NULL
-        );
+        return VariableExpander::expand($text, $environment);
     }
 
     /**

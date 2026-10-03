@@ -189,6 +189,26 @@ class UrlWaiterTest extends TestCase
         $this->assertSame([7, 2], array_column($this->requests, 'timeout'));
     }
 
+    /** CTAP-2150: an error the next poll would hit again fails at once instead of at the timeout. */
+    public function testAPermanentErrorFailsAtOnce(): void
+    {
+        $this->script = [HttpProbeResult::transportError('URL rejected: Malformed input to a URL function', true)];
+
+        try {
+            $this->waiter->wait($this->wait(['timeout' => 3600]), $this->logger);
+            $this->fail('Expected the wait to fail.');
+        } catch (RuntimeException $e) {
+            $this->assertSame(
+                'Cannot poll GET http://magento/rest: URL rejected: Malformed input to a URL function. '
+                . 'Retrying cannot fix this; check the URL.',
+                $e->getMessage()
+            );
+        }
+
+        $this->assertCount(1, $this->requests);
+        $this->assertSame(1000.0, $this->now, 'It must not sleep before failing.');
+    }
+
     /** @return list<string> */
     private function records(string $level): array
     {

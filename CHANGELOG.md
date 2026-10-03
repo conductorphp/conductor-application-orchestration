@@ -1,3 +1,10 @@
+[4.7.1](https://github.com/conductorphp/conductor-application-orchestration/compare/4.7.0...4.7.1) (2026-10-03)
+
+### Bug Fixes
+* wait step fails fast on an unset variable or a URL it can never reach (CTAP-2150) ([a63098d](https://github.com/conductorphp/conductor-application-orchestration/commit/a63098d2ada2e44e2478b071fcebbea082f03ce5))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [4.7.0](https://github.com/conductorphp/conductor-application-orchestration/compare/4.6.1...4.7.0) (2026-10-03)
 
 ### Features

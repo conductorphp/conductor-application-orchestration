@@ -70,6 +70,14 @@ final class UrlWaiter
                 return;
             }
 
+            if ($result->permanent) {
+                throw new Exception\RuntimeException(sprintf(
+                    'Cannot poll %s: %s. Retrying cannot fix this; check the URL.',
+                    $target,
+                    $result->error
+                ));
+            }
+
             if ($now >= $deadline) {
                 throw new Exception\RuntimeException(sprintf(
                     'Timed out after %ds waiting for %s. Last result: %s.',

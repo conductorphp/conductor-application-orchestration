@@ -231,6 +231,85 @@ class PlanRunnerWaitTest extends TestCase
         $this->plan(['group' => ['wait' => ['url' => 'http://magento/rest'], 'steps' => ['a' => ['command' => 'true']]]]);
     }
 
+    /** CTAP-2150: an unset variable fails the step before the first poll, naming the variable. */
+    public function testAnUnsetVariableFailsBeforeTheFirstPoll(): void
+    {
+        try {
+            $this->runStep('wait-for-magento', ['wait' => ['url' => 'https://${UNSET_FOR_CTAP_2150}/rest', 'timeout' => 3600]]);
+            $this->fail('Expected the step to fail.');
+        } catch (RuntimeException $e) {
+            $this->assertSame(
+                'Step "wait-for-magento" key "wait" cannot be resolved: url: UNSET_FOR_CTAP_2150 is not set.',
+                $e->getMessage()
+            );
+        }
+
+        $this->assertSame([], $this->events, 'Nothing may be polled.');
+    }
+
+    public function testUnsetVariablesInTheBodyAndHeadersAreReportedToo(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('body: UNSET_BODY_CTAP_2150 is not set; header "Store": UNSET_STORE_CTAP_2150 is not set');
+
+        $this->runStep('wait-for-graphql', ['wait' => [
+            'url' => 'https://example.com/graphql',
+            'headers' => ['Store' => '$UNSET_STORE_CTAP_2150'],
+            'body' => '{"q":"$UNSET_BODY_CTAP_2150"}',
+        ]]);
+    }
+
+    public function testARequiredVariableFailsWithItsMessage(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('url: UNSET_CTAP_2150 set the commerce base URL');
+
+        $this->runStep('wait-for-magento', ['wait' => ['url' => '${UNSET_CTAP_2150:?set the commerce base URL}/rest']]);
+    }
+
+    public function testARequiredVariableExpandsWhenSet(): void
+    {
+        $this->probeResults = [new HttpProbeResult(200)];
+
+        $this->runStep('wait-for-magento', [
+            'wait' => ['url' => '${MAGENTO_BASE_URL:?set it}/rest'],
+            'environment_variables' => ['MAGENTO_BASE_URL' => 'https://shop.example.com'],
+        ]);
+
+        $this->assertSame(['probe GET https://shop.example.com/rest []'], $this->events);
+    }
+
+    /** A set but empty variable passes bash -u, but leaves a URL with no host: that fails too. */
+    public function testAUrlWithoutAHostFailsBeforeTheFirstPoll(): void
+    {
+        try {
+            $this->runStep('wait-for-magento', [
+                'wait' => ['url' => 'https://${MAGENTO_HOST}/rest'],
+                'environment_variables' => ['MAGENTO_HOST' => ''],
+            ]);
+            $this->fail('Expected the step to fail.');
+        } catch (RuntimeException $e) {
+            $this->assertStringContainsString('url resolves to "https:///rest", which is not an http(s) URL with a host', $e->getMessage());
+        }
+
+        $this->assertSame([], $this->events);
+    }
+
+    public function testAnUnsupportedExpansionFailsThePlanWhenItLoads(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Step "wait-for-magento" key "wait" url uses ${MAGENTO_BASE_URL:+x}, which is not supported');
+
+        $this->plan(['wait-for-magento' => ['wait' => ['url' => '${MAGENTO_BASE_URL:+x}/rest']]]);
+    }
+
+    public function testSupportedExpansionsLoad(): void
+    {
+        $plan = $this->plan(['wait-for-magento' => ['wait' => ['url' => '${MAGENTO_BASE_URL:?set it}/rest/${STORE:-default}']]]);
+
+        $this->assertArrayHasKey('wait-for-magento', $plan->getSteps());
+    }
+
     private function runStep(string $name, array $step, array $conditions = [], array $stepArguments = []): void
     {
         $method = (new ReflectionClass(PlanRunner::class))->getMethod('runStep');
