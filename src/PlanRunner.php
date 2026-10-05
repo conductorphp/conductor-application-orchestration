@@ -148,7 +148,7 @@ class PlanRunner implements LoggerAwareInterface
             $this->preparePlanPath();
 
             if ($rollback) {
-                $rollbackPreflightSteps = $plan->getRollbackSteps();
+                $rollbackPreflightSteps = $plan->getRollbackPreflightSteps();
                 $rollbackSteps = $plan->getRollbackSteps();
                 if (!$rollbackSteps) {
                     throw new Exception\RuntimeException(

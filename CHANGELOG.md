@@ -1,3 +1,10 @@
+[4.8.1](https://github.com/conductorphp/conductor-application-orchestration/compare/4.8.0...4.8.1) (2026-10-05)
+
+### Bug Fixes
+* runs rollback_preflight_steps, and rollback_steps once (CTAP-2199) ([9dabdee](https://github.com/conductorphp/conductor-application-orchestration/commit/9dabdee290eeb8464f1f1f4a22786c8372ddf4ab))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [4.8.0](https://github.com/conductorphp/conductor-application-orchestration/compare/4.7.1...4.8.0) (2026-10-05)
 
 ### Features
