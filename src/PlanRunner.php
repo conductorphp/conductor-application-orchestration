@@ -63,6 +63,10 @@ class PlanRunner implements LoggerAwareInterface
     /** @var list<array{step: string, notice: string}> */
     private array $notices = [];
     private ?UrlWaiter $urlWaiter = null;
+    /** The first step in the current plan that threw; the name `${FAILED_STEP}` gives on_failure steps */
+    private ?string $failedStep = null;
+    /** @var array<string, string> Extra environment for the on_failure steps while they run */
+    private array $failureEnvironment = [];
 
     public function __construct(
         ApplicationConfig                  $applicationConfig,
@@ -115,6 +119,7 @@ class PlanRunner implements LoggerAwareInterface
     ): void {
         $origWorkingDirectory = getcwd();
         $this->notices = [];
+        $this->failedStep = null;
         if (!isset($this->planPath)) {
             $this->planPath = getcwd();
         }
@@ -180,9 +185,38 @@ class PlanRunner implements LoggerAwareInterface
                     );
                 }
 
-                if ($preflightSteps) {
-                    $this->logger->info(sprintf('Plan: %s (preflight)', $planName));
-                    foreach ($preflightSteps as $name => $step) {
+                try {
+                    if ($preflightSteps) {
+                        $this->logger->info(sprintf('Plan: %s (preflight)', $planName));
+                        foreach ($preflightSteps as $name => $step) {
+                            $providedDependencies = $this->runStep(
+                                $name,
+                                $step,
+                                $conditions,
+                                $metDependencies,
+                                $stepArguments
+                            );
+                            $metDependencies = array_unique(array_merge($metDependencies, $providedDependencies));
+                        }
+                    }
+
+                    $cleanSteps = $plan->getCleanSteps();
+                    if ($clean && !empty($cleanSteps)) {
+                        $this->logger->info(sprintf('Plan: %s (clean)', $planName));
+                        foreach ($cleanSteps as $name => $step) {
+                            $providedDependencies = $this->runStep(
+                                $name,
+                                $step,
+                                $conditions,
+                                $metDependencies,
+                                $stepArguments
+                            );
+                            $metDependencies = array_unique(array_merge($metDependencies, $providedDependencies));
+                        }
+                    }
+
+                    $this->logger->info(sprintf('Plan: %s', $planName));
+                    foreach ($plan->getSteps() as $name => $step) {
                         $providedDependencies = $this->runStep(
                             $name,
                             $step,
@@ -192,27 +226,18 @@ class PlanRunner implements LoggerAwareInterface
                         );
                         $metDependencies = array_unique(array_merge($metDependencies, $providedDependencies));
                     }
-                }
-
-                $cleanSteps = $plan->getCleanSteps();
-                if ($clean && !empty($cleanSteps)) {
-                    $this->logger->info(sprintf('Plan: %s (clean)', $planName));
-                    foreach ($cleanSteps as $name => $step) {
-                        $providedDependencies = $this->runStep(
-                            $name,
-                            $step,
-                            $conditions,
-                            $metDependencies,
-                            $stepArguments
-                        );
-                        $metDependencies = array_unique(array_merge($metDependencies, $providedDependencies));
-                    }
-                }
-
-                $this->logger->info(sprintf('Plan: %s', $planName));
-                foreach ($plan->getSteps() as $name => $step) {
-                    $providedDependencies = $this->runStep($name, $step, $conditions, $metDependencies, $stepArguments);
-                    $metDependencies = array_unique(array_merge($metDependencies, $providedDependencies));
+                } catch (\Throwable $e) {
+                    // runStep() records the step that threw; anything it did not see falls back to the
+                    // top-level step that was running
+                    $this->runOnFailureSteps(
+                        $plan,
+                        $this->failedStep ?? (string) ($name ?? ''),
+                        $e,
+                        $conditions,
+                        $metDependencies,
+                        $stepArguments
+                    );
+                    throw $e;
                 }
             }
 
@@ -226,6 +251,56 @@ class PlanRunner implements LoggerAwareInterface
             $this->logger->error("An error occurred running plan \"$planName\".");
             chdir($origWorkingDirectory);
             throw $e;
+        }
+    }
+
+    /**
+     * Runs the plan's `on_failure_steps` after a preflight, clean or main step threw. Best-effort: a
+     * failing on_failure step is logged and the rest still run, and nothing here may replace the
+     * original failure, which the caller rethrows.
+     */
+    private function runOnFailureSteps(
+        Plan $plan,
+        string $failedStep,
+        \Throwable $failure,
+        array $conditions,
+        array $metDependencies,
+        array $stepArguments
+    ): void {
+        $onFailureSteps = $plan->getOnFailureSteps();
+        if (!$onFailureSteps) {
+            return;
+        }
+
+        // The first line only: a failed command step has already logged its output in full
+        $this->logger->warning(sprintf(
+            'Running on_failure steps after step "%s" failed: %s',
+            $failedStep,
+            strtok($failure->getMessage(), "\n")
+        ));
+        $this->logger->info(sprintf('Plan: %s (on_failure)', $plan->getName()));
+        $this->failureEnvironment = ['FAILED_STEP' => $failedStep];
+        try {
+            foreach ($onFailureSteps as $name => $step) {
+                try {
+                    $providedDependencies = $this->runStep(
+                        $name,
+                        $step,
+                        $conditions,
+                        $metDependencies,
+                        $stepArguments
+                    );
+                    $metDependencies = array_unique(array_merge($metDependencies, $providedDependencies));
+                } catch (\Throwable $e) {
+                    $this->logger->error(sprintf(
+                        'on_failure step "%s" failed, continuing with the rest: %s',
+                        $name,
+                        strtok($e->getMessage(), "\n")
+                    ));
+                }
+            }
+        } finally {
+            $this->failureEnvironment = [];
         }
     }
 
@@ -404,6 +479,21 @@ class PlanRunner implements LoggerAwareInterface
             }
         }
 
+        try {
+            return $this->executeStep($name, $step, $stepArguments);
+        } catch (\Throwable $e) {
+            // Recorded here rather than in runPlan() so a failure inside a parallel group names the
+            // child step that failed, not the group
+            $this->failedStep ??= (string) $name;
+            throw $e;
+        }
+    }
+
+    /**
+     * Runs a step whose conditions and dependencies are met.
+     */
+    private function executeStep(string $name, array $step, array $stepArguments): array
+    {
         $this->logger->info("Step: $name");
         if (!empty($step['comment'])) {
             $this->logger->debug($step['comment']);
@@ -604,6 +694,7 @@ class PlanRunner implements LoggerAwareInterface
         $environmentVariables = array_replace(
             ChildProcessVerbosity::forChild(getenv()),
             $stepArguments,
+            $this->failureEnvironment,
             $step['environment_variables'] ?? []
         );
 

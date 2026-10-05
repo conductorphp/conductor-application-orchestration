@@ -37,11 +37,11 @@ use function is_scalar;
  * ## What is left alone
  *
  * - **Plan steps.** Everything under `*.plans.<plan>.steps` (and `preflight_steps`, `clean_steps`,
- *   `rollback_*_steps`) is shell text that `PlanRunner` hands to `bash` with the same process
- *   environment merged in, so `${VAR}` there already means what a reader expects — and `${attempt}`
- *   in a retry loop is a shell variable that does not exist at config-load time. Steps can also be
- *   bare command strings with no `command:` key, so the whole step subtree is skipped rather than
- *   one key.
+ *   `rollback_*_steps`, `on_failure_steps`) is shell text that `PlanRunner` hands to `bash` with the
+ *   same process environment merged in, so `${VAR}` there already means what a reader expects — and
+ *   `${attempt}` in a retry loop is a shell variable that does not exist at config-load time. Steps
+ *   can also be bare command strings with no `command:` key, so the whole step subtree is skipped
+ *   rather than one key.
  * - **Other environments.** `application.environments.<name>` for every environment other than
  *   the one being run. A production-only `${PROD_DB_PASSWORD}` must not fail a QA deploy;
  *   {@see ApplicationConfigFactory} discards those sections anyway.

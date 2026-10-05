@@ -1,3 +1,10 @@
+[4.8.0](https://github.com/conductorphp/conductor-application-orchestration/compare/4.7.1...4.8.0) (2026-10-05)
+
+### Features
+* run when a plan step fails (CTAP-2197) ([1e42057](https://github.com/conductorphp/conductor-application-orchestration/commit/1e4205707c90735a7381c59368377398d0c34669))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [4.7.1](https://github.com/conductorphp/conductor-application-orchestration/compare/4.7.0...4.7.1) (2026-10-03)
 
 ### Bug Fixes

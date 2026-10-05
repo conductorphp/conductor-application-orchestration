@@ -224,15 +224,21 @@ class EnvVarInterpolationPostProcessorTest extends TestCase
             'parallel'    => ['a' => 'echo ${A}', 'b' => 'echo ${B}'],
         ];
         $preflight = ['check' => 'test -n "${CT_MYSQL_HOST:?required}"'];
+        $onFailure = ['report' => 'echo "failed at ${FAILED_STEP}"'];
 
         $config = (new EnvVarInterpolationPostProcessor())($this->mergedConfig('qa', [
-            'deploy' => ['plans' => ['default' => ['steps' => $steps, 'preflight_steps' => $preflight]]],
+            'deploy' => ['plans' => ['default' => [
+                'steps' => $steps,
+                'preflight_steps' => $preflight,
+                'on_failure_steps' => $onFailure,
+            ]]],
             'build'  => ['plans' => ['default' => ['steps' => $steps, 'clean_steps' => $preflight]]],
         ]));
 
         $plans = $config['application_orchestration']['application'];
         $this->assertSame($steps, $plans['deploy']['plans']['default']['steps']);
         $this->assertSame($preflight, $plans['deploy']['plans']['default']['preflight_steps']);
+        $this->assertSame($onFailure, $plans['deploy']['plans']['default']['on_failure_steps']);
         $this->assertSame($steps, $plans['build']['plans']['default']['steps']);
         $this->assertSame($preflight, $plans['build']['plans']['default']['clean_steps']);
     }

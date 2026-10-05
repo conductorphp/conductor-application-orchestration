@@ -13,6 +13,7 @@ class Plan
     private array $steps;
     private array $rollbackPreflightSteps;
     private array $rollbackSteps;
+    private array $onFailureSteps;
 
     public function __construct(string $name, array $plan, string $stepInterface)
     {
@@ -24,6 +25,7 @@ class Plan
         $this->steps = $plan['steps'];
         $this->rollbackPreflightSteps = $plan['rollback_preflight_steps'];
         $this->rollbackSteps = $plan['rollback_steps'];
+        $this->onFailureSteps = $plan['on_failure_steps'];
     }
 
     public function getName(): string
@@ -56,13 +58,28 @@ class Plan
         return $this->rollbackSteps;
     }
 
+    /**
+     * Steps run when a preflight, clean or main step fails, before that failure is rethrown.
+     */
+    public function getOnFailureSteps(): array
+    {
+        return $this->onFailureSteps;
+    }
+
     private function validateAndNormalize(array $plan): array
     {
         if (empty($plan['steps'])) {
             throw new Exception\RuntimeException('Key "steps" must be set in plan "' . $this->name . '".');
         }
 
-        $stepTypes = ['preflight_steps', 'clean_steps', 'steps', 'rollback_preflight_steps', 'rollback_steps'];
+        $stepTypes = [
+            'preflight_steps',
+            'clean_steps',
+            'steps',
+            'rollback_preflight_steps',
+            'rollback_steps',
+            'on_failure_steps',
+        ];
         $normalizedPlan = $plan;
         foreach ($stepTypes as $stepType) {
             $normalizedPlan[$stepType] = [];
