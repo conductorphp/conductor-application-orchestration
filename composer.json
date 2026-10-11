@@ -1,6 +1,6 @@
 {
   "name": "conductor/application-orchestration",
-  "version": "4.8.1",
+  "version": "5.0.0",
   "description": "Conductor Application Orchestration",
   "type": "library",
   "homepage": "https://github.com/conductorphp/conductor-application-orchestration",
@@ -18,7 +18,7 @@
   "require": {
     "php": "~8.4.1|~8.5.0",
     "ext-curl": "*",
-    "conductor/core": "^5.2 || ^6.0",
+    "conductor/core": "^7.0",
     "revolt/event-loop": "^1.0",
     "twig/twig": "^3.5.1"
   },

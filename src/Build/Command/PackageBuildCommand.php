@@ -2,6 +2,8 @@
 
 namespace ConductorAppOrchestration\Build\Command;
 
+use ConductorCore\Runtime\Requirement;
+use ConductorCore\Runtime\RequirementChecker;
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\Config\ApplicationConfigAwareInterface;
 use ConductorAppOrchestration\Exception;
@@ -39,6 +41,8 @@ class PackageBuildCommand
                 $buildId
             )
         );
+
+        (new RequirementChecker($this->shellAdapter))->assert('packaging the build', [Requirement::binary('tar')]);
 
         $tarFilename = "$buildId.tgz";
         $command = 'tar -cz --exclude-vcs ';

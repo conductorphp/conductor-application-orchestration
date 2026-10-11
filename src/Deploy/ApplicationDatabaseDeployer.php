@@ -210,26 +210,26 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
         return $filename;
     }
 
+    /**
+     * Looked up along the application's source file paths: the environment's `files/`, the
+     * configuration's `files/`, then the platform module's and conductor's own. The same stack the
+     * skeleton deployer uses, built by ApplicationConfigFactory from the configuration directory, so
+     * nothing here assumes where conductor is installed (CTAP-1760).
+     */
     private function findScript(string $scriptFilename): string
     {
-        // @todo Make this a setting in config instead. This module shouldn't make assumptions on where it's installed
-        $conductorRoot = dirname(__DIR__, 5);
-        $configRoot = "$conductorRoot/config/app";
-        $environment = $this->applicationConfig->getCurrentEnvironment();
-
-        $environmentPath = "$configRoot/environments/$environment/files";
-        if (file_exists("$environmentPath/$scriptFilename")) {
-            return "$environmentPath/$scriptFilename";
+        $searched = $this->applicationConfig->getSourceFilePaths();
+        foreach ($searched as $path) {
+            if (file_exists("$path/$scriptFilename")) {
+                return "$path/$scriptFilename";
+            }
         }
 
-        $globalPath = "$configRoot/files";
-        if (file_exists("$globalPath/$scriptFilename")) {
-            return "$globalPath/$scriptFilename";
-        }
-
-        throw new Exception\RuntimeException(
-            "Script \"$scriptFilename\" not found in \"$environmentPath\" or \"$globalPath\"."
-        );
+        throw new Exception\RuntimeException(sprintf(
+            'Script "%s" not found in %s.',
+            $scriptFilename,
+            implode(', ', array_map(static fn(string $p): string => '"' . $p . '"', $searched)),
+        ));
     }
 
     public function setLogger(LoggerInterface $logger): void

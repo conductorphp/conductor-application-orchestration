@@ -2,25 +2,36 @@
 
 namespace ConductorAppOrchestration\Config;
 
-use ConductorAppOrchestration\Exception;
+use ConductorCore\Config\ConfigDirectory;
 use Laminas\ServiceManager\Factory\FactoryInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 
 class ApplicationConfigFactory implements FactoryInterface
 {
-    private const PLATFORM_CUSTOM = 'custom';
-
     public function __invoke(ContainerInterface $container, $requestedName, ?array $options = null): ApplicationConfig
     {
         $config = $container->get('config');
 
-        $zendExpressiveRoot = dirname(__DIR__, 5);
         $environment = $config['environment'] ?? 'development';
-        $sourceFilePathStack = [
-            $zendExpressiveRoot . '/config/app/environments/' . $environment . '/files',
-            $zendExpressiveRoot . '/config/app/files',
-        ];
+        // The launcher puts the resolved directory in config (`conductor.config_directory`) as well
+        // as in the container; config is read here because the reflection abstract factory makes
+        // has(ConfigDirectory::class) true even when nothing registered one.
+        if (!empty($config['conductor']['config_directory'])) {
+            $configDirectory     = new ConfigDirectory($config['conductor']['config_directory']);
+            $sourceFilePathStack = [
+                $configDirectory->environmentFilesPath($environment),
+                $configDirectory->filesPath(),
+            ];
+        } else {
+            // A host from before conductor/conductor: the configuration sits five levels above this
+            // file in the composer vendor tree. The launcher there registers no ConfigDirectory.
+            $conductorRoot       = dirname(__DIR__, 5);
+            $sourceFilePathStack = [
+                $conductorRoot . '/config/app/environments/' . $environment . '/files',
+                $conductorRoot . '/config/app/files',
+            ];
+        }
         $application = [
             'environment' => $environment,
         ];
@@ -35,19 +46,9 @@ class ApplicationConfigFactory implements FactoryInterface
             }
             unset($application['environments']);
 
-            // Merge in platform config
-            if (self::PLATFORM_CUSTOM !== $application['platform']
-                && !isset($config['application_orchestration']['platforms'][$application['platform']])
-            ) {
-                throw new Exception\RuntimeException(sprintf('Platform configured as "%s", but there '
-                    . 'is no "application_orchestration/platforms/%s" configuration key defined. You '
-                    . 'likely need to include the correct platform support package. '
-                    . 'See https://github.com/conductorphp/?q=platform-support',
-                    $application['platform'],
-                    $application['platform']
-                ));
-            }
-
+            // Merge in platform config. A platform that no installed module registers is not refused
+            // here: that would fail every command at boot, `list` included. PlatformManager refuses it
+            // at the first use of a platform service, and PlanRunner asks before its first step.
             if (isset($config['application_orchestration']['platforms'][$application['platform']])) {
                 $platformConfig = $config['application_orchestration']['platforms'][$application['platform']];
 
@@ -55,6 +56,8 @@ class ApplicationConfigFactory implements FactoryInterface
                     $sourceFilePathStack[] = $platformConfig['source_file_path'];
                     unset($platformConfig['source_file_path']);
                 }
+                // The module's service registrations are PlatformManager's, not application config.
+                unset($platformConfig['services']);
 
                 $application = array_replace_recursive($platformConfig, $application);
             }

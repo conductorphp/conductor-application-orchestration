@@ -17,6 +17,7 @@ use ConductorAppOrchestration\Deploy\DeploymentState;
 use ConductorAppOrchestration\Exception;
 use ConductorAppOrchestration\Maintenance\MaintenanceStrategyAwareInterface;
 use ConductorAppOrchestration\Maintenance\MaintenanceStrategyInterface;
+use ConductorAppOrchestration\Platform\PlatformManager;
 use ConductorAppOrchestration\Wait\UrlWait;
 use ConductorAppOrchestration\Wait\UrlWaiter;
 use ConductorCore\Database\DatabaseAdapterManager;
@@ -54,6 +55,7 @@ class PlanRunner implements LoggerAwareInterface
     private ApplicationAssetDeployer $applicationAssetDeployer;
     private ApplicationDatabaseDeployer $applicationDatabaseDeployer;
     private DeploymentState $deploymentState;
+    private ?PlatformManager $platformManager = null;
     private int $diskSpaceErrorThreshold;
     private int $diskSpaceWarningThreshold;
     private LoggerInterface $logger;
@@ -83,7 +85,8 @@ class PlanRunner implements LoggerAwareInterface
         DeploymentState                    $deploymentState,
         int                                $diskSpaceErrorThreshold = 52428800,
         int                                $diskSpaceWarningThreshold = 104857600,
-        ?LoggerInterface                    $logger = null
+        ?LoggerInterface                    $logger = null,
+        ?PlatformManager                   $platformManager = null
     ) {
         $this->applicationConfig = $applicationConfig;
         $this->repositoryAdapter = $repositoryAdapter;
@@ -97,6 +100,7 @@ class PlanRunner implements LoggerAwareInterface
         $this->applicationAssetDeployer = $applicationAssetDeployer;
         $this->applicationDatabaseDeployer = $applicationDatabaseDeployer;
         $this->deploymentState = $deploymentState;
+        $this->platformManager = $platformManager;
         $this->diskSpaceErrorThreshold = $diskSpaceErrorThreshold;
         $this->diskSpaceWarningThreshold = $diskSpaceWarningThreshold;
         if (is_null($logger)) {
@@ -117,6 +121,10 @@ class PlanRunner implements LoggerAwareInterface
                $clean = false,
                $rollback = false
     ): void {
+        // The platform's strategies resolve on first use, which for a plan without a maintenance step
+        // could be after work has started. Refuse an uninstalled platform before the first step instead.
+        $this->platformManager?->assertInstalled();
+
         $origWorkingDirectory = getcwd();
         $this->notices = [];
         $this->failedStep = null;

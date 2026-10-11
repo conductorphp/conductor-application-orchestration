@@ -6,6 +6,8 @@ use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\Exception;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\Repository\RepositoryAdapterInterface;
+use ConductorCore\Runtime\Requirement;
+use ConductorCore\Runtime\RequirementChecker;
 use ConductorCore\Shell\Adapter\ShellAdapterInterface;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
@@ -85,6 +87,7 @@ class ApplicationCodeDeployer
         $this->mountManager->copy("$buildPath/$buildId.tgz", "local://$cwd/$buildId.tgz");
 
         $this->logger->debug("Extracting \"local://$cwd/$buildId.tgz\" to \"$codePath\".");
+        (new RequirementChecker($this->shellAdapter))->assert('extracting the build', [Requirement::binary('tar')]);
         $command = 'tar -xzvf ' . escapeshellarg("$cwd/$buildId.tgz") . ' --directory ' . escapeshellarg($codePath);
         $this->shellAdapter->runShellCommand($command);
     }

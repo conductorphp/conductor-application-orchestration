@@ -1,3 +1,22 @@
+[5.0.0](https://github.com/conductorphp/conductor-application-orchestration/compare/4.8.1...5.0.0) (2026-10-11)
+
+### Features
+* config/app through ConfigDirectory (CTAP-1760) ([92bf764](https://github.com/conductorphp/conductor-application-orchestration/commit/92bf76436986ea07e0f67b867b4cbb1b6f79e7cd))
+* for tar before a build is packaged (CTAP-1759) ([392b106](https://github.com/conductorphp/conductor-application-orchestration/commit/392b106dbf9da21264f1f5e27b38777d92684268))
+* conductor/core ^6.0 (CTAP-1741) ([dd68be1](https://github.com/conductorphp/conductor-application-orchestration/commit/dd68be12742188dd8db53b3950be8965b9527805))
+* steps run at their default verbosity below -vvv (CTAP-1736) ([99089d9](https://github.com/conductorphp/conductor-application-orchestration/commit/99089d9688142913af79823aefd5507cd8fc71d0))
+* interpolation across merged config (CTAP-1724) ([66cce7a](https://github.com/conductorphp/conductor-application-orchestration/commit/66cce7a83287ccb4f75559f7c8be31324fef6083))
+* conductor/core ^5.0 (CTAP-1712) ([d9274ed](https://github.com/conductorphp/conductor-application-orchestration/commit/d9274edd8d59d3fe7274ad4e564f3d3688e9a750))
+* post-import scripts read the schema instead of guessing it (CTAP-1628) ([e832642](https://github.com/conductorphp/conductor-application-orchestration/commit/e832642044c318bfa8ceb905c824ba826bdc833f))
+### Bug Fixes
+* the clicktap module in the refusal (CTAP-1757) ([2602b9a](https://github.com/conductorphp/conductor-application-orchestration/commit/2602b9a985424bd10d55f3fca987fdf1324512e0))
+* PlanRunner's platform manager to null (CTAP-1757) ([06cb4a3](https://github.com/conductorphp/conductor-application-orchestration/commit/06cb4a3069c43d8c6ab64e1a04e12cd13b3c1734))
+* a writable app root only when the deploy writes there (CTAP-1752) ([bcec4cf](https://github.com/conductorphp/conductor-application-orchestration/commit/bcec4cf46e3b7cf5231b3a308956dbd1dce44ebd))
+* placeholder parser for replacements (CTAP-1728) ([31f4558](https://github.com/conductorphp/conductor-application-orchestration/commit/31f455864fae2df3583fe0288e44147a00f72d46))
+* null config values in app:config:show instead of fataling (CTAP-1634) ([5fbf1f1](https://github.com/conductorphp/conductor-application-orchestration/commit/5fbf1f1d5577ceaccaa1ac5c057bc3fd3934e35f))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [4.8.1](https://github.com/conductorphp/conductor-application-orchestration/compare/4.8.0...4.8.1) (2026-10-05)
 
 ### Bug Fixes

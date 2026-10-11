@@ -2,6 +2,7 @@
 
 namespace ConductorAppOrchestration\Build\Command;
 
+use ConductorCore\Shell\Adapter\LocalShellAdapter;
 use ConductorAppOrchestration\Exception;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\Filesystem\MountManager\MountManagerAwareInterface;
@@ -44,8 +45,8 @@ class SaveBuildCommand
 
         $this->logger->info("Saving build to \"$savePath\".");
         if (str_starts_with($savePath, 'local://')) {
-            exec('which rsync', $output, $result_code);
-            if (0 === $result_code) {
+            // rsync is preferred when present, not required: the mount manager sync is the fallback.
+            if ((new LocalShellAdapter())->isCallable('rsync')) {
                 $this->syncLocallyViaRsync($filename, $savePath, $options);
                 return null;
             }
