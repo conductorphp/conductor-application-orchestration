@@ -46,13 +46,12 @@ use function is_scalar;
  *   the one being run. A production-only `${PROD_DB_PASSWORD}` must not fail a QA deploy;
  *   {@see ApplicationConfigFactory} discards those sections anyway.
  *
- * ## Ordering relative to `ENC[…]`
+ * ## Ordering relative to decryption
  *
- * Decryption happens in the providers, so it runs before this. The two coexist: a value is either
- * an `ENC[…]` string or carries `${VAR}` placeholders, and each mechanism ignores the other's
- * syntax. The one consequence of the order is that a *decrypted* plaintext containing a literal
- * `${NAME}` sequence would be interpolated. Such a value belongs in an environment variable, base64
- * encoded if it must carry that text verbatim.
+ * Run this before `DecryptConfigPostProcessor` (CTAP-2383). An encrypted environment variable
+ * reached through `${VAR}` is then decrypted exactly like an `enc:v1:…` or `ENC[…]` value written in
+ * the YAML, which interpolation passes through unchanged since neither envelope contains `${`. A
+ * decrypted plaintext is never scanned, so a secret holding a literal `${NAME}` stays verbatim.
  *
  * Undefined variables fail the load with an exception naming every variable and config path, so a
  * deploy stops before any plan step runs — see {@see EnvVarInterpolator}.
