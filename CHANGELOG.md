@@ -1,3 +1,10 @@
+[5.1.0](https://github.com/conductorphp/conductor-application-orchestration/compare/5.0.1...5.1.0) (2026-10-15)
+
+### Features
+* dump a database before a restore drops it (CTAP-2579) ([0e863df](https://github.com/conductorphp/conductor-application-orchestration/commit/0e863df66a85be865431ca64d818547068dc3980))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [5.0.1](https://github.com/conductorphp/conductor-application-orchestration/compare/5.0.0...5.0.1) (2026-10-12)
 
 

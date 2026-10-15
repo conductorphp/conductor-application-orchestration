@@ -4,6 +4,7 @@ namespace ConductorAppOrchestration\Console;
 
 use ConductorAppOrchestration\Config\ApplicationConfig;
 use ConductorAppOrchestration\Deploy\ApplicationDeployer;
+use ConductorAppOrchestration\Deploy\Command\DeployDatabasesCommand;
 use ConductorAppOrchestration\Exception;
 use ConductorCore\Filesystem\MountManager\MountManager;
 use ConductorCore\MonologConsoleHandlerAwareTrait;
@@ -135,8 +136,25 @@ class AppDeployCommand extends Command
                 'allow-full-rollback',
                 null,
                 InputOption::VALUE_NONE,
-                'Allow for a full rollback. This will cause increased site downtime due to the need to '
-                . 'backup databases.'
+                'Dump each existing database before a snapshot restore drops it, even where the deploy plan '
+                . 'turns the pre-restore dump off. Code is rolled back with --rollback.'
+            )
+            ->addOption(
+                'no-pre-restore-dump',
+                null,
+                InputOption::VALUE_NONE,
+                'Drop existing databases on a snapshot restore without dumping them first. For disposable '
+                . 'databases only.'
+            )
+            ->addOption(
+                'pre-restore-dump-dir',
+                null,
+                InputOption::VALUE_REQUIRED,
+                sprintf(
+                    'Local directory existing databases are dumped to before a snapshot restore drops them. '
+                    . '<comment>[default: the plan\'s pre_restore_dump_dir, else "%s"]</comment>',
+                    DeployDatabasesCommand::DEFAULT_PRE_RESTORE_DUMP_DIR
+                )
             )
             ->addOption(
                 'clean',
@@ -271,6 +289,8 @@ class AppDeployCommand extends Command
                 $input->getOption('clean'),
                 $input->getOption('rollback'),
                 $force,
+                $input->getOption('no-pre-restore-dump') ? false : null,
+                $input->getOption('pre-restore-dump-dir'),
             );
         }
         $this->logger->info("<info>Application \"$appName\" deployment completed!</info>");
@@ -306,6 +326,12 @@ class AppDeployCommand extends Command
         if ($input->getOption('skeleton') && ($input->getOption('snapshot') || $input->getOption('build-id') || $input->getOption('repo-reference'))) {
             throw new Exception\RuntimeException(
                 'Options --snapshot, --build-id, and --repo-reference may not be set with --skeleton. Use --refresh instead.'
+            );
+        }
+
+        if ($input->getOption('allow-full-rollback') && $input->getOption('no-pre-restore-dump')) {
+            throw new Exception\RuntimeException(
+                'Options --allow-full-rollback and --no-pre-restore-dump may not both be set.'
             );
         }
 

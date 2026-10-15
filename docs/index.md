@@ -79,3 +79,44 @@ deploy:
         report:
           notice: Deploy failed at ${FAILED_STEP}; maintenance mode was switched back off.
 ```
+
+## Pre-restore database dump
+
+A snapshot restore (`app:deploy --snapshot … --databases`) drops each database that already exists
+before it imports the snapshot. Before the drop, `DeployDatabasesCommand` exports the database with its
+own import/export adapter into `/tmp/.conductor/pre-restore-dumps/<database>-<YYYYMMDD-HHMMSS>/`. The
+log names the file and the command that puts it back:
+
+```
+NOTICE Database "app" was dumped to "/tmp/.conductor/pre-restore-dumps/app-20261015-143314/app.tgz"
+       before the restore dropped it. To put it back, run
+       `conductor database:import --adapter=default '/tmp/…/app.tgz' 'app'`.
+```
+
+If the dump fails, the restore stops before anything is dropped. Dumps are not pruned: delete them
+once you no longer need them. The deploy working directory (`--working-dir`) is emptied after every
+run, so the dumps live outside it.
+
+| Setting | Effect |
+| --- | --- |
+| Step option `pre_restore_dump_dir: /data/dumps` | Local directory the dumps go to. |
+| `app:deploy --pre-restore-dump-dir=/data/dumps` | The same, for one run. |
+| Step option `pre_restore_dump: false` | No dump. Only for disposable databases, such as a local stack's. |
+| `app:deploy --no-pre-restore-dump` | No dump for this run. |
+| `app:deploy --allow-full-rollback` | Dump even where the plan sets `pre_restore_dump: false`. |
+
+```yaml
+# config/app/environments/local/config.yaml
+application_orchestration:
+  application:
+    deploy:
+      plans:
+        development:
+          steps:
+            deploy-databases:
+              class: ConductorAppOrchestration\Deploy\Command\DeployDatabasesCommand
+              conditions: [ databases ]
+              provides: [ databases ]
+              options:
+                pre_restore_dump: false
+```

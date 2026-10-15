@@ -59,13 +59,16 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
     }
 
     /**
+     * @param string|null $preRestoreDumpDir Local directory each existing database is exported to before
+     *                                       it is dropped. Null drops it with no dump.
      * @throws Exception\RuntimeException if app skeleton has not yet been installed
      */
     public function deployDatabases(
-        string $snapshotPath,
-        string $snapshotName,
-        array  $databases,
-        bool   $force = false
+        string  $snapshotPath,
+        string  $snapshotName,
+        array   $databases,
+        bool    $force = false,
+        ?string $preRestoreDumpDir = null
     ): void {
 
         if (!$databases) {
@@ -86,6 +89,10 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
             if ($databaseAdapter->databaseExists($databaseAlias)) {
                 if (!$force && !$this->confirmDatabaseDrop($databaseAlias)) {
                     throw new Exception\RuntimeException('Aborted database deployment because user did not confirm dropping existing database.');
+                }
+
+                if (null !== $preRestoreDumpDir) {
+                    $this->dumpBeforeDrop($databaseImportExportAdapter, $adapterName, $databaseAlias, $preRestoreDumpDir);
                 }
 
                 $this->logger->debug("Dropping database \"$databaseAlias\".");
@@ -189,6 +196,36 @@ class ApplicationDatabaseDeployer implements LoggerAwareInterface
                 }
             }
         }
+    }
+
+    /**
+     * The restore drops the database, so a wrong snapshot or environment would otherwise lose it for good
+     * (CTAP-2579). A failed export throws before anything is dropped.
+     */
+    private function dumpBeforeDrop(
+        DatabaseImportExportAdapterInterface $adapter,
+        string                               $adapterName,
+        string                               $database,
+        string                               $dumpDir
+    ): void {
+        // One directory per dump: an export adapter writes "<database>.<extension>" into the path it is
+        // given, so a shared directory would overwrite the previous dump of the same database
+        $path = sprintf('%s/%s-%s', rtrim($dumpDir, '/'), $database, date('Ymd-His'));
+        if (!is_dir($path) && !mkdir($path, 0700, true) && !is_dir($path)) {
+            throw new Exception\RuntimeException(sprintf('Pre-restore dump directory "%s" was not created.', $path));
+        }
+
+        $this->logger->info("Dumping database \"$database\" to \"$path\" before dropping it.");
+        $filename = $adapter->exportToFile($database, $path);
+        $this->logger->notice(sprintf(
+            'Database "%s" was dumped to "%s" before the restore dropped it. To put it back, run '
+            . '`conductor database:import --adapter=%s %s %s`. Delete the dump when it is no longer needed.',
+            $database,
+            $filename,
+            $adapterName,
+            escapeshellarg($filename),
+            escapeshellarg($database)
+        ));
     }
 
     private function applyStringReplacements(

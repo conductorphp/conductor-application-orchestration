@@ -11,10 +11,21 @@ use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
+/**
+ * Restores the snapshot's databases, dropping each one that exists. Before the drop, the database is
+ * exported to `pre_restore_dump_dir` (default {@see self::DEFAULT_PRE_RESTORE_DUMP_DIR}). A plan turns
+ * that off for disposable databases with the step option `pre_restore_dump: false`, as does
+ * `app:deploy --no-pre-restore-dump`; `app:deploy --allow-full-rollback` turns it back on.
+ */
 class DeployDatabasesCommand
     implements DeployCommandInterface, ApplicationDatabaseDeployerAwareInterface, LoggerAwareInterface,
     ApplicationConfigAwareInterface
 {
+    /**
+     * Outside the deploy working directory, which is emptied at the end of every run
+     */
+    public const DEFAULT_PRE_RESTORE_DUMP_DIR = '/tmp/.conductor/pre-restore-dumps';
+
     private ApplicationDatabaseDeployer $applicationDatabaseDeployer;
     private ApplicationConfig $applicationConfig;
     private LoggerInterface $logger;
@@ -58,11 +69,19 @@ class DeployDatabasesCommand
             $databases = array_replace_recursive($databases, $options['databases']);
         }
         $force = $options['force'] ?? false;
+        $preRestoreDumpDir = null;
+        if ($allowFullRollback || ($options['pre_restore_dump'] ?? true)) {
+            $preRestoreDumpDir = $options['pre_restore_dump_dir'] ?? self::DEFAULT_PRE_RESTORE_DUMP_DIR;
+        } else {
+            $this->logger->debug('Pre-restore dump turned off. Existing databases are dropped without a dump.');
+        }
+
         $this->applicationDatabaseDeployer->deployDatabases(
             $snapshotPath,
             $snapshotName,
             $databases,
-            $force
+            $force,
+            $preRestoreDumpDir
         );
         return null;
     }

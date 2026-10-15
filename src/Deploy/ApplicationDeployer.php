@@ -78,7 +78,9 @@ class ApplicationDeployer
         bool   $allowFullRollback = false,
         bool   $clean = false,
         bool   $rollback = false,
-        bool   $force = false
+        bool   $force = false,
+        ?bool  $preRestoreDump = null,
+        ?string $preRestoreDumpDir = null
     ): void {
 
         $deployPlans = $this->applicationConfig->getDeployConfig()->getPlans();
@@ -114,6 +116,16 @@ class ApplicationDeployer
             $conditions[] = 'refresh';
         }
 
+        // Only what was given at runtime, so a plan's own step options apply otherwise
+        $options = array_filter(
+            [
+                'force' => $force,
+                'pre_restore_dump' => $preRestoreDump,
+                'pre_restore_dump_dir' => $preRestoreDumpDir,
+            ],
+            static fn ($value): bool => null !== $value
+        );
+
         $this->planRunner->runPlan(
             $deployPlan,
             $conditions,
@@ -128,7 +140,7 @@ class ApplicationDeployer
                 'assetSyncConfig' => $assetSyncConfig,
                 'includeDatabases' => $includeDatabases,
                 'allowFullRollback' => $allowFullRollback,
-                'options' => ['force' => $force],
+                'options' => $options,
             ],
             $clean,
             $rollback
