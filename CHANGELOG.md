@@ -1,3 +1,10 @@
+[5.1.1](https://github.com/conductorphp/conductor-application-orchestration/compare/5.1.0...5.1.1) (2026-10-15)
+
+### Bug Fixes
+* app:snapshot --replace deletes the old snapshot (CTAP-2586) ([5b105ee](https://github.com/conductorphp/conductor-application-orchestration/commit/5b105ee04491b733304b17bf7db3234028ea6829))
+
+<!--- CHANGELOG SPLIT MARKER -->
+
 [5.1.0](https://github.com/conductorphp/conductor-application-orchestration/compare/5.0.1...5.1.0) (2026-10-15)
 
 ### Features

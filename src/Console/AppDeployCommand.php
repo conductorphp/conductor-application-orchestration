@@ -256,10 +256,12 @@ class AppDeployCommand extends Command
         $this->logger->info($message);
 
         if ($input->getOption('skeleton')) {
+            // Named, because a skeleton-only deploy has no build id: passed positionally, --clean
+            // landed in $buildId and --force in $clean (CTAP-2585)
             $this->applicationDeployer->deploySkeleton(
                 $input->getOption('plan'),
-                $input->getOption('clean'),
-                $force,
+                clean: (bool) $input->getOption('clean'),
+                force: (bool) $force,
             );
         } else {
             // Handle fallback from deprecated options to new options

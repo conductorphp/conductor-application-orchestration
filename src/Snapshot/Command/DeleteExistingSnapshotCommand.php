@@ -44,7 +44,9 @@ class DeleteExistingSnapshotCommand
         } elseif ($includeAssets && !$includeDatabases) {
             $path .= '/assets';
         }
-        $this->mountManager->delete($path);
+        // A snapshot is a directory. delete() removes one file: on a local path it failed, and on S3
+        // it deleted no object, so a replaced snapshot kept files the new one does not have (CTAP-2586)
+        $this->mountManager->deleteDirectory($path);
         return null;
     }
 
